@@ -5,6 +5,7 @@ body {
   color: var(--c-text);
   line-height: var(--lh-body);
   font-size: var(--fs-md);
+  overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -21,14 +22,19 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
   border-radius: var(--r-md);
-  border: 1px solid var(--c-border);
-  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
   color: var(--c-text);
   cursor: pointer;
   font-weight: 600;
   font-size: var(--fs-sm);
   transition: all var(--dur-2) var(--ease-out);
   gap: var(--sp-2);
+}
+
+.btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
 }
 
 .btn.primary {

@@ -9,7 +9,7 @@ import { expirePending } from './services/orders.js';
 // เริ่มเซิร์ฟเวอร์ + งานเบื้องหลัง คืน { server, stop } — stop() ปิดทุกอย่างอย่างเรียบร้อย (ใช้กับสัญญาณ SIGTERM/SIGINT และเทส)
 export function start({ port = config.port } = {}) {
   seedIfEmpty(); // production: ไม่ seed อะไรเลย (ดู db/seed.js)
-  const server = createApp().listen(port);
+  const server = createApp().listen(port, '0.0.0.0');
   server.once('listening', () => console.log(`Game Store running at ${config.appUrl} (port ${server.address().port})`));
 
   const timers = [

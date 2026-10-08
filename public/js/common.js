@@ -341,3 +341,9 @@ if (!mqlTilt.matches) {
     card.style.zIndex = '';
   }, { passive: true });
 }
+
+// Navbar dynamic scroll state
+window.addEventListener('scroll', () => {
+  const tb = $('.topbar');
+  if (tb) tb.classList.toggle('scrolled', window.scrollY > 20);
+}, { passive: true });

@@ -14,38 +14,66 @@ try {
 if (game) {
   const g = game;
   remember([g, ...g.related]);
-  const specs = g.spec_min || g.spec_rec ? `
-    <div class="reveal-scroll">
-      <h2 class="sec">${t('game.specs')}</h2>
+  const specsContent = g.spec_min || g.spec_rec ? `
+    <div class="bento-card sys-req">
+      <div class="bento-label">SYSTEM REQUIREMENTS</div>
       <div class="specs">
-        ${g.spec_min ? `<div><h3>${t('game.min')}</h3><p>${esc(g.spec_min)}</p></div>` : ''}
-        ${g.spec_rec ? `<div><h3>${t('game.rec')}</h3><p>${esc(g.spec_rec)}</p></div>` : ''}
+        ${g.spec_min ? `<div><strong>MINIMUM</strong><p>${esc(g.spec_min)}</p></div>` : ''}
+        ${g.spec_rec ? `<div><strong>RECOMMENDED</strong><p>${esc(g.spec_rec)}</p></div>` : ''}
       </div>
     </div>` : '';
-  const trailer = g.trailer_url ? `<div class="reveal-scroll"><iframe class="trailer" src="${esc(g.trailer_url)}" title="${t('game.trailer')}" allowfullscreen loading="lazy"></iframe></div>` : '';
 
+  const trailer = g.trailer_url ? `<div class="reveal-scroll"><iframe class="trailer" src="${esc(g.trailer_url)}" title="${t('game.trailer')}" allowfullscreen loading="lazy"></iframe></div>` : '';
   const shots = g.images?.length ? `<div class="shots reveal-scroll">${g.images.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(g.title)}" loading="lazy"></a>`).join('')}</div>` : '';
 
   $('#detail').innerHTML = `
-    <div class="game-backdrop" id="gameBackdrop"></div>
-    <div class="detail reveal-scroll">
+    <div class="game-backdrop" id="gameBackdrop" style="background-image: url('${esc(g.cover)}')"></div>
+    <div class="detail-hero reveal-scroll">
       <div class="detail-cover-wrap">
         <img class="detail-cover" src="${esc(g.cover)}" alt="${esc(g.title)}" width="400" height="300">
         ${heartHtml(g.id)}
       </div>
-      <div class="detail-info">
+      <div class="detail-hero-content">
         <h1>${esc(g.title)}</h1>
-        <div class="meta">${esc(genreName(g.genre))} • ${esc(g.platform)} • ⭐ <span id="ratingNow">${g.rating}</span> <span id="ratingCount"></span> • ${t('game.release')} ${esc(g.release_date)}</div>
-        <p>${esc(descOf(g))}</p>
         <div class="price-row big-price">
           <span class="price">${priceHtml(g)}${g.discount ? ` <span class="badge inline">-${g.discount}%</span>` : ''}</span>
         </div>
-        <button class="btn primary big" id="addBtn" type="button">${t('game.add')}</button>
+        <button class="btn primary big" id="addBtn" type="button">ADD TO CART</button>
       </div>
     </div>
+
+    <!-- The Bento Grid -->
+    <div class="game-bento-grid reveal-scroll">
+      <div class="bento-card overview">
+        <div class="bento-label">GAME OVERVIEW</div>
+        <p>${esc(descOf(g))}</p>
+      </div>
+      
+      <div class="bento-card rating">
+        <div class="bento-label">RATING</div>
+        <div class="bento-val">⭐ ${g.rating} <small id="ratingCount"></small></div>
+      </div>
+      
+      <div class="bento-card release">
+        <div class="bento-label">RELEASE DATE</div>
+        <div class="bento-val">${esc(g.release_date)}</div>
+      </div>
+      
+      <div class="bento-card genre">
+        <div class="bento-label">GENRE</div>
+        <div class="bento-val">${esc(genreName(g.genre))}</div>
+      </div>
+      
+      <div class="bento-card dev">
+        <div class="bento-label">PLATFORM</div>
+        <div class="bento-val">${esc(g.platform)}</div>
+      </div>
+      
+      ${specsContent}
+    </div>
+
     ${trailer}
     ${shots}
-    ${specs}
     <div class="reveal-scroll"><section id="reviews" class="reviews"></section></div>
     ${g.related.length ? `<div class="reveal-scroll"><h2 class="sec">${t('game.related')}</h2><div class="grid">${g.related.map(cardHtml).join('')}</div></div>` : ''}
     
