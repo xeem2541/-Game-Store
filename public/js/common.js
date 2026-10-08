@@ -315,3 +315,29 @@ applyI18n();
 // footer ซ่อนอยู่จนกว่าหน้าจะโหลดข้อมูลเสร็จ (body[data-async]) — ไม่ให้ footer ถูกดันลงมา (layout shift) ตอนเนื้อหาเข้ามา
 export const markReady = () => document.body.classList.add('ready');
 if (!document.body.hasAttribute('data-async')) markReady();
+
+// Premium 3D subtle tilt for all game cards globally
+const mqlTilt = window.matchMedia('(prefers-reduced-motion: reduce)');
+if (!mqlTilt.matches) {
+  document.addEventListener('mousemove', (e) => {
+    const card = e.target.closest('.card');
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const rotateX = ((rect.height / 2 - y) / (rect.height / 2)) * 4;
+    const rotateY = ((x - rect.width / 2) / (rect.width / 2)) * 4;
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+    card.style.transition = 'none';
+    card.style.zIndex = '10';
+  }, { passive: true });
+  
+  document.addEventListener('mouseout', (e) => {
+    const card = e.target.closest('.card');
+    if (!card) return;
+    if (card.contains(e.relatedTarget)) return;
+    card.style.transform = '';
+    card.style.transition = 'all var(--dur-3) var(--ease-out)';
+    card.style.zIndex = '';
+  }, { passive: true });
+}
