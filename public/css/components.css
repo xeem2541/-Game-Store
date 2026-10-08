@@ -10,47 +10,50 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   line-height: var(--lh-head);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 800; /* Bolder for Brutalism */
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
 }
 
-/* Button Foundation */
+/* ---- NEO-BRUTALISM BUTTONS ---- */
 .btn {
-  padding: 0 var(--sp-4);
+  padding: 0 var(--sp-5);
   min-height: var(--tap);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--r-md);
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.03);
+  border-radius: var(--r-brutal);
+  border: var(--border-thin);
+  background: var(--c-surface);
   color: var(--c-text);
   cursor: pointer;
-  font-weight: 600;
-  font-size: var(--fs-sm);
-  transition: all var(--dur-2) var(--ease-out);
+  font-weight: 800;
+  font-size: var(--fs-md);
+  text-transform: uppercase;
+  transition: transform var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out), background var(--dur-1);
+  box-shadow: var(--shadow-brutal-sm);
   gap: var(--sp-2);
+  text-decoration: none;
 }
 
 .btn:hover:not(:disabled) {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.2);
+  background: var(--c-surface-2);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-brutal);
 }
 
 .btn.primary {
   background: var(--c-accent);
   color: var(--c-on-accent);
-  border: none;
-  box-shadow: var(--glow-accent);
 }
 
 .btn.primary:hover:not(:disabled) {
   background: var(--c-accent-hover);
-  transform: translateY(-1px);
 }
 
 .btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: translate(3px, 3px);
+  box-shadow: var(--shadow-brutal-active);
 }
 
 .btn:disabled, .btn.disabled {
@@ -58,47 +61,88 @@ h1, h2, h3, h4, h5, h6 {
   cursor: not-allowed;
   pointer-events: none;
   box-shadow: none;
+  transform: none;
 }
 
-/* Sale Badge Foundation */
+/* ---- NEO-BRUTALISM BADGE ---- */
 .badge {
   background: var(--c-sale);
-  color: var(--c-on-accent);
-  font-weight: 700;
-  padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--r-sm);
+  color: var(--c-text);
+  font-weight: 800;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-brutal);
+  border: var(--border-thin);
   font-size: var(--fs-xs);
-  box-shadow: var(--glow-accent);
+  box-shadow: var(--shadow-brutal-sm);
+  text-transform: uppercase;
 }
 
 /* Icon */
 .icon {
-  width: 1em;
-  height: 1em;
+  width: 1.2em;
+  height: 1.2em;
   fill: none;
   stroke: currentColor;
-  stroke-width: 2;
+  stroke-width: 2.5;
   display: inline-block;
   vertical-align: -0.125em;
 }
 
-/* Form Inputs Foundation */
+/* ---- NEUMORPHISM INPUTS & FILTERS ---- */
 input[type="text"], input[type="number"], input[type="email"], input[type="password"], select, textarea {
   width: 100%;
-  padding: 10px 14px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--c-border);
-  background: var(--c-surface);
+  padding: 12px 16px;
+  border-radius: var(--r-pill); /* Soft pill shape for Neumorphism */
+  border: none;
+  background: var(--neu-bg);
+  box-shadow: var(--neu-shadow-inset);
   color: var(--c-text);
   font-family: inherit;
   font-size: var(--fs-sm);
+  font-weight: 600;
   transition: all var(--dur-2) var(--ease-out);
 }
 input:focus, select:focus, textarea:focus {
-  outline: 2px solid var(--c-accent);
-  outline-offset: 1px;
-  border-color: var(--c-accent);
+  outline: none;
+  box-shadow: inset 6px 6px 12px #d0ccc7, inset -6px -6px 12px #ffffff, 0 0 0 3px var(--c-focus); /* Focus ring */
+}
+:root[data-theme="dark"] input:focus, :root[data-theme="dark"] select:focus, :root[data-theme="dark"] textarea:focus {
+  box-shadow: inset 6px 6px 12px #0a0a0a, inset -6px -6px 12px #1a1a1a, 0 0 0 3px var(--c-focus);
 }
 input::placeholder, textarea::placeholder {
   color: var(--c-text-2);
+  opacity: 0.6;
+}
+
+/* Checkbox Neumorphism Toggle */
+input[type="checkbox"] {
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  background: var(--neu-bg);
+  box-shadow: var(--neu-shadow-inset);
+  border-radius: var(--r-pill);
+  position: relative;
+  cursor: pointer;
+  transition: var(--dur-2);
+}
+input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  background: var(--c-surface);
+  box-shadow: var(--neu-shadow-sm);
+  border-radius: 50%;
+  transition: var(--dur-2);
+}
+input[type="checkbox"]:checked {
+  background: var(--c-ok);
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.2);
+}
+input[type="checkbox"]:checked::after {
+  transform: translateX(20px);
+  background: #fff;
 }

@@ -1,57 +1,70 @@
 @import url('./font-faces.css');
 
 :root {
-  /* Colors (Luxury Dark Theme) */
-  --c-bg: #000000; 
-  --c-surface: #0A0A0A; 
-  --c-surface-2: #141414; 
-  --c-border: rgba(255, 255, 255, 0.1);
-  --c-text: #EDEDED; 
-  --c-text-2: #888888; 
-  --c-accent: #FFFFFF; 
-  --c-accent-hover: #F0F0F0; 
+  /* ---- NEO-BRUTALISM CORE COLORS (Light Theme Default) ---- */
+  --c-bg: #f4f0ea; 
+  --c-surface: #ffffff; 
+  --c-surface-2: #e0e0e0; 
+  --c-border: #000000;
+  --c-text: #000000; 
+  --c-text-2: #333333; 
+  --c-accent: #ff4d00; /* Vibrant Orange */
+  --c-accent-hover: #e03b00; 
   --c-on-accent: #000000;
-  --c-sale: #FF453A; 
-  --c-ok: #32D74B; 
-  --c-err: #FF453A; 
-  --c-focus: #0A84FF;
+  --c-sale: #00e5ff; /* Cyan for sale */
+  --c-ok: #00d977; 
+  --c-err: #ff2a2a; 
+  --c-focus: #5d00ff; /* Purple focus */
 
-  /* Glow (Linear / Premium) */
-  --glow-accent: 0 0 0 1px rgba(255, 255, 255, 0.15), 0 12px 36px rgba(255, 255, 255, 0.15);
-  --glow-card: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 24px rgba(0, 0, 0, 0.5);
+  /* ---- NEO-BRUTALISM TOKENS ---- */
+  --border-thick: 4px solid var(--c-border);
+  --border-thin: 2px solid var(--c-border);
+  --shadow-brutal: 6px 6px 0px var(--c-border);
+  --shadow-brutal-sm: 3px 3px 0px var(--c-border);
+  --shadow-brutal-hover: 2px 2px 0px var(--c-border);
+  --shadow-brutal-active: 0px 0px 0px var(--c-border);
 
-  /* Spacing */
+  /* ---- NEUMORPHISM TOKENS (For Soft UI) ---- */
+  --neu-bg: #f4f0ea;
+  --neu-shadow: 6px 6px 12px #d0ccc7, -6px -6px 12px #ffffff;
+  --neu-shadow-sm: 3px 3px 6px #d0ccc7, -3px -3px 6px #ffffff;
+  --neu-shadow-inset: inset 4px 4px 8px #d0ccc7, inset -4px -4px 8px #ffffff;
+
+  /* ---- SPATIAL UI (Z-Index & Perspective) ---- */
+  --z-bg: -10;
+  --z-base: 1;
+  --z-mid: 10;
+  --z-float: 20;
+  --z-nav: 50;
+  --z-overlay: 100;
+  --spatial-perspective: 1000px;
+  --spatial-hover: translateZ(20px) scale(1.02);
+
+  /* ---- SPACING & RADIUS ---- */
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
+  --r-sm: 0px; --r-md: 0px; --r-lg: 0px; --r-xl: 0px; --r-pill: 999px; /* Brutalism prefers sharp edges or perfectly round */
+  --r-brutal: 8px;
 
-  /* Radius */
-  --r-sm: 4px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px; --r-pill: 999px;
-
-  /* Glassmorphism */
-  --glass-bg: rgba(10, 10, 10, 0.45); 
-  --glass-blur: 24px; 
-  --glass-border: rgba(255, 255, 255, 0.08); 
-  --glass-fallback: rgba(10, 10, 10, 0.98);
-
-  /* Typography */
-  --font: "Anuphan", "Noto Sans Thai", system-ui, sans-serif;
+  /* ---- TYPOGRAPHY ---- */
+  --font: "Anuphan", system-ui, sans-serif;
   --fs-xs: clamp(.75rem, .72rem + .15vw, .8125rem);  
   --fs-sm: clamp(.875rem, .85rem + .1vw, .9375rem);
   --fs-md: clamp(1rem, .97rem + .15vw, 1.0625rem);   
   --fs-lg: clamp(1.125rem, 1.05rem + .35vw, 1.3125rem);
   --fs-xl: clamp(1.375rem, 1.2rem + .8vw, 1.75rem);  
   --fs-2xl: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);
-  --fs-hero: clamp(2.5rem, 2rem + 4.5vw, 5rem);
+  --fs-hero: clamp(3rem, 2.5rem + 5vw, 6rem);
   --lh-body: 1.6; 
-  --lh-head: 1.15;
+  --lh-head: 1.1;
 
-  /* Transitions */
+  /* ---- TRANSITIONS ---- */
   --dur-1: 150ms; --dur-2: 250ms; --dur-3: 400ms; --dur-4: 600ms;
-  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.19, 1, 0.22, 1); /* Sharp brutal snap */
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   
-  --tap: 44px;
+  --tap: 48px;
 
-  /* Map old variables to new tokens to prevent breaking current layout */
+  /* Map old variables */
   --bg: var(--c-bg);
   --card: var(--c-surface);
   --text: var(--c-text);
@@ -61,31 +74,33 @@
   --sale: var(--c-sale);
   --border: var(--c-border);
   --hover: var(--c-surface-2);
-  --topbar: var(--glass-fallback);
+  --topbar: var(--c-surface);
   --danger: var(--c-err);
   
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-:root[data-theme="light"] {
-  --c-bg: #FAFAF9;
-  --c-surface: #FFFFFF;
-  --c-surface-2: #F4F4F5;
-  --c-border: rgba(0, 0, 0, 0.08);
-  --c-text: #0A0A0C;
-  --c-text-2: #52525B;
-  --c-accent: #C2410C;
-  --c-accent-hover: #9A3412;
-  --c-on-accent: #FFFFFF;
-  --c-sale: var(--c-accent);
-  --c-ok: #16A34A;
-  --c-err: #DC2626;
-  --c-focus: #0369A1;
-  --glow-accent: 0 0 0 1px rgba(194, 65, 12, 0.35), 0 8px 32px rgba(194, 65, 12, 0.25);
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(0, 0, 0, 0.1);
-  --glass-fallback: rgba(255, 255, 255, 0.96);
-  color-scheme: light;
+:root[data-theme="dark"] {
+  --c-bg: #121212; 
+  --c-surface: #1e1e1e; 
+  --c-surface-2: #2c2c2c; 
+  --c-border: #ffffff;
+  --c-text: #ffffff; 
+  --c-text-2: #aaaaaa; 
+  --c-accent: #ff4d00;
+  --c-on-accent: #ffffff;
+  
+  --shadow-brutal: 6px 6px 0px var(--c-border);
+  --shadow-brutal-sm: 3px 3px 0px var(--c-border);
+  --shadow-brutal-hover: 2px 2px 0px var(--c-border);
+  --shadow-brutal-active: 0px 0px 0px var(--c-border);
+  
+  --neu-bg: #121212;
+  --neu-shadow: 6px 6px 12px #0a0a0a, -6px -6px 12px #1a1a1a;
+  --neu-shadow-sm: 3px 3px 6px #0a0a0a, -3px -3px 6px #1a1a1a;
+  --neu-shadow-inset: inset 4px 4px 8px #0a0a0a, inset -4px -4px 8px #1a1a1a;
+
+  color-scheme: dark;
 }
 
 @media (prefers-reduced-motion: reduce) { 
