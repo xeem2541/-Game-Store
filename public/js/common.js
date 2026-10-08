@@ -29,7 +29,7 @@ export async function api(path, { method = 'GET', body } = {}) {
 
 export function toast(msg) {
   let el = $('#toast');
-  if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); document.body.append(el); }
+  if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); document.body.append(el); }
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toast.id);
@@ -59,10 +59,11 @@ export const cart = {
     document.dispatchEvent(new Event('cart:change'));
     return done;
   },
-  add(game) {
+  add(game, e) {
     if (cartItems.some((i) => i.slug === game.slug)) return toast(t('cart.exists'));
     cartItems = [...cartItems, slim(game)];
     this.save();
+    if (e) flyToCart(e, game);
     toast(t('cart.added'));
   },
   remove(slug) { cartItems = cartItems.filter((i) => i.slug !== slug); return this.save(); },
@@ -150,12 +151,43 @@ export function cardHtml(g) {
   </article>`;
 }
 
+function flyToCart(e, game) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const badge = $('#cartCount');
+    badge.style.transition = 'none';
+    badge.style.transform = 'scale(1.5)';
+    setTimeout(() => {
+      badge.style.transition = 'transform var(--dur-2) var(--ease-out)';
+      badge.style.transform = '';
+    }, 150);
+    return;
+  }
+  const btn = e?.target?.closest('button') || e?.target;
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const dest = $('#cartBtn').getBoundingClientRect();
+  const fly = document.createElement('img');
+  fly.src = game.cover + '?size=sm';
+  Object.assign(fly.style, {
+    position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
+    width: rect.width + 'px', height: rect.height + 'px',
+    objectFit: 'cover', borderRadius: '10px', zIndex: 9999, pointerEvents: 'none',
+    transition: 'all 0.6s cubic-bezier(0.2, 1, 0.3, 1)'
+  });
+  document.body.append(fly);
+  requestAnimationFrame(() => {
+    fly.style.transform = `translate(${dest.left - rect.left}px, ${dest.top - rect.top}px) scale(0.2) rotate(15deg)`;
+    fly.style.opacity = '0';
+  });
+  setTimeout(() => fly.remove(), 600);
+}
+
 // แคชข้อมูลเกมที่แสดงอยู่ เพื่อให้ปุ่มเพิ่มตะกร้าหาข้อมูลเจอ
 const known = new Map();
 export const remember = (list) => { list.forEach((g) => known.set(g.slug, g)); queueMicrotask(paintHearts); };
 document.addEventListener('click', (e) => {
   const slug = e.target.dataset?.add;
-  if (slug && known.has(slug)) cart.add(known.get(slug));
+  if (slug && known.has(slug)) cart.add(known.get(slug), e);
   const wish = e.target.dataset?.wish;
   if (wish) toggleWish(+wish);
 });
@@ -187,6 +219,7 @@ function mountLayout() {
   if (!footer) { footer = document.createElement('footer'); document.body.append(footer); }
   footer.innerHTML = `<nav class="foot-links" aria-label="legal"><a href="/privacy">${t('footer.privacy')}</a><a href="/terms">${t('footer.terms')}</a><a href="/refund-policy">${t('footer.refund')}</a></nav><div>${t('footer.text')}</div>`;
   document.body.insertAdjacentHTML('beforeend', `
+  <div id="cartScrim" class="scrim" hidden></div>
   <aside id="cart" class="cart" hidden aria-label="${t('cart.title')}">
     <div class="cart-head"><h2>${t('cart.title')}</h2><button class="close" id="closeCart" type="button" aria-label="${t('common.close')}">✕</button></div>
     <div id="cartItems" class="cart-items"></div>
@@ -213,8 +246,38 @@ function mountLayout() {
   document.addEventListener('cart:change', renderCart);
   renderCart();
 
-  $('#cartBtn').onclick = () => ($('#cart').hidden = !$('#cart').hidden);
-  $('#closeCart').onclick = () => ($('#cart').hidden = true);
+  let lastFocus;
+  const trapFocus = (e) => {
+    const focusable = $('#cart').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.key === 'Tab') {
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    } else if (e.key === 'Escape') {
+      closeCart();
+    }
+  };
+  const openCart = () => {
+    lastFocus = document.activeElement;
+    $('#cart').hidden = false;
+    $('#cartScrim').hidden = false;
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => $('#closeCart').focus(), 400);
+    document.addEventListener('keydown', trapFocus);
+  };
+  const closeCart = () => {
+    $('#cart').hidden = true;
+    $('#cartScrim').hidden = true;
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', trapFocus);
+    if (lastFocus) lastFocus.focus();
+  };
+
+  $('#cartBtn').onclick = openCart;
+  $('#closeCart').onclick = closeCart;
+  $('#cartScrim').onclick = closeCart;
   $('#cartItems').onclick = (e) => e.target.dataset.rm && cart.remove(e.target.dataset.rm);
   $('#checkout').onclick = () => (cart.get().length ? (location.href = '/cart') : toast(t('cart.empty')));
 

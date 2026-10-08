@@ -45,7 +45,7 @@ if (game) {
     ${specs}
     <section id="reviews" class="reviews"></section>
     ${g.related.length ? `<h2 class="sec">${t('game.related')}</h2><div class="grid">${g.related.map(cardHtml).join('')}</div>` : ''}`;
-  $('#addBtn').onclick = () => cart.add(g);
+  $('#addBtn').onclick = (e) => cart.add(g, e);
   renderHearts();
   initReviews(g);
 }
