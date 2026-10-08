@@ -143,6 +143,7 @@ footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px
 .filters { justify-content: flex-start; align-items: center; }
 .check { color: var(--muted); display: flex; gap: 6px; align-items: center; }
 .pager { display: flex; gap: 6px; justify-content: center; margin-top: 28px; }
+.game-backdrop { position: absolute; top: 0; left: 0; right: 0; height: 70vh; min-height: 400px; background-size: cover; background-position: center top; filter: blur(40px); opacity: 0.25; -webkit-mask-image: linear-gradient(to bottom, black 20%, transparent 100%); mask-image: linear-gradient(to bottom, black 20%, transparent 100%); z-index: -1; pointer-events: none; }
 .detail { display: grid; grid-template-columns: minmax(240px, 400px) 1fr; gap: 28px; margin-top: 12px; }
 .detail-cover { width: 100%; border-radius: 14px; height: auto; }
 .detail-info { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
@@ -158,6 +159,24 @@ footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px
 .cart-item .thumb { object-fit: cover; }
 @media (max-width: 700px) { .detail { grid-template-columns: 1fr; } .nav { display: none; } .search { order: 3; flex-basis: 100%; max-width: none; } }
 .cover img { height: auto; }
+
+/* Scrollytelling Reveal */
+.reveal-scroll { opacity: 0; transform: translateY(30px); animation: reveal var(--dur-4) ease-out both; animation-timeline: view(); animation-range: entry 5% cover 25%; }
+@keyframes reveal { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+.reveal-scroll.visible { opacity: 1; transform: translateY(0); transition: opacity var(--dur-4), transform var(--dur-4); }
+@media (prefers-reduced-motion: reduce) { .reveal-scroll { animation: none; opacity: 1; transform: none; } }
+
+/* Sticky CTA */
+.sticky-cta { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--glass-fallback); padding: 16px 20px; border-top: 1px solid var(--border); z-index: 99; align-items: center; justify-content: space-between; }
+@supports (backdrop-filter: blur(1px)) { .sticky-cta { background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); border-top: 1px solid var(--glass-border); } }
+.sticky-cta-title { font-weight: 700; color: var(--text); }
+.sticky-cta-price { font-size: 18px; color: var(--text); font-weight: 800; margin-top: 4px; }
+.sticky-cta-price .old { font-size: 14px; margin-right: 6px; color: var(--muted); text-decoration: line-through; font-weight: 400; }
+
+@media (max-width: 700px) {
+  .sticky-cta { display: flex; }
+  .sticky-cta-spacer { height: 100px; }
+}
 
 /* ---- เฟส 2: สมาชิก / ภาษา / ธีม ---- */
 .topbar { flex-wrap: wrap; }

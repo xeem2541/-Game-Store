@@ -15,17 +15,20 @@ if (game) {
   const g = game;
   remember([g, ...g.related]);
   const specs = g.spec_min || g.spec_rec ? `
-    <h2 class="sec">${t('game.specs')}</h2>
-    <div class="specs">
-      ${g.spec_min ? `<div><h3>${t('game.min')}</h3><p>${esc(g.spec_min)}</p></div>` : ''}
-      ${g.spec_rec ? `<div><h3>${t('game.rec')}</h3><p>${esc(g.spec_rec)}</p></div>` : ''}
+    <div class="reveal-scroll">
+      <h2 class="sec">${t('game.specs')}</h2>
+      <div class="specs">
+        ${g.spec_min ? `<div><h3>${t('game.min')}</h3><p>${esc(g.spec_min)}</p></div>` : ''}
+        ${g.spec_rec ? `<div><h3>${t('game.rec')}</h3><p>${esc(g.spec_rec)}</p></div>` : ''}
+      </div>
     </div>` : '';
-  const trailer = g.trailer_url ? `<iframe class="trailer" src="${esc(g.trailer_url)}" title="${t('game.trailer')}" allowfullscreen loading="lazy"></iframe>` : '';
+  const trailer = g.trailer_url ? `<div class="reveal-scroll"><iframe class="trailer" src="${esc(g.trailer_url)}" title="${t('game.trailer')}" allowfullscreen loading="lazy"></iframe></div>` : '';
 
-  const shots = g.images?.length ? `<div class="shots">${g.images.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(g.title)}" loading="lazy"></a>`).join('')}</div>` : '';
+  const shots = g.images?.length ? `<div class="shots reveal-scroll">${g.images.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(g.title)}" loading="lazy"></a>`).join('')}</div>` : '';
 
   $('#detail').innerHTML = `
-    <div class="detail">
+    <div class="game-backdrop" id="gameBackdrop"></div>
+    <div class="detail reveal-scroll">
       <div class="detail-cover-wrap">
         <img class="detail-cover" src="${esc(g.cover)}" alt="${esc(g.title)}" width="400" height="300">
         ${heartHtml(g.id)}
@@ -43,9 +46,34 @@ if (game) {
     ${trailer}
     ${shots}
     ${specs}
-    <section id="reviews" class="reviews"></section>
-    ${g.related.length ? `<h2 class="sec">${t('game.related')}</h2><div class="grid">${g.related.map(cardHtml).join('')}</div>` : ''}`;
+    <div class="reveal-scroll"><section id="reviews" class="reviews"></section></div>
+    ${g.related.length ? `<div class="reveal-scroll"><h2 class="sec">${t('game.related')}</h2><div class="grid">${g.related.map(cardHtml).join('')}</div></div>` : ''}
+    
+    <div class="sticky-cta-spacer"></div>
+    <div class="sticky-cta">
+      <div class="sticky-cta-info">
+        <div class="sticky-cta-title">${esc(g.title)}</div>
+        <div class="sticky-cta-price">${priceHtml(g)}</div>
+      </div>
+      <button class="btn primary" id="stickyAddBtn" type="button">${t('game.add')}</button>
+    </div>`;
+  
   $('#addBtn').onclick = (e) => cart.add(g, e);
+  const stickyBtn = $('#stickyAddBtn');
+  if (stickyBtn) stickyBtn.onclick = (e) => cart.add(g, e);
+  $('#gameBackdrop').style.backgroundImage = `url('${g.cover}')`;
+
+  if (!CSS.supports('animation-timeline: view()')) {
+    const obs = new IntersectionObserver((ents) => {
+      ents.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal-scroll').forEach(el => obs.observe(el));
+  }
   renderHearts();
   initReviews(g);
 }
