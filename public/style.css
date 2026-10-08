@@ -126,7 +126,7 @@ footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px
 .nav a { color: var(--muted); text-decoration: none; }
 .nav a:hover { color: var(--text); }
 .search { position: relative; flex: 1; max-width: 420px; }
-.search input { width: 100%; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+.search input { border-radius: 999px; padding-left: 20px; padding-right: 20px; }
 .suggest { position: absolute; top: 110%; left: 0; right: 0; list-style: none; padding: 4px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; z-index: 20; }
 .suggest a { display: flex; justify-content: space-between; padding: 8px 12px; color: var(--text); text-decoration: none; border-radius: 8px; }
 .suggest a:hover { background: var(--hover); }
@@ -139,7 +139,7 @@ footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px
 .sec a { font-size: 14px; color: var(--accent2); text-decoration: none; margin-left: auto; }
 .sec small { color: var(--muted); font-size: 14px; font-weight: 400; }
 .btn.big { padding: 12px 24px; font-size: 16px; text-decoration: none; display: inline-block; margin-top: 16px; }
-.filters input[type=number] { width: 120px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+.filters input[type=number] { width: 120px; }
 .filters { justify-content: flex-start; align-items: center; }
 .check { color: var(--muted); display: flex; gap: 6px; align-items: center; }
 .pager { display: flex; gap: 6px; justify-content: center; margin-top: 28px; }
@@ -171,7 +171,7 @@ footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px
 @supports (backdrop-filter: blur(1px)) { .sticky-cta { background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); border-top: 1px solid var(--glass-border); } }
 .sticky-cta-title { font-weight: 700; color: var(--text); }
 .sticky-cta-price { font-size: 18px; color: var(--text); font-weight: 800; margin-top: 4px; }
-.sticky-cta-price .old { font-size: 14px; margin-right: 6px; color: var(--muted); text-decoration: line-through; font-weight: 400; }
+.sticky-cta-price .old { font-size: 14px; margin-right: 6px; color: var(--text); opacity: 0.75; text-decoration: line-through; font-weight: 400; }
 
 @media (max-width: 700px) {
   .sticky-cta { display: flex; }
@@ -208,7 +208,7 @@ footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px
 .auth-box h1 { margin-bottom: 18px; font-size: 26px; }
 .auth-box form, .auth-form { display: flex; flex-direction: column; gap: 14px; }
 .auth-box label, .auth-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--muted); }
-.auth-box input, .auth-form input, .review-form textarea, .review-form select { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; }
+.auth-box input, .auth-form input, .review-form textarea, .review-form select { background: var(--bg); }
 .auth-box small, .auth-form small { color: var(--muted); }
 .alt { text-align: center; margin-top: 16px; color: var(--muted); }
 .alt a { color: var(--accent2); }
@@ -253,7 +253,7 @@ footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px
 .btn.disabled, .btn:disabled { opacity: .5; pointer-events: none; }
 .coupon label { font-size: 14px; color: var(--muted); }
 .coupon .row { margin-top: 6px; }
-.coupon input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); text-transform: uppercase; }
+.coupon input { flex: 1; min-width: 0; text-transform: uppercase; }
 .payment-box { border: 1px dashed var(--border); border-radius: 12px; padding: 14px; color: var(--muted); font-size: 14px; }
 .alt-link { color: var(--accent2); text-decoration: none; text-align: center; font-size: 14px; }
 .status { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-left: 6px; vertical-align: middle; }

@@ -74,3 +74,24 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-block;
   vertical-align: -0.125em;
 }
+
+/* Form Inputs Foundation */
+input[type="text"], input[type="number"], input[type="email"], input[type="password"], select, textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  transition: all var(--dur-2) var(--ease-out);
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 1px;
+  border-color: var(--c-accent);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--c-text-2);
+}

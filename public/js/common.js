@@ -210,7 +210,7 @@ function mountLayout() {
       <ul id="suggest" class="suggest" hidden></ul>
     </form>
     <div class="actions">
-      <button id="langBtn" class="icon-btn" type="button" title="${t('header.lang')}" aria-label="${t('header.lang')}">${lang === 'th' ? 'EN' : 'TH'}</button>
+      <button id="langBtn" class="icon-btn" type="button" title="${t('header.lang')}" aria-label="${lang === 'th' ? 'EN' : 'TH'} - ${t('header.lang')}">${lang === 'th' ? 'EN' : 'TH'}</button>
       <button id="themeBtn" class="icon-btn" type="button" title="${t('header.theme')}" aria-label="${t('header.theme')}">◐</button>
       ${authHtml}
       <button id="cartBtn" class="cart-btn" type="button"><svg class="icon"><use href="/icons.svg#icon-cart" /></svg> <span class="cart-label">${t('cart.btn')}</span> <span id="cartCount">0</span></button>

@@ -11,6 +11,7 @@ const fmt = (vs) => vs.map((v) => `${v.id} (${v.impact}):\n${v.nodes.slice(0, 4)
 for (const lang of ['th', 'en']) {
   for (const theme of ['dark', 'light']) {
     test(`a11y: ${lang} / ${theme}`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.addInitScript(([l, t]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', t); }, [lang, theme]);
       for (const [name, url] of PUBLIC_PAGES) {
         await page.goto(url);
