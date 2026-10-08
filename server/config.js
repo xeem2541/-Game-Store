@@ -54,7 +54,7 @@ export const config = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   },
   shop: {
-    name: process.env.SHOP_NAME || 'Geme Store (ตัวอย่าง)',
+    name: process.env.SHOP_NAME || 'Game Store (ตัวอย่าง)',
     address: process.env.SHOP_ADDRESS || '123 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10000',
     taxId: process.env.SHOP_TAX_ID || '0000000000000',
   },
@@ -63,6 +63,6 @@ export const config = {
     port: Number(process.env.SMTP_PORT) || 587,
     user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',
-    from: process.env.SMTP_FROM || 'Geme Store <no-reply@localhost>',
+    from: process.env.SMTP_FROM || 'Game Store <no-reply@localhost>',
   },
 };

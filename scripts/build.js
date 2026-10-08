@@ -40,14 +40,14 @@ await bundleJs(pubJs.map((n) => `public/js/${n}.js`), path.join(DIST, 'public/js
 const themeOut = await build({ entryPoints: [path.join(ROOT, 'public/js/theme-init.js')], outdir: path.join(DIST, 'public/js'), bundle: true, format: 'iife', minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning' });
 for (const out of Object.keys(themeOut.metafile.outputs)) map.set('/js/theme-init.js', `/js/${path.basename(out)}`);
 
-const cssOut = await build({ entryPoints: [path.join(ROOT, 'public/style.css')], outdir: path.join(DIST, 'public/css'), bundle: true, minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning' });
+const cssOut = await build({ entryPoints: [path.join(ROOT, 'public/style.css')], outdir: path.join(DIST, 'public/css'), bundle: true, minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning', external: ['/fonts/*'] });
 for (const out of Object.keys(cssOut.metafile.outputs)) map.set('/style.css', `/css/${path.basename(out)}`);
 
 // ---------- แอดมิน (admin/) : แยกโฟลเดอร์ เสิร์ฟเฉพาะผู้ล็อกอินแอดมิน ----------
 await bundleJs(['admin/js/main.js'], path.join(DIST, 'admin/js'), '/admin/js/');
 const adminLogin = await build({ entryPoints: [path.join(ROOT, 'admin/login.js')], outdir: path.join(DIST, 'admin'), bundle: true, format: 'iife', minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning' });
 for (const out of Object.keys(adminLogin.metafile.outputs)) map.set('/admin/login.js', `/admin/${path.basename(out)}`);
-const adminCss = await build({ entryPoints: [path.join(ROOT, 'admin/admin.css')], outdir: path.join(DIST, 'admin'), bundle: true, minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning' });
+const adminCss = await build({ entryPoints: [path.join(ROOT, 'admin/admin.css')], outdir: path.join(DIST, 'admin'), bundle: true, minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning', external: ['/fonts/*'] });
 for (const out of Object.keys(adminCss.metafile.outputs)) map.set('/admin/admin.css', `/admin/${path.basename(out)}`);
 // Chart.js: ใช้ไฟล์ minified ที่โฮสต์เอง (ไม่โหลดจาก CDN)
 const chart = fs.readFileSync(path.join(ROOT, 'node_modules/chart.js/dist/chart.umd.min.js'));
@@ -74,6 +74,17 @@ htmlCopy(path.join(ROOT, 'admin'), path.join(DIST, 'admin'));
 // ไฟล์แปล: minify JSON
 fs.mkdirSync(path.join(DIST, 'public/i18n'), { recursive: true });
 for (const l of ['th', 'en']) fs.writeFileSync(path.join(DIST, `public/i18n/${l}.json`), JSON.stringify(JSON.parse(fs.readFileSync(path.join(ROOT, `public/i18n/${l}.json`), 'utf8'))));
+
+// คัดลอก Fonts และ Icons
+if (fs.existsSync(path.join(ROOT, 'public/fonts'))) {
+  fs.mkdirSync(path.join(DIST, 'public/fonts'), { recursive: true });
+  for (const f of fs.readdirSync(path.join(ROOT, 'public/fonts'))) {
+    fs.copyFileSync(path.join(ROOT, 'public/fonts', f), path.join(DIST, 'public/fonts', f));
+  }
+}
+if (fs.existsSync(path.join(ROOT, 'public/icons.svg'))) {
+  fs.copyFileSync(path.join(ROOT, 'public/icons.svg'), path.join(DIST, 'public/icons.svg'));
+}
 
 // ---------- บีบอัดล่วงหน้า ----------
 let files = 0; let raw = 0; let br = 0;

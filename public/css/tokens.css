@@ -1,0 +1,91 @@
+@import url('./font-faces.css');
+
+:root {
+  /* Colors (Dark Premium Minimal - A) */
+  --c-bg: #0A0A0C; 
+  --c-surface: #131317; 
+  --c-surface-2: #1B1B21; 
+  --c-border: rgba(255, 255, 255, 0.08);
+  --c-text: #F5F5F7; 
+  --c-text-2: #A1A1AA; 
+  --c-accent: #FF8A3D; 
+  --c-accent-hover: #FFA266; 
+  --c-on-accent: #0A0A0C;
+  --c-sale: var(--c-accent); 
+  --c-ok: #3DD68C; 
+  --c-err: #FF5C5C; 
+  --c-focus: #7DD3FC;
+
+  /* Glow (Neon Gamer Luxe - B) */
+  --glow-accent: 0 0 0 1px rgba(255, 138, 61, 0.35), 0 8px 32px rgba(255, 138, 61, 0.25);
+
+  /* Spacing */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
+
+  /* Radius */
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-pill: 999px;
+
+  /* Glassmorphism */
+  --glass-bg: rgba(19, 19, 23, 0.62); 
+  --glass-blur: 14px; 
+  --glass-border: rgba(255, 255, 255, 0.1); 
+  --glass-fallback: rgba(19, 19, 23, 0.96);
+
+  /* Typography */
+  --font: "Anuphan", "Noto Sans Thai", system-ui, sans-serif;
+  --fs-xs: clamp(.75rem, .72rem + .15vw, .8125rem);  
+  --fs-sm: clamp(.875rem, .85rem + .1vw, .9375rem);
+  --fs-md: clamp(1rem, .97rem + .15vw, 1.0625rem);   
+  --fs-lg: clamp(1.125rem, 1.05rem + .35vw, 1.3125rem);
+  --fs-xl: clamp(1.375rem, 1.2rem + .8vw, 1.75rem);  
+  --fs-2xl: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);
+  --fs-hero: clamp(2.25rem, 1.5rem + 3.6vw, 4.5rem);
+  --lh-body: 1.65; 
+  --lh-head: 1.25;
+
+  /* Transitions */
+  --dur-1: 120ms; --dur-2: 200ms; --dur-3: 320ms; --dur-4: 560ms;
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  
+  --tap: 44px;
+
+  /* Map old variables to new tokens to prevent breaking current layout */
+  --bg: var(--c-bg);
+  --card: var(--c-surface);
+  --text: var(--c-text);
+  --muted: var(--c-text-2);
+  --accent: var(--c-accent);
+  --accent2: var(--c-focus);
+  --sale: var(--c-sale);
+  --border: var(--c-border);
+  --hover: var(--c-surface-2);
+  --topbar: var(--glass-fallback);
+  --danger: var(--c-err);
+  
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --c-bg: #FAFAF9;
+  --c-surface: #FFFFFF;
+  --c-surface-2: #F4F4F5;
+  --c-border: rgba(0, 0, 0, 0.08);
+  --c-text: #0A0A0C;
+  --c-text-2: #71717A;
+  --c-accent: #C2410C;
+  --c-accent-hover: #9A3412;
+  --c-on-accent: #FFFFFF;
+  --c-sale: var(--c-accent);
+  --c-ok: #16A34A;
+  --c-err: #DC2626;
+  --c-focus: #0369A1;
+  --glow-accent: 0 0 0 1px rgba(194, 65, 12, 0.35), 0 8px 32px rgba(194, 65, 12, 0.25);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-fallback: rgba(255, 255, 255, 0.96);
+  color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) { 
+  :root { --dur-1: 0ms; --dur-2: 0ms; --dur-3: 0ms; --dur-4: 0ms; } 
+}

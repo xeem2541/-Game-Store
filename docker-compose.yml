@@ -1,9 +1,9 @@
-# Geme Store — docker compose up -d --build
+# Game Store — docker compose up -d --build
 # ความลับทั้งหมดอยู่ในไฟล์ .env (คัดลอกจาก .env.example) — ไฟล์นี้ไม่มีคีย์ใด ๆ ฝังอยู่
 services:
   app:
     build: .
-    image: geme-store:latest
+    image: game-store:latest
     restart: unless-stopped
     env_file: .env
     environment:

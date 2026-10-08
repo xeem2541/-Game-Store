@@ -163,7 +163,7 @@ document.addEventListener('click', (e) => {
 // ---------- header / footer / ลิ้นชักตะกร้า ----------
 function mountLayout() {
   const authHtml = user
-    ? `<details class="usermenu"><summary>👤 ${esc(user.name)}</summary>
+    ? `<details class="usermenu"><summary><svg class="icon"><use href="/icons.svg#icon-user" /></svg> ${esc(user.name)}</summary>
          <div class="menu"><a href="/profile">${t('header.profile')}</a><button id="logoutBtn" type="button">${t('header.logout')}</button></div></details>`
     : `<a class="btn" href="/login">${t('header.login')}</a><a class="btn primary" href="/register">${t('header.register')}</a>`;
 
@@ -171,7 +171,7 @@ function mountLayout() {
   let header = $('header.topbar');
   if (!header) { header = document.createElement('header'); header.className = 'topbar'; document.body.prepend(header); }
   header.innerHTML = `
-    <a class="logo" href="/">🎮 Geme <span>Store</span></a>
+    <a class="logo" href="/"><svg class="icon"><use href="/icons.svg#icon-gamepad" /></svg> Game <span>Store</span></a>
     <nav class="nav" aria-label="main"><a href="/games.html">${t('nav.games')}</a><a href="/games.html?onSale=1">${t('nav.promo')}</a></nav>
     <form class="search" action="/games.html" autocomplete="off" role="search">
       <input id="search" name="q" type="search" placeholder="${t('search.placeholder')}" aria-label="${t('search.placeholder')}">
@@ -181,7 +181,7 @@ function mountLayout() {
       <button id="langBtn" class="icon-btn" type="button" title="${t('header.lang')}" aria-label="${t('header.lang')}">${lang === 'th' ? 'EN' : 'TH'}</button>
       <button id="themeBtn" class="icon-btn" type="button" title="${t('header.theme')}" aria-label="${t('header.theme')}">◐</button>
       ${authHtml}
-      <button id="cartBtn" class="cart-btn" type="button">🛒 <span class="cart-label">${t('cart.btn')}</span> <span id="cartCount">0</span></button>
+      <button id="cartBtn" class="cart-btn" type="button"><svg class="icon"><use href="/icons.svg#icon-cart" /></svg> <span class="cart-label">${t('cart.btn')}</span> <span id="cartCount">0</span></button>
     </div>`;
   let footer = $('body > footer');
   if (!footer) { footer = document.createElement('footer'); document.body.append(footer); }
@@ -206,7 +206,7 @@ function mountLayout() {
           <img class="thumb" src="${esc(i.cover)}" alt="">
           <div class="t"><a href="/game/${esc(i.slug)}">${esc(i.title)}</a><div class="meta">${esc(i.platform)}</div></div>
           <strong>${priceText(i.finalPrice)}</strong>
-          <button class="rm" data-rm="${esc(i.slug)}" type="button" aria-label="${t('cart.remove')}">🗑</button>
+          <button class="rm" data-rm="${esc(i.slug)}" type="button" aria-label="${t('cart.remove')}"><svg class="icon"><use href="/icons.svg#icon-trash" /></svg></button>
         </div>`).join('')
       : `<p class="empty">${t('cart.empty')}</p>`;
   };

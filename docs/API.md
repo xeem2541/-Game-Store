@@ -1,4 +1,4 @@
-# API — Geme Store
+# API — Game Store
 
 เอกสารนี้สรุป endpoint ทั้งหมดที่มีในโค้ด (ตรวจจาก `server/routes/**`) พร้อมสิทธิ์ที่ต้องใช้
 

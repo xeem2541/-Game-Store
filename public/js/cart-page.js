@@ -19,7 +19,7 @@ function renderGuest() {
           <img class="thumb" src="${esc(i.cover)}" alt="">
           <div class="t"><a href="/game/${esc(i.slug)}">${esc(i.title)}</a><div class="meta">${esc(i.platform)}</div></div>
           <strong>${priceText(i.finalPrice)}</strong>
-          <button class="rm" data-rm="${esc(i.slug)}" type="button" aria-label="${t('cart.remove')}">🗑</button>
+          <button class="rm" data-rm="${esc(i.slug)}" type="button" aria-label="${t('cart.remove')}"><svg class="icon"><use href="/icons.svg#icon-trash" /></svg></button>
         </div>`).join('')}</div>
       <aside class="side">
         <div class="summary"><div class="sum-row grand"><span>${t('cart.total')}</span><strong>${priceText(total)}</strong></div></div>
@@ -47,7 +47,7 @@ async function renderUser() {
           <div class="t"><a href="/game/${esc(i.slug)}">${esc(i.title)}</a><div class="meta">${esc(i.platform)}</div>
             ${i.owned ? `<div class="msg">${t('cartpage.owned')}</div>` : ''}</div>
           <strong>${i.discountPercent ? `<span class="old">${money(i.listPrice)}</span>` : ''}${money(i.unitPrice)}</strong>
-          <button class="rm" data-rm="${esc(i.slug)}" type="button" aria-label="${t('cart.remove')}">🗑</button>
+          <button class="rm" data-rm="${esc(i.slug)}" type="button" aria-label="${t('cart.remove')}"><svg class="icon"><use href="/icons.svg#icon-trash" /></svg></button>
         </div>`).join('')}</div>
       <aside class="side">
         <form id="couponForm" class="coupon">

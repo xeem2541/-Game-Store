@@ -10,7 +10,7 @@ import { expirePending } from './services/orders.js';
 export function start({ port = config.port } = {}) {
   seedIfEmpty(); // production: ไม่ seed อะไรเลย (ดู db/seed.js)
   const server = createApp().listen(port);
-  server.once('listening', () => console.log(`Geme Store running at ${config.appUrl} (port ${server.address().port})`));
+  server.once('listening', () => console.log(`Game Store running at ${config.appUrl} (port ${server.address().port})`));
 
   const timers = [
     // ยกเลิกออเดอร์ pending ที่หมดเวลา ทุก 1 นาที

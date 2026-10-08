@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Geme Store — multi-stage: build (มี devDependencies + esbuild) → runtime (เฉพาะ production deps, รันด้วย user ที่ไม่ใช่ root)
+# Game Store — multi-stage: build (มี devDependencies + esbuild) → runtime (เฉพาะ production deps, รันด้วย user ที่ไม่ใช่ root)
 # ⚠️ ไฟล์นี้ยังไม่เคยถูก build จริงบนเครื่องผู้พัฒนา (ไม่มี Docker daemon) — ดู docs/CHECKLIST.md
 
 ARG NODE_VERSION=24

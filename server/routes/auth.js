@@ -27,7 +27,7 @@ export function sendVerificationMail(user) {
   const token = createToken('email_verifications', user.id, 24 * HOUR);
   return sendMail({
     to: user.email,
-    subject: 'ยืนยันอีเมลของคุณ – Geme Store',
+    subject: 'ยืนยันอีเมลของคุณ – Game Store',
     text: `สวัสดี ${user.name},\n\nกรุณายืนยันอีเมลโดยเปิดลิงก์ (หมดอายุใน 24 ชั่วโมง):\n${config.appUrl}/verify?token=${token}\n`,
   });
 }
@@ -85,7 +85,7 @@ authRouter.post('/forgot', limiter, async (req, res) => {
     const token = createToken('password_resets', user.id, HOUR);
     await sendMail({
       to: user.email,
-      subject: 'รีเซ็ตรหัสผ่าน – Geme Store',
+      subject: 'รีเซ็ตรหัสผ่าน – Game Store',
       text: `สวัสดี ${user.name},\n\nตั้งรหัสผ่านใหม่ได้ที่ลิงก์นี้ (หมดอายุใน 1 ชั่วโมง ใช้ได้ครั้งเดียว):\n${config.appUrl}/reset?token=${token}\n\nถ้าคุณไม่ได้ขอ ให้ละเว้นอีเมลนี้\n`,
     });
   }

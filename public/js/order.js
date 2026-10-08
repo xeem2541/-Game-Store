@@ -16,7 +16,7 @@ if (returnedFromStripe) history.replaceState(null, '', location.pathname);
 if (returnedFromStripe === 'canceled') toast(t('order.checkoutCanceled'));
 
 function render(o) {
-  document.title = t('order.title', { id: o.id }) + ' – Geme Store';
+  document.title = t('order.title', { id: o.id }) + ' – Game Store';
   const pending = o.status === 'pending';
   view.innerHTML = `
     <h1 class="sec">${t('order.title', { id: o.id })} <span class="status ${o.status}">${t('order.status.' + o.status)}</span></h1>

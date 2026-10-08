@@ -1,16 +1,6 @@
-:root {
-  --bg: #0f1020; --card: #1a1b33; --text: #eef0ff; --muted: #9a9cc0;
-  --accent: #6d4aff; --accent2: #00d4ff; --sale: #35c46a;
-  --border: #2f3163; --hover: #262850; --topbar: rgba(15,16,32,.92); --danger: #ff6b6b;
-  color-scheme: dark;
-}
-:root[data-theme="light"] {
-  --bg: #f4f5fb; --card: #ffffff; --text: #1b1c33; --muted: #62668a; --accent2: #066a88; --sale: #1f9d55;
-  --border: #d5d8ee; --hover: #eceefb; --topbar: rgba(255,255,255,.92); --danger: #d63c3c;
-  color-scheme: light;
-}
+@import url('./css/tokens.css');
+@import url('./css/components.css');
 * { box-sizing: border-box; margin: 0; }
-body { font-family: "Segoe UI", "Noto Sans Thai", Tahoma, sans-serif; background: var(--bg); color: var(--text); }
 button, select, input { font: inherit; }
 
 .topbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 16px; align-items: center;
@@ -18,7 +8,7 @@ button, select, input { font: inherit; }
 .logo { font-size: 22px; font-weight: 800; color: var(--text); text-decoration: none; }
 .logo span { color: var(--accent2); }
 #search { flex: 1; max-width: 480px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
-.cart-btn { margin-left: auto; padding: 10px 16px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+.cart-btn { margin-left: auto; padding: 10px 16px; border-radius: 999px; border: 0; background: var(--accent); color: var(--c-on-accent); cursor: pointer; }
 #cartCount { background: #fff; color: var(--accent); border-radius: 999px; padding: 0 8px; margin-left: 4px; font-weight: 700; }
 
 .hero { text-align: center; padding: 56px 16px; background: linear-gradient(135deg, #3b2a9e, #0a7fa8); }
@@ -29,7 +19,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
 .filters { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; margin-bottom: 20px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
-.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip.active { background: var(--accent); border-color: var(--accent); color: var(--c-on-accent); }
 .selects { display: flex; gap: 8px; }
 select { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
 
@@ -37,16 +27,14 @@ select { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
 .card { background: var(--card); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: transform .2s; }
 .card:hover { transform: translateY(-4px); }
 .cover { height: 140px; display: flex; align-items: flex-end; padding: 12px; font-weight: 800; font-size: 20px; text-shadow: 0 2px 6px rgba(0,0,0,.5); cursor: pointer; position: relative; }
-.badge { position: absolute; top: 10px; right: 10px; background: var(--sale); color: #04210f; font-size: 13px; padding: 2px 8px; border-radius: 6px; text-shadow: none; }
+.cover .badge { position: absolute; top: 10px; right: 10px; }
 .info { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
 .meta { color: var(--muted); font-size: 13px; }
 .price-row { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 8px; }
 .price { font-weight: 700; font-size: 18px; }
 .old { color: var(--muted); text-decoration: line-through; font-size: 13px; margin-right: 6px; font-weight: 400; }
 
-.btn { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--text); cursor: pointer; }
-.btn.primary { background: var(--accent); color: #fff; }
-.btn:hover { filter: brightness(1.15); }
+/* btn moved to components.css */
 .empty { text-align: center; color: var(--muted); padding: 48px; }
 footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px solid var(--hover); font-size: 14px; }
 
@@ -101,7 +89,7 @@ footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px
 .detail-info { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
 .detail-info h1 { font-size: 34px; }
 .big-price .price { font-size: 28px; }
-.badge.inline { position: static; display: inline-block; vertical-align: middle; }
+.badge.inline { position: static; display: inline-flex; vertical-align: middle; }
 .specs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
 .specs > div { background: var(--card); padding: 16px; border-radius: 12px; }
 .specs h3 { margin-bottom: 6px; font-size: 15px; color: var(--accent2); }
@@ -119,7 +107,7 @@ footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px
 .icon-btn { min-width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-weight: 700; }
 .icon-btn:hover { background: var(--hover); }
 .btn { text-decoration: none; display: inline-block; text-align: center; color: var(--text); }
-.btn.primary { color: #fff; }
+.btn.primary { color: var(--c-on-accent); }
 .btn.danger { border-color: var(--danger); color: var(--danger); }
 .usermenu { position: relative; }
 .usermenu summary { list-style: none; cursor: pointer; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
@@ -159,7 +147,7 @@ footer { text-align: center; color: var(--muted); padding: 24px; border-top: 1px
 .review-head small { color: var(--muted); margin-left: auto; }
 .review p { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .stars { color: #ffc531; letter-spacing: 1px; }
-.tag { background: var(--accent); color: #fff; border-radius: 6px; padding: 0 6px; font-size: 12px; }
+.tag { background: var(--accent); color: var(--c-on-accent); border-radius: 6px; padding: 0 6px; font-size: 12px; }
 
 @media (max-width: 700px) {
   .topbar { padding: 10px 14px; gap: 10px; }

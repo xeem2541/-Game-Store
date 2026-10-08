@@ -7,8 +7,8 @@ import { UPLOAD_DIR } from './services/images.js';
 
 // หน้า HTML ที่ต้องมี meta SEO จริง (เซิร์ฟเวอร์ใส่แทน <!--SEO--> ในเทมเพลต) — อ่านเทมเพลตจากโฟลเดอร์ที่ใช้งานอยู่ (public หรือ dist/public)
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-const SITE = 'Geme Store';
-const DEFAULT_DESC = 'Geme Store ร้านขายเกมออนไลน์ PC, PS5, Switch รับโค้ดเกมทันทีหลังชำระเงิน ราคาโดนใจ ลดสูงสุด 50%';
+const SITE = 'Game Store';
+const DEFAULT_DESC = 'Game Store ร้านขายเกมออนไลน์ PC, PS5, Switch รับโค้ดเกมทันทีหลังชำระเงิน ราคาโดนใจ ลดสูงสุด 50%';
 
 export const absUrl = (p) => `${config.appUrl}${p}`;
 
@@ -53,19 +53,19 @@ export const finalPrice = (g) => Math.round((g.price * (100 - g.discount)) / 100
 
 export function homeMeta() {
   return {
-    title: 'Geme Store – ร้านขายเกมออนไลน์ เกมแท้ ราคาโดนใจ', path: '/', image: '/og/default.png',
+    title: 'Game Store – ร้านขายเกมออนไลน์ เกมแท้ ราคาโดนใจ', path: '/', image: '/og/default.png',
     jsonLd: {
       '@context': 'https://schema.org', '@type': 'WebSite', name: SITE, url: absUrl('/'),
       potentialAction: { '@type': 'SearchAction', target: `${absUrl('/games.html')}?q={search_term_string}`, 'query-input': 'required name=search_term_string' },
     },
   };
 }
-export const gamesMeta = () => ({ title: 'เกมทั้งหมด – Geme Store', description: 'เลือกซื้อเกม PC, PS5, Switch ทุกแนว ค้นหาและกรองตามหมวดหมู่ ราคา และแพลตฟอร์ม', path: '/games.html' });
+export const gamesMeta = () => ({ title: 'เกมทั้งหมด – Game Store', description: 'เลือกซื้อเกม PC, PS5, Switch ทุกแนว ค้นหาและกรองตามหมวดหมู่ ราคา และแพลตฟอร์ม', path: '/games.html' });
 
 // หน้ารายละเอียดเกม: Product + Offer + AggregateRating (เฉพาะเมื่อมีรีวิวจริง — ไม่แต่งตัวเลข)
 export function gameMeta(slug) {
   const g = db.prepare('SELECT * FROM games_v WHERE slug = ? AND active = 1').get(slug);
-  if (!g) return { found: false, meta: { title: 'ไม่พบเกม – Geme Store', description: 'ไม่พบเกมที่คุณต้องการ', path: `/game/${slug}`, robots: 'noindex,nofollow' } };
+  if (!g) return { found: false, meta: { title: 'ไม่พบเกม – Game Store', description: 'ไม่พบเกมที่คุณต้องการ', path: `/game/${slug}`, robots: 'noindex,nofollow' } };
   const stock = db.prepare("SELECT COUNT(*) AS n FROM game_keys WHERE game_id = ? AND status = 'available'").get(g.id).n;
   const image = `/og/${g.slug}.png`;
   const jsonLd = {
@@ -79,7 +79,7 @@ export function gameMeta(slug) {
   if (g.review_count > 0) jsonLd.aggregateRating = { '@type': 'AggregateRating', ratingValue: String(g.rating), reviewCount: g.review_count, bestRating: '5', worstRating: '1' };
   return {
     found: true, game: g,
-    meta: { title: `${g.title} – Geme Store`, description: g.description.slice(0, 200), path: `/game/${g.slug}`, image, type: 'product', jsonLd },
+    meta: { title: `${g.title} – Game Store`, description: g.description.slice(0, 200), path: `/game/${g.slug}`, image, type: 'product', jsonLd },
   };
 }
 
@@ -126,7 +126,7 @@ async function buildOg({ title, subtitle, color1, color2, coverFile }) {
     <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".15"/><stop offset="1" stop-color="#000" stop-opacity=".78"/></linearGradient></defs>
     <rect width="1200" height="630" fill="url(#g)"/>${text}
     <text x="70" y="520" font-size="40" fill="#fff" fill-opacity=".92" font-family="${FONT}">${xmlEsc(subtitle)}</text>
-    <text x="70" y="585" font-size="34" font-weight="700" fill="#00d4ff" font-family="${FONT}">🎮 Geme Store</text></svg>`;
+    <text x="70" y="585" font-size="34" font-weight="700" fill="#00d4ff" font-family="${FONT}">🎮 Game Store</text></svg>`;
   const bg = coverFile
     ? sharp(coverFile).resize(1200, 630, { fit: 'cover' })
     : sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${color1}"/><stop offset="1" stop-color="${color2}"/></linearGradient></defs><rect width="1200" height="630" fill="url(#b)"/></svg>`));
@@ -135,7 +135,7 @@ async function buildOg({ title, subtitle, color1, color2, coverFile }) {
 
 export async function ogImage(slug) {
   let spec;
-  if (slug === 'default') spec = { title: 'Geme Store', subtitle: 'ร้านขายเกมออนไลน์ เกมแท้ ราคาโดนใจ', color1: '#3b2a9e', color2: '#0a7fa8' };
+  if (slug === 'default') spec = { title: 'Game Store', subtitle: 'ร้านขายเกมออนไลน์ เกมแท้ ราคาโดนใจ', color1: '#3b2a9e', color2: '#0a7fa8' };
   else {
     const g = db.prepare('SELECT title, genre, platform, price, discount, color1, color2, cover_image FROM games WHERE slug = ? AND active = 1').get(slug);
     if (!g) return null;

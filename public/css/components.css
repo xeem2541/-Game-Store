@@ -1,0 +1,76 @@
+/* Core typography rules */
+body {
+  font-family: var(--font);
+  background: var(--c-bg);
+  color: var(--c-text);
+  line-height: var(--lh-body);
+  font-size: var(--fs-md);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: var(--lh-head);
+  font-weight: 700;
+}
+
+/* Button Foundation */
+.btn {
+  padding: 0 var(--sp-4);
+  min-height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  transition: all var(--dur-2) var(--ease-out);
+  gap: var(--sp-2);
+}
+
+.btn.primary {
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  border: none;
+  box-shadow: var(--glow-accent);
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--c-accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled, .btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+/* Sale Badge Foundation */
+.badge {
+  background: var(--c-sale);
+  color: var(--c-on-accent);
+  font-weight: 700;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  box-shadow: var(--glow-accent);
+}
+
+/* Icon */
+.icon {
+  width: 1em;
+  height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  display: inline-block;
+  vertical-align: -0.125em;
+}
