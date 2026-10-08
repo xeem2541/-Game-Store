@@ -1,0 +1,53 @@
+# Geme Store — docker compose up -d --build
+# ความลับทั้งหมดอยู่ในไฟล์ .env (คัดลอกจาก .env.example) — ไฟล์นี้ไม่มีคีย์ใด ๆ ฝังอยู่
+services:
+  app:
+    build: .
+    image: geme-store:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_PATH: /app/data/store.db
+      BACKUP_DIR: /app/data/backups
+      TRUST_PROXY: "1"        # อยู่หลัง Caddy/nginx ด้านล่าง
+    volumes:
+      - gamestore-data:/app/data   # ฐานข้อมูล SQLite + รูปที่อัปโหลด + ไฟล์สำรอง
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 15s       # เวลาให้ปิดระบบอย่างเรียบร้อย
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # HTTPS อัตโนมัติด้วย Caddy (Let's Encrypt) — เปิดด้วย: docker compose --profile proxy up -d
+  # ต้องตั้ง DOMAIN=ชื่อโดเมนจริง (ใน .env หรือ shell) และชี้ DNS มาที่เครื่องนี้ + เปิดพอร์ต 80/443
+  caddy:
+    profiles: ["proxy"]
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  gamestore-data:
+  caddy-data:
+  caddy-config:

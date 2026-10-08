@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="/js/theme-init.js"></script>
+  <title data-i18n="auth.reset">ตั้งรหัสผ่านใหม่</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="reset">
+  <header class="topbar"></header>
+  <main class="auth-box">
+    <h1 data-i18n="auth.reset">ตั้งรหัสผ่านใหม่</h1>
+    <form id="form" novalidate>
+      <label><span data-i18n="auth.newPassword"></span>
+        <input name="password" type="password" required autocomplete="new-password" minlength="8" maxlength="72"></label>
+      <small data-i18n="auth.passwordHint"></small>
+      <p id="msg" class="msg" role="alert"></p>
+      <button class="btn primary big" type="submit" data-i18n="auth.reset"></button>
+    </form>
+
+  </main>
+  <footer></footer>
+  <script type="module" src="/js/auth-pages.js"></script>
+</body>
+</html>

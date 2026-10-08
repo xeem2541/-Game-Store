@@ -1,0 +1,38 @@
+# dependencies / build output
+node_modules/
+dist/
+coverage/
+
+# runtime data: SQLite DB, uploads, backups (never commit customer data)
+data/
+backups/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# secrets — never commit (only the template .env.example is tracked)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# test artifacts
+e2e/.tmp/
+e2e/screenshots/
+test-results/
+playwright-report/
+lighthouse/
+
+# logs / OS / editor
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

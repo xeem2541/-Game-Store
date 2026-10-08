@@ -1,0 +1,254 @@
+// โค้ดที่ใช้ร่วมกันทุกหน้า: API, ผู้ใช้, ตะกร้า, wishlist, header/footer, การ์ดเกม
+import { t, applyI18n, lang, setLang, genreName, errText, descOf } from './i18n.js';
+export { t, applyI18n, lang, genreName, descOf };
+
+export const $ = (s, r = document) => r.querySelector(s);
+export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// เงินจากเซิร์ฟเวอร์เป็นสตางค์ (จำนวนเต็ม) → แสดงเป็นบาท
+export const money = (satang) => '฿' + (satang / 100).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: satang % 100 ? 2 : 0, maximumFractionDigits: 2 });
+export const fmtDateTime = (s) => new Date(typeof s === 'number' ? s : s.replace(' ', 'T') + 'Z').toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });
+// ราคาทุกที่ในระบบเป็น "สตางค์" (จำนวนเต็ม) — แสดงผลเป็นบาท; 0 = ฟรี
+export const priceText = (satang) => (satang === 0 ? t('price.free') : money(satang));
+
+const csrfToken = () => document.cookie.split('; ').find((c) => c.startsWith('csrf='))?.slice(5) ?? '';
+
+export async function api(path, { method = 'GET', body } = {}) {
+  const opts = { method, headers: {}, credentials: 'same-origin' };
+  if (body !== undefined) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  if (method !== 'GET') opts.headers['x-csrf-token'] = csrfToken();
+  const r = await fetch('/api' + path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const e = new Error(errText(data.error || r.statusText, data.code, data.params));
+    e.status = r.status;
+    e.code = data.code;
+    throw e;
+  }
+  return data;
+}
+
+export function toast(msg) {
+  let el = $('#toast');
+  if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); document.body.append(el); }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast.id);
+  toast.id = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ---------- ผู้ใช้ ----------
+export const user = (await api('/auth/me').catch(() => ({ user: null }))).user;
+export const loginUrl = () => '/login?next=' + encodeURIComponent(location.pathname + location.search);
+
+// ---------- ตะกร้า: ล็อกอินแล้วเก็บในฐานข้อมูล, ยังไม่ล็อกอินเก็บใน localStorage ----------
+const slim = (g) => ({ slug: g.slug, title: g.title, platform: g.platform, finalPrice: g.finalPrice, cover: g.cover });
+// คีย์ cart2: รูปแบบเก่า (cart) เก็บราคาเป็นบาท จึงไม่นำมาใช้ต่อหลังย้ายเป็นสตางค์
+const CART_KEY = 'cart2';
+const localCart = {
+  get() { try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; } catch { return []; } },
+  set(v) { try { localStorage.setItem(CART_KEY, JSON.stringify(v)); } catch {} },
+};
+let cartItems = user ? (await api('/cart').catch(() => ({ items: [] }))).items.map(slim) : localCart.get();
+
+export const cart = {
+  get: () => cartItems,
+  save() {
+    let done = Promise.resolve();
+    if (user) done = api('/cart', { method: 'PUT', body: { slugs: cartItems.map((i) => i.slug) } }).catch(() => toast(t('common.error')));
+    else localCart.set(cartItems);
+    document.dispatchEvent(new Event('cart:change'));
+    return done;
+  },
+  add(game) {
+    if (cartItems.some((i) => i.slug === game.slug)) return toast(t('cart.exists'));
+    cartItems = [...cartItems, slim(game)];
+    this.save();
+    toast(t('cart.added'));
+  },
+  remove(slug) { cartItems = cartItems.filter((i) => i.slug !== slug); return this.save(); },
+  clear() { cartItems = []; this.save(); },
+  // โหลดตะกร้าจากเซิร์ฟเวอร์ใหม่ (เช่นหลังชำระเงิน เกมที่ซื้อจะถูกเอาออกจากตะกร้า)
+  async refresh() {
+    if (!user) return;
+    cartItems = (await api('/cart').catch(() => ({ items: cartItems }))).items.map(slim);
+    document.dispatchEvent(new Event('cart:change'));
+  },
+};
+
+// เรียกหลังล็อกอิน/สมัครสำเร็จ: รวมตะกร้าใน localStorage เข้ากับตะกร้าบนเซิร์ฟเวอร์
+export async function mergeLocalCart() {
+  const local = localCart.get();
+  if (local.length) {
+    const server = (await api('/cart')).items.map((i) => i.slug);
+    const slugs = [...new Set([...server, ...local.map((i) => i.slug)])];
+    await api('/cart', { method: 'PUT', body: { slugs } });
+  }
+  try { localStorage.removeItem(CART_KEY); } catch {}
+}
+
+// ---------- รายการโปรด ----------
+const wishIds = new Set(user ? (await api('/wishlist').catch(() => ({ items: [] }))).items.map((g) => g.id) : []);
+
+function paintHearts() {
+  document.querySelectorAll('[data-wish]').forEach((b) => {
+    const on = wishIds.has(+b.dataset.wish);
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on);
+    b.setAttribute('aria-label', t(on ? 'wish.remove' : 'wish.add'));
+    b.textContent = on ? '♥' : '♡';
+  });
+}
+
+async function toggleWish(id) {
+  if (!user) { location.href = loginUrl(); return; }
+  const on = wishIds.has(id);
+  on ? wishIds.delete(id) : wishIds.add(id);
+  paintHearts();
+  try {
+    if (on) await api('/wishlist/' + id, { method: 'DELETE' });
+    else await api('/wishlist', { method: 'POST', body: { gameId: id } });
+  } catch {
+    on ? wishIds.add(id) : wishIds.delete(id); // ย้อนกลับถ้าล้มเหลว
+    paintHearts();
+    toast(t('common.error'));
+  }
+}
+
+export const heartHtml = (id) => `<button class="heart" data-wish="${id}" type="button"></button>`;
+export function renderHearts() { paintHearts(); }
+
+// สรุปราคาที่เซิร์ฟเวอร์คำนวณ (สตางค์)
+export function summaryHtml(s) {
+  const row = (label, val, cls = '') => `<div class="sum-row ${cls}"><span>${label}</span><strong>${val}</strong></div>`;
+  return `<div class="summary">
+    ${row(t('summary.subtotal'), money(s.subtotal))}
+    ${s.gameDiscount ? row(t('summary.gameDiscount'), '−' + money(s.gameDiscount), 'neg') : ''}
+    ${s.couponDiscount ? row(`${t('summary.coupon')} (${esc(s.coupon?.code ?? '')})`, '−' + money(s.couponDiscount), 'neg') : ''}
+    ${row(t('cart.total'), money(s.total), 'grand')}
+  </div>`;
+}
+
+// ---------- การ์ดเกม ----------
+export const priceHtml = (g) => (g.discount ? `<span class="old">${priceText(g.price)}</span>${priceText(g.finalPrice)}` : priceText(g.price));
+
+export function cardHtml(g) {
+  return `
+  <article class="card">
+    <a class="cover" href="/game/${esc(g.slug)}">
+      <img src="${esc(g.cover)}?size=sm" alt="${esc(g.title)}" loading="lazy" decoding="async" width="400" height="300">
+      ${g.discount ? `<span class="badge">-${g.discount}%</span>` : ''}
+    </a>
+    ${heartHtml(g.id)}
+    <div class="info">
+      <a class="title" href="/game/${esc(g.slug)}">${esc(g.title)}</a>
+      <div class="meta">${esc(genreName(g.genre))} • ${esc(g.platform)} • ⭐ ${g.rating}${g.review_count ? ` (${g.review_count})` : ''}</div>
+      <div class="price-row">
+        <span class="price">${priceHtml(g)}</span>
+        <button class="btn" data-add="${esc(g.slug)}">${t('cart.add')}</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+// แคชข้อมูลเกมที่แสดงอยู่ เพื่อให้ปุ่มเพิ่มตะกร้าหาข้อมูลเจอ
+const known = new Map();
+export const remember = (list) => { list.forEach((g) => known.set(g.slug, g)); queueMicrotask(paintHearts); };
+document.addEventListener('click', (e) => {
+  const slug = e.target.dataset?.add;
+  if (slug && known.has(slug)) cart.add(known.get(slug));
+  const wish = e.target.dataset?.wish;
+  if (wish) toggleWish(+wish);
+});
+
+// ---------- header / footer / ลิ้นชักตะกร้า ----------
+function mountLayout() {
+  const authHtml = user
+    ? `<details class="usermenu"><summary>👤 ${esc(user.name)}</summary>
+         <div class="menu"><a href="/profile">${t('header.profile')}</a><button id="logoutBtn" type="button">${t('header.logout')}</button></div></details>`
+    : `<a class="btn" href="/login">${t('header.login')}</a><a class="btn primary" href="/register">${t('header.register')}</a>`;
+
+  // header/footer มี placeholder อยู่ใน HTML แล้ว (จองที่ว่างกัน layout shift) — เติมเนื้อหาเข้าไป; ถ้าหน้าไหนไม่มีก็สร้างให้
+  let header = $('header.topbar');
+  if (!header) { header = document.createElement('header'); header.className = 'topbar'; document.body.prepend(header); }
+  header.innerHTML = `
+    <a class="logo" href="/">🎮 Geme <span>Store</span></a>
+    <nav class="nav" aria-label="main"><a href="/games.html">${t('nav.games')}</a><a href="/games.html?onSale=1">${t('nav.promo')}</a></nav>
+    <form class="search" action="/games.html" autocomplete="off" role="search">
+      <input id="search" name="q" type="search" placeholder="${t('search.placeholder')}" aria-label="${t('search.placeholder')}">
+      <ul id="suggest" class="suggest" hidden></ul>
+    </form>
+    <div class="actions">
+      <button id="langBtn" class="icon-btn" type="button" title="${t('header.lang')}" aria-label="${t('header.lang')}">${lang === 'th' ? 'EN' : 'TH'}</button>
+      <button id="themeBtn" class="icon-btn" type="button" title="${t('header.theme')}" aria-label="${t('header.theme')}">◐</button>
+      ${authHtml}
+      <button id="cartBtn" class="cart-btn" type="button">🛒 <span class="cart-label">${t('cart.btn')}</span> <span id="cartCount">0</span></button>
+    </div>`;
+  let footer = $('body > footer');
+  if (!footer) { footer = document.createElement('footer'); document.body.append(footer); }
+  footer.innerHTML = `<nav class="foot-links" aria-label="legal"><a href="/privacy">${t('footer.privacy')}</a><a href="/terms">${t('footer.terms')}</a><a href="/refund-policy">${t('footer.refund')}</a></nav><div>${t('footer.text')}</div>`;
+  document.body.insertAdjacentHTML('beforeend', `
+  <aside id="cart" class="cart" hidden aria-label="${t('cart.title')}">
+    <div class="cart-head"><h2>${t('cart.title')}</h2><button class="close" id="closeCart" type="button" aria-label="${t('common.close')}">✕</button></div>
+    <div id="cartItems" class="cart-items"></div>
+    <div class="cart-foot">
+      <div class="total">${t('cart.total')} <strong id="cartTotal">฿0</strong></div>
+      <button id="checkout" class="btn primary" type="button">${t('cart.viewCart')}</button>
+    </div>
+  </aside>`);
+
+  const renderCart = () => {
+    const items = cart.get();
+    $('#cartCount').textContent = items.length;
+    $('#cartTotal').textContent = priceText(items.reduce((s, i) => s + i.finalPrice, 0)).replace(t('price.free'), '฿0');
+    $('#cartItems').innerHTML = items.length
+      ? items.map((i) => `
+        <div class="cart-item">
+          <img class="thumb" src="${esc(i.cover)}" alt="">
+          <div class="t"><a href="/game/${esc(i.slug)}">${esc(i.title)}</a><div class="meta">${esc(i.platform)}</div></div>
+          <strong>${priceText(i.finalPrice)}</strong>
+          <button class="rm" data-rm="${esc(i.slug)}" type="button" aria-label="${t('cart.remove')}">🗑</button>
+        </div>`).join('')
+      : `<p class="empty">${t('cart.empty')}</p>`;
+  };
+  document.addEventListener('cart:change', renderCart);
+  renderCart();
+
+  $('#cartBtn').onclick = () => ($('#cart').hidden = !$('#cart').hidden);
+  $('#closeCart').onclick = () => ($('#cart').hidden = true);
+  $('#cartItems').onclick = (e) => e.target.dataset.rm && cart.remove(e.target.dataset.rm);
+  $('#checkout').onclick = () => (cart.get().length ? (location.href = '/cart') : toast(t('cart.empty')));
+
+  $('#langBtn').onclick = () => setLang(lang === 'th' ? 'en' : 'th');
+  $('#themeBtn').onclick = () => {
+    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('theme', next); } catch {}
+  };
+  $('#logoutBtn')?.addEventListener('click', async () => {
+    await api('/auth/logout', { method: 'POST', body: {} }).catch(() => {});
+    location.href = '/';
+  });
+
+  // autocomplete
+  const input = $('#search');
+  const box = $('#suggest');
+  let timer;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (!q) { box.hidden = true; return; }
+    timer = setTimeout(async () => {
+      const rows = await api('/games/suggest?q=' + encodeURIComponent(q)).catch(() => []);
+      box.innerHTML = rows.map((r) => `<li><a href="/game/${esc(r.slug)}">${esc(r.title)} <small>${esc(genreName(r.genre))}</small></a></li>`).join('');
+      box.hidden = !rows.length;
+    }, 200);
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.search')) box.hidden = true; });
+}
+
+mountLayout();
+applyI18n();
+
+// footer ซ่อนอยู่จนกว่าหน้าจะโหลดข้อมูลเสร็จ (body[data-async]) — ไม่ให้ footer ถูกดันลงมา (layout shift) ตอนเนื้อหาเข้ามา
+export const markReady = () => document.body.classList.add('ready');
+if (!document.body.hasAttribute('data-async')) markReady();

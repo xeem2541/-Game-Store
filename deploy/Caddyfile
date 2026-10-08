@@ -1,0 +1,14 @@
+# Caddy: ขอ/ต่ออายุใบรับรอง HTTPS (Let's Encrypt) ให้อัตโนมัติ และ redirect http → https
+# ใช้กับ docker-compose profile "proxy" (ตัวแปร DOMAIN มาจาก environment ของ caddy)
+{$DOMAIN} {
+	encode zstd gzip
+	# Express ส่ง security header (CSP/HSTS ฯลฯ) เองแล้ว — Caddy แค่ส่งต่อ
+	reverse_proxy app:3000 {
+		health_uri /healthz
+		health_interval 30s
+	}
+	# ขนาดอัปโหลดสูงสุด (รูปปกเกม) ให้สอดคล้องกับแอป
+	request_body {
+		max_size 12MB
+	}
+}

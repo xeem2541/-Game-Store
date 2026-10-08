@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="/js/theme-init.js"></script>
+  <title data-i18n="auth.forgot">ลืมรหัสผ่าน</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="forgot">
+  <header class="topbar"></header>
+  <main class="auth-box">
+    <h1 data-i18n="auth.forgot">ลืมรหัสผ่าน</h1>
+    <form id="form" novalidate>
+      <label><span data-i18n="auth.email"></span>
+        <input name="email" type="email" required autocomplete="email" ></label>
+      <p id="msg" class="msg" role="alert"></p>
+      <button class="btn primary big" type="submit" data-i18n="auth.sendLink"></button>
+    </form>
+    <p class="alt"><a href="/login" data-i18n="auth.login"></a></p>
+  </main>
+  <footer></footer>
+  <script type="module" src="/js/auth-pages.js"></script>
+</body>
+</html>

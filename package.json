@@ -1,0 +1,51 @@
+{
+  "name": "game-store",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server/index.js",
+    "start": "node server/index.js",
+    "seed": "node server/db/seed.js",
+    "make-admin": "node server/scripts/make-role.js admin",
+    "make-staff": "node server/scripts/make-role.js staff",
+    "test": "node --test tests/*.test.js",
+    "check:env": "node server/scripts/check-env.js",
+    "backup": "node server/scripts/backup.js",
+    "restore": "node server/scripts/restore.js",
+    "build": "node scripts/build.js",
+    "start:dist": "USE_DIST=1 node server/index.js",
+    "e2e": "playwright test",
+    "test:coverage": "node --experimental-test-coverage --test tests/*.test.js",
+    "bench": "node scripts/bench.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.0.3",
+    "chart.js": "^4.5.1",
+    "compression": "^1.8.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.6",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.16",
+    "pdfkit": "^0.20.2",
+    "sharp": "^0.35.5",
+    "stripe": "^23.0.0",
+    "zod": "^4.6.5"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.64.0",
+    "autocannon": "^8.0.0",
+    "esbuild": "^0.28.2"
+  }
+}

@@ -1,0 +1,64 @@
+import { $, $$, api, errorState, esc, hasPerm, loading, state, toast } from './core.js';
+import * as dashboard from './dashboard.js';
+import * as games from './games.js';
+import * as stock from './stock.js';
+import * as orders from './orders.js';
+import * as users from './users.js';
+import * as coupons from './coupons.js';
+import * as reviews from './reviews.js';
+import * as reports from './reports.js';
+import * as audit from './audit.js';
+
+// เมนู: roles = บทบาทที่เห็นเมนูนี้ (staff ไม่เห็น ผู้ใช้ / คูปอง / Audit log) — เซิร์ฟเวอร์ตรวจสิทธิ์ซ้ำทุก endpoint อยู่แล้ว
+const ROUTES = [
+  { key: 'dashboard', label: '📊 Dashboard', roles: ['staff', 'admin'], mod: dashboard },
+  { key: 'games', label: '🎮 เกม', roles: ['staff', 'admin'], mod: games },
+  { key: 'stock', label: '🔑 สต็อกโค้ด', roles: ['staff', 'admin'], mod: stock },
+  { key: 'orders', label: '🧾 ออเดอร์', roles: ['staff', 'admin'], mod: orders },
+  { key: 'users', label: '👥 ผู้ใช้', roles: ['admin'], mod: users },
+  { key: 'coupons', label: '🏷️ คูปอง', roles: ['staff', 'admin'], perm: 'coupons.manage', mod: coupons },
+  { key: 'reviews', label: '⭐ รีวิว', roles: ['staff', 'admin'], mod: reviews },
+  { key: 'reports', label: '📁 รายงาน', roles: ['staff', 'admin'], mod: reports },
+  { key: 'audit', label: '📜 Audit log', roles: ['admin'], mod: audit },
+];
+
+const view = $('#view');
+let token = 0; // กันผลลัพธ์ของหน้าเก่ามาเขียนทับหน้าใหม่ที่เปิดทีหลัง
+
+async function route() {
+  const [path] = location.hash.replace(/^#\/?/, '').split('?');
+  const [key, ...rest] = path.split('/');
+  const r = ROUTES.find((x) => x.key === (key || 'dashboard'));
+  $$('#nav a').forEach((a) => a.classList.toggle('active', a.dataset.key === r?.key));
+  $('#sidebar').classList.remove('open');
+  if (!r || !r.roles.includes(state.me.role) || (r.perm && !hasPerm(r.perm))) {
+    view.innerHTML = '<div class="state error">ไม่พบหน้านี้ หรือคุณไม่มีสิทธิ์เข้าถึง</div>';
+    return;
+  }
+  const mine = ++token;
+  loading(view);
+  try {
+    await r.mod.render(view, rest, () => mine === token);
+  } catch (e) {
+    if (mine === token) errorState(view, e);
+  }
+}
+
+async function start() {
+  try {
+    const me = await api('/auth/me');
+    state.me = me.user;
+    state.perms = me.permissions ?? [];
+  } catch { return; } // 401 → api() พาไปหน้า login แล้ว
+  $('#nav').innerHTML = ROUTES.filter((r) => r.roles.includes(state.me.role) && (!r.perm || hasPerm(r.perm))).map((r) => `<a href="#/${r.key}" data-key="${r.key}">${r.label}</a>`).join('');
+  $('#who').innerHTML = `<div><strong>${esc(state.me.name)}</strong></div><div>${esc(state.me.email)}</div>
+    <div><span class="badge ${esc(state.me.role)}">${state.me.role === 'admin' ? 'admin' : 'staff'}</span></div>
+    <p><a href="/" target="_blank" rel="noopener">เปิดหน้าร้าน ↗</a></p><button class="btn sm" id="logout" type="button">ออกจากระบบ</button>`;
+  $('#logout').onclick = async () => { await api('/auth/logout', { method: 'POST', body: {} }).catch(() => {}); location.href = '/admin/login'; };
+  $('#menuBtn').onclick = () => $('#sidebar').classList.toggle('open');
+  window.addEventListener('hashchange', route);
+  if (!location.hash) location.hash = '#/dashboard'; else route();
+}
+
+window.addEventListener('unhandledrejection', (e) => { if (e.reason?.message) toast(e.reason.message, true); });
+start();

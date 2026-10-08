@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="/js/theme-init.js"></script>
+  <!--SEO-->
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body data-async>
+  <header class="topbar"></header>
+  <main>
+    <h1 class="sec"><span data-i18n="catalog.title">เกมทั้งหมด</span> <small id="count"></small></h1>
+    <form id="filters" class="filters">
+      <select name="genre" id="genre" aria-label="genre"><option value="" data-i18n="filter.allGenres"></option></select>
+      <select name="platform" id="platform" aria-label="platform"><option value="" data-i18n="filter.allPlatforms"></option></select>
+      <input name="minPrice" type="number" min="0" data-i18n-placeholder="filter.minPrice" data-i18n-label="filter.minPrice">
+      <input name="maxPrice" type="number" min="0" data-i18n-placeholder="filter.maxPrice" data-i18n-label="filter.maxPrice">
+      <label class="check"><input type="checkbox" name="onSale" value="1"> <span data-i18n="filter.onSale"></span></label>
+      <select name="sort" aria-label="sort">
+        <option value="default" data-i18n="sort.default"></option>
+        <option value="bestseller" data-i18n="sort.bestseller"></option>
+        <option value="newest" data-i18n="sort.newest"></option>
+        <option value="priceAsc" data-i18n="sort.priceAsc"></option>
+        <option value="priceDesc" data-i18n="sort.priceDesc"></option>
+        <option value="rating" data-i18n="sort.rating"></option>
+        <option value="discount" data-i18n="sort.discount"></option>
+      </select>
+      <button class="btn" type="reset" data-i18n="filter.reset"></button>
+    </form>
+    <div id="grid" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div>
+    <p id="empty" class="empty" hidden data-i18n="catalog.empty"></p>
+    <nav id="pager" class="pager"></nav>
+  </main>
+  <footer></footer>
+  <script type="module" src="/js/catalog.js"></script>
+</body>
+</html>
