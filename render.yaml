@@ -1,4 +1,4 @@
-﻿services:
+services:
   - type: web
     name: game-store
     runtime: docker
@@ -7,7 +7,7 @@
     healthCheckPath: /healthz
     envVars:
       - key: NODE_ENV
-        value: development
+        value: production
       - key: USE_DIST
         value: "1"
       - key: TRUST_PROXY

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
   <link rel="preload" href="/fonts/anuphan-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/anuphan-3.woff2" as="font" type="font/woff2" crossorigin>
@@ -8,30 +8,36 @@
   <script src="/js/theme-init.js"></script>
   <!--SEO-->
   <link rel="stylesheet" href="/style.css">
+  <title>NEXUS - Next Level Gaming</title>
 </head>
 <body data-async>
-  <header class="topbar"></header>
-  <section class="hero" id="hero">
-    <div class="hero-bg" aria-hidden="true" id="heroBg">
-      <div class="glow-orb orb-1"></div>
-      <div class="glow-orb orb-2"></div>
+  <header class="topbar glass-nav">
+    <a href="/" class="logo">NEXUS<span>.</span></a>
+    <div id="search"></div>
+    <div class="nav">
+      <a href="/games.html">ALL GAMES</a>
+      <a href="/games.html?onSale=1">PROMOS</a>
     </div>
-    <div class="hero-content">
-      <h1 class="kinetic-text" data-i18n="hero.title">เกมแท้ ราคาโดนใจ</h1>
-      <p class="kinetic-sub" data-i18n="hero.sub">รับโค้ดเกมทันทีหลังชำระเงิน • ลดสูงสุด 50%</p>
-      <div class="hero-actions">
-        <a class="btn primary big" href="/games.html?onSale=1" data-i18n="hero.cta">ดูโปรโมชัน</a>
-        <a class="btn big" href="/games.html" data-i18n="home.all">เลือกดูเกมทั้งหมด</a>
-      </div>
+    <div id="authNav" class="nav"></div>
+    <div class="cart-btn" id="cartToggle"></div>
+  </header>
+  <main class="full-width">
+    <!-- Hero section injected by JS -->
+    <div id="hero"></div>
+
+    <div class="content-wrapper">
+      <section><h2 class="sec"><span data-i18n="home.featured">FEATURED TITLES</span></h2><div id="featured" class="grid bento" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
+      
+      <section><h2 class="sec"><span data-i18n="home.best">TRENDING NOW</span> <a href="/games.html?sort=bestseller" data-i18n="home.all">VIEW ALL</a></h2><div id="bestsellers" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
+      
+      <section><h2 class="sec"><span data-i18n="home.new">NEW ARRIVALS</span> <a href="/games.html?sort=newest" data-i18n="home.all">VIEW ALL</a></h2><div id="newest" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
+      
+      <section><h2 class="sec"><span data-i18n="home.sale">SPECIAL OFFERS</span> <a href="/games.html?onSale=1&sort=discount" data-i18n="home.all">VIEW ALL</a></h2><div id="onSale" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
     </div>
-  </section>
-  <main>
-    <section><h2 class="sec"><span data-i18n="home.featured"></span></h2><div id="featured" class="grid bento" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
-    <section><h2 class="sec"><span data-i18n="home.best"></span> <a href="/games.html?sort=bestseller" data-i18n="home.all"></a></h2><div id="bestsellers" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
-    <section><h2 class="sec"><span data-i18n="home.new"></span> <a href="/games.html?sort=newest" data-i18n="home.all"></a></h2><div id="newest" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
-    <section><h2 class="sec"><span data-i18n="home.sale"></span> <a href="/games.html?onSale=1&sort=discount" data-i18n="home.all"></a></h2><div id="onSale" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
   </main>
-  <footer></footer>
+  <footer>
+    <div>NEXUS GAME STORE &copy; 2026. CREATING DIGITAL WORLDS.</div>
+  </footer>
   <script type="module" src="/js/home.js"></script>
 </body>
 </html>

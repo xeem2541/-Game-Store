@@ -51,6 +51,8 @@ export async function registerAndVerify(page, { name = 'ผู้ทดสอบ
   await page.fill('input[name=password]', pw);
   await page.click('button[type=submit]');
   await page.waitForURL('**/profile**');
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(500);
   await page.goto(await mailLink(email, 'verify'));
   await page.waitForSelector('#msg.ok');
   return { email, password: pw, name };

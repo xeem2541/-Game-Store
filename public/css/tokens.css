@@ -1,36 +1,36 @@
 @import url('./font-faces.css');
 
 :root {
-  /* ---- NEO-BRUTALISM CORE COLORS (Light Theme Default) ---- */
-  --c-bg: #f4f0ea; 
-  --c-surface: #ffffff; 
-  --c-surface-2: #e0e0e0; 
-  --c-border: #000000;
-  --c-text: #000000; 
-  --c-text-2: #333333; 
-  --c-accent: #ff4d00; /* Vibrant Orange */
-  --c-accent-hover: #e03b00; 
-  --c-on-accent: #000000;
-  --c-sale: #00e5ff; /* Cyan for sale */
-  --c-ok: #00d977; 
-  --c-err: #ff2a2a; 
-  --c-focus: #5d00ff; /* Purple focus */
+  /* ---- NEXUS GAME STORE (Futuristic Dark UI) ---- */
+  --c-bg: #080A0F;
+  --c-surface: #10141D;
+  --c-surface-2: #151B26;
+  --c-border: rgba(255, 255, 255, 0.10);
+  --c-text: #F5F7FA;
+  --c-text-2: #A0A7B4;
+  --c-accent: #FF5A1F;
+  --c-accent-hover: #ff7645;
+  --c-on-accent: #080A0F;
+  --c-sale: #A3FF5F;
+  --c-ok: #A3FF5F;
+  --c-err: #ff4d6d;
+  --c-focus: #8B5CF6;
 
-  /* ---- NEO-BRUTALISM TOKENS ---- */
-  --border-thick: 4px solid var(--c-border);
-  --border-thin: 2px solid var(--c-border);
-  --shadow-brutal: 6px 6px 0px var(--c-border);
-  --shadow-brutal-sm: 3px 3px 0px var(--c-border);
-  --shadow-brutal-hover: 2px 2px 0px var(--c-border);
-  --shadow-brutal-active: 0px 0px 0px var(--c-border);
+  /* ---- TOKENS ---- */
+  --border-thick: 1px solid rgba(255, 255, 255, 0.15);
+  --border-thin: 1px solid var(--c-border);
+  --shadow-brutal: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  --shadow-brutal-sm: 0 4px 16px 0 rgba(0, 0, 0, 0.3);
+  --shadow-brutal-hover: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
+  --shadow-brutal-active: 0 2px 8px 0 rgba(0, 0, 0, 0.6);
 
-  /* ---- NEUMORPHISM TOKENS (For Soft UI) ---- */
-  --neu-bg: #f4f0ea;
-  --neu-shadow: 6px 6px 12px #d0ccc7, -6px -6px 12px #ffffff;
-  --neu-shadow-sm: 3px 3px 6px #d0ccc7, -3px -3px 6px #ffffff;
-  --neu-shadow-inset: inset 4px 4px 8px #d0ccc7, inset -4px -4px 8px #ffffff;
+  /* ---- NEUMORPHISM TOKENS -> GLASSMORPHISM TOKENS ---- */
+  --neu-bg: rgba(21, 27, 38, 0.6);
+  --neu-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  --neu-shadow-sm: 0 2px 12px rgba(0,0,0,0.3);
+  --neu-shadow-inset: inset 0 1px 0 rgba(255,255,255,0.05);
 
-  /* ---- SPATIAL UI (Z-Index & Perspective) ---- */
+  /* ---- SPATIAL UI ---- */
   --z-bg: -10;
   --z-base: 1;
   --z-mid: 10;
@@ -42,8 +42,8 @@
 
   /* ---- SPACING & RADIUS ---- */
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
-  --r-sm: 0px; --r-md: 0px; --r-lg: 0px; --r-xl: 0px; --r-pill: 999px; /* Brutalism prefers sharp edges or perfectly round */
-  --r-brutal: 8px;
+  --r-sm: 4px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px; --r-pill: 999px;
+  --r-brutal: 12px; /* Smoother corners for futuristic look */
 
   /* ---- TYPOGRAPHY ---- */
   --font: "Anuphan", system-ui, sans-serif;
@@ -59,46 +59,10 @@
 
   /* ---- TRANSITIONS ---- */
   --dur-1: 150ms; --dur-2: 250ms; --dur-3: 400ms; --dur-4: 600ms;
-  --ease-out: cubic-bezier(0.19, 1, 0.22, 1); /* Sharp brutal snap */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   
   --tap: 48px;
-
-  /* Map old variables */
-  --bg: var(--c-bg);
-  --card: var(--c-surface);
-  --text: var(--c-text);
-  --muted: var(--c-text-2);
-  --accent: var(--c-accent);
-  --accent2: var(--c-focus);
-  --sale: var(--c-sale);
-  --border: var(--c-border);
-  --hover: var(--c-surface-2);
-  --topbar: var(--c-surface);
-  --danger: var(--c-err);
-  
-  color-scheme: light;
-}
-
-:root[data-theme="dark"] {
-  --c-bg: #121212; 
-  --c-surface: #1e1e1e; 
-  --c-surface-2: #2c2c2c; 
-  --c-border: #ffffff;
-  --c-text: #ffffff; 
-  --c-text-2: #aaaaaa; 
-  --c-accent: #ff4d00;
-  --c-on-accent: #ffffff;
-  
-  --shadow-brutal: 6px 6px 0px var(--c-border);
-  --shadow-brutal-sm: 3px 3px 0px var(--c-border);
-  --shadow-brutal-hover: 2px 2px 0px var(--c-border);
-  --shadow-brutal-active: 0px 0px 0px var(--c-border);
-  
-  --neu-bg: #121212;
-  --neu-shadow: 6px 6px 12px #0a0a0a, -6px -6px 12px #1a1a1a;
-  --neu-shadow-sm: 3px 3px 6px #0a0a0a, -3px -3px 6px #1a1a1a;
-  --neu-shadow-inset: inset 4px 4px 8px #0a0a0a, inset -4px -4px 8px #1a1a1a;
 
   color-scheme: dark;
 }

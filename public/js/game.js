@@ -27,7 +27,7 @@ if (game) {
   const shots = g.images?.length ? `<div class="shots reveal-scroll">${g.images.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(g.title)}" loading="lazy"></a>`).join('')}</div>` : '';
 
   $('#detail').innerHTML = `
-    <div class="game-backdrop" id="gameBackdrop" style="background-image: url('${esc(g.cover)}')"></div>
+    <div class="game-backdrop" id="gameBackdrop"></div>
     <div class="detail-hero reveal-scroll">
       <div class="detail-cover-wrap">
         <img class="detail-cover" src="${esc(g.cover)}" alt="${esc(g.title)}" width="400" height="300">
@@ -51,7 +51,7 @@ if (game) {
       
       <div class="bento-card rating">
         <div class="bento-label">RATING</div>
-        <div class="bento-val">⭐ ${g.rating} <small id="ratingCount"></small></div>
+        <div class="bento-val">⭐ <span id="ratingNow">${g.rating}</span> <small id="ratingCount"></small></div>
       </div>
       
       <div class="bento-card release">

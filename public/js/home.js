@@ -1,32 +1,61 @@
-import { api, cardHtml, remember, $, markReady, genreName, money, esc } from './common.js';
+import { api, cardHtml, remember, $, markReady, genreName, money, esc, applyI18n } from './common.js';
+import { initThreeHero } from './three-hero.js';
+import { gsap, ScrollTrigger } from './vendor.bundle.js';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const data = await api('/games/home');
 const featuredGame = data.featured[0];
 
 const heroHtml = `
-  <div class="hero-bg cinematic-bg" id="heroBg">
-    <div class="layer layer-1" style="background-image: url('${esc(featuredGame.cover)}')"></div>
-    <div class="layer layer-2"></div>
+  <div class="hero-bg" id="heroBg">
+    <!-- 3D Canvas will be injected here -->
   </div>
   <div class="hero-content cinematic-content">
-    <div class="hero-cover"><img src="${esc(featuredGame.cover)}" alt=""></div>
     <div class="hero-info">
-      <div class="tag">${esc(genreName(featuredGame.genre))}</div>
-      <h1 class="kinetic-text">${esc(featuredGame.title)}</h1>
-      <p class="hero-desc">Experience the ultimate gameplay and discover new worlds in this premium masterpiece.</p>
-      <div class="hero-price">
-        ${featuredGame.discountPercent ? `<span class="old">${money(featuredGame.listPrice)}</span>` : ''}
-        <strong>${money(featuredGame.unitPrice)}</strong>
+      <div class="tag-group">
+        <span class="tag">NEXUS EXCLUSIVE</span>
+        <span class="tag outline">${esc(genreName(featuredGame.genre))}</span>
       </div>
+      <h1 class="kinetic-text">
+        <span class="line-1" data-i18n="hero.title">เกมแท้ ราคาโดนใจ</span><br>
+      </h1>
+      <p class="hero-desc">Discover your next obsession. Explore worlds, unlock adventures, and find your next favorite game. Featured: <strong>${esc(featuredGame.title)}</strong></p>
+      
       <div class="hero-actions">
-        <a class="btn primary big" href="/game/${esc(featuredGame.slug)}">BUY NOW</a>
-        <a class="btn big" href="/game/${esc(featuredGame.slug)}">VIEW DETAILS</a>
+        <a class="btn primary big" href="/game/${esc(featuredGame.slug)}">
+          EXPLORE GAMES
+        </a>
+        <a class="btn big glass" href="/games.html?onSale=1">
+          VIEW DEALS
+        </a>
+      </div>
+      
+      <div class="hero-stats">
+        <div class="stat"><span class="val">2K+</span><span class="lbl">GAMES</span></div>
+        <div class="stat"><span class="val">24/7</span><span class="lbl">SUPPORT</span></div>
+        <div class="stat"><span class="val">INSTANT</span><span class="lbl">DELIVERY</span></div>
       </div>
     </div>
   </div>
 `;
 $('#hero').innerHTML = heroHtml;
-$('#hero').className = 'hero cinematic-hero';
+$('#hero').className = 'hero futuristic-hero';
+applyI18n($('#hero'));
+
+// Initialize 3D Hero
+initThreeHero('heroBg');
+
+// GSAP Animations for Hero
+const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+if (!mql.matches) {
+  const tl = gsap.timeline();
+  tl.fromTo('.tag-group', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', delay: 0.2 })
+    .fromTo('.kinetic-text span', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.8, stagger: 0.2, ease: 'power3.out' }, '-=0.4')
+    .fromTo('.hero-desc', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.4')
+    .fromTo('.hero-actions .btn', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out' }, '-=0.4')
+    .fromTo('.hero-stats .stat', { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.4, stagger: 0.1, ease: 'back.out(1.5)' }, '-=0.2');
+}
 
 for (const key of ['featured', 'bestsellers', 'newest', 'onSale']) {
   let items = data[key];
@@ -36,35 +65,20 @@ for (const key of ['featured', 'bestsellers', 'newest', 'onSale']) {
 }
 markReady();
 
-// Scrolltelling Observer
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.remove('scroll-hide');
-      setTimeout(() => e.target.style.transitionDelay = '', 600);
-      observer.unobserve(e.target);
-    }
+// GSAP Scroll Animations for Cards
+if (!mql.matches) {
+  document.querySelectorAll('.sec').forEach(sec => {
+    gsap.fromTo(sec, 
+      { opacity: 0, x: -30 },
+      { opacity: 1, x: 0, duration: 0.6, ease: 'power2.out', scrollTrigger: { trigger: sec, start: 'top 85%' } }
+    );
   });
-}, { rootMargin: '0px 0px -50px 0px' });
 
-document.querySelectorAll('.card').forEach((el, i) => {
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    el.classList.add('scroll-hide');
-    el.style.transitionDelay = `${(i % 4) * 0.1}s`;
-    observer.observe(el);
-  }
-});
-
-// Cinematic Parallax
-const heroBg = $('#heroBg');
-const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-if (!mql.matches && heroBg) {
-  document.addEventListener('mousemove', (e) => {
-    const x = (e.clientX / window.innerWidth - 0.5) * 2;
-    const y = (e.clientY / window.innerHeight - 0.5) * 2;
-    heroBg.style.transform = `translate(${x * -6}px, ${y * -6}px)`;
-    const cover = $('.hero-cover img');
-    if (cover) cover.style.transform = `perspective(1000px) rotateX(${-y * 2}deg) rotateY(${x * 2}deg) scale(1.03) translate(${x * 3}px, ${y * 3}px)`;
+  document.querySelectorAll('.grid').forEach(grid => {
+    const cards = grid.querySelectorAll('.card');
+    gsap.fromTo(cards,
+      { opacity: 0, y: 40 },
+      { opacity: 1, y: 0, duration: 0.6, stagger: 0.05, ease: 'power2.out', scrollTrigger: { trigger: grid, start: 'top 85%' } }
+    );
   });
 }
