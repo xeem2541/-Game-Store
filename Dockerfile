@@ -6,6 +6,7 @@ ARG NODE_VERSION=24
 
 # ---------- 1) build: ติดตั้งทุก dependency แล้ว bundle/minify หน้าเว็บลง dist/ ----------
 FROM node:${NODE_VERSION}-bookworm-slim AS build
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -17,6 +18,7 @@ RUN npm run build
 
 # ---------- 2) deps: เฉพาะ production dependencies ----------
 FROM node:${NODE_VERSION}-bookworm-slim AS deps
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
