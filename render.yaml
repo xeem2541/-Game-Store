@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: game-store
+    runtime: docker
+    plan: free
+    region: singapore
+    healthCheckPath: /healthz
+    dockerCommand: sh -c "node server/db/seed.js; node server/index.js"
+    envVars:
+      - key: NODE_ENV
+        value: development
+      - key: USE_DIST
+        value: "1"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: KEY_ENCRYPTION_SECRET
+        generateValue: true

@@ -18,7 +18,7 @@ if (!isProd && stripeSecret && !/^(sk|rk)_test_/.test(stripeSecret)) {
   throw new Error('STRIPE_SECRET_KEY ที่ไม่ใช่โหมดทดสอบ (sk_test_...) ใช้ได้เฉพาะเมื่อ NODE_ENV=production');
 }
 
-const appUrl = (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
+const appUrl = (process.env.APP_URL || process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 // TRUST_PROXY: เว้นว่าง/false = ไม่เชื่อ header จาก proxy | true | จำนวน hop (เช่น 1) | 'loopback' ฯลฯ (รูปแบบเดียวกับ express "trust proxy")
 function parseTrustProxy(v) {
