@@ -15,15 +15,15 @@ const heroHtml = `
     <div class="hero-info">
       <div class="tag-group">
         <span class="tag">NEXUS EXCLUSIVE</span>
-        <span class="tag outline">${esc(genreName(featuredGame.genre))}</span>
+        <span class="tag outline">${esc(featuredGame ? genreName(featuredGame.genre) : 'NEW ARRIVALS')}</span>
       </div>
       <h1 class="kinetic-text">
         <span class="line-1" data-i18n="hero.title">เกมแท้ ราคาโดนใจ</span><br>
       </h1>
-      <p class="hero-desc">Discover your next obsession. Explore worlds, unlock adventures, and find your next favorite game. Featured: <strong>${esc(featuredGame.title)}</strong></p>
+      <p class="hero-desc">Discover your next obsession. Explore worlds, unlock adventures, and find your next favorite game. ${featuredGame ? `Featured: <strong>${esc(featuredGame.title)}</strong>` : ''}</p>
       
       <div class="hero-actions">
-        <a class="btn primary big" href="/game/${esc(featuredGame.slug)}">
+        <a class="btn primary big" href="${featuredGame ? `/game/${esc(featuredGame.slug)}` : '/games.html'}">
           EXPLORE GAMES
         </a>
         <a class="btn big glass" href="/games.html?onSale=1">
