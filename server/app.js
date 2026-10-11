@@ -113,8 +113,7 @@ export function createApp() {
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, _next) => {
     if (err instanceof ZodError) {
-      const first = err.issues[0];
-      return res.status(400).json({ error: first?.message && !first.message.startsWith('Invalid') ? first.message : 'ข้อมูลไม่ถูกต้อง', details: err.issues });
+      return res.status(400).json({ error: err.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง', details: err.issues });
     }
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, code: err.code, params: err.params });
     if (err.name === 'MulterError') {

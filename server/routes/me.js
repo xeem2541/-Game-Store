@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { db } from '../db/index.js';
 import { publicUser, requireAuth, revokeSessions, setAuthCookie } from '../middleware/auth.js';
@@ -8,6 +7,7 @@ import { decrypt } from '../services/crypto.js';
 import { HttpError } from '../services/errors.js';
 import { sendMail } from '../services/mail.js';
 import { expirePending } from '../services/orders.js';
+import { checkPassword, hashPassword, isUniqueViolation } from '../services/passwords.js';
 import { withFinal } from './games.js';
 import { passwordSchema, sendVerificationMail } from './auth.js';
 
@@ -30,7 +30,7 @@ meRouter.put('/', async (req, res) => {
   if (changed) {
     // เปลี่ยนอีเมล = เปลี่ยนช่องทางกู้บัญชี → ต้องยืนยันด้วยรหัสผ่าน (ผู้ที่ได้เซสชันไปอย่างเดียวยึดบัญชีไม่ได้)
     if (!body.currentPassword) throw new HttpError(400, 'กรุณากรอกรหัสผ่านปัจจุบันเพื่อเปลี่ยนอีเมล', 'PASSWORD_REQUIRED');
-    if (!(await bcrypt.compare(body.currentPassword, req.user.password_hash))) {
+    if (!(await checkPassword(req.user, body.currentPassword))) {
       throw new HttpError(400, 'รหัสผ่านเดิมไม่ถูกต้อง', 'WRONG_PASSWORD');
     }
     if (db.prepare('SELECT 1 FROM users WHERE email = ? AND id != ?').get(body.email, req.user.id)) {
@@ -42,7 +42,7 @@ meRouter.put('/', async (req, res) => {
     db.prepare('UPDATE users SET name = ?, email = ?, email_verified = ? WHERE id = ?')
       .run(body.name, body.email, changed ? 0 : req.user.email_verified, req.user.id);
   } catch (e) {
-    if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') return res.status(409).json({ error: 'อีเมลนี้ถูกใช้งานแล้ว' }); // สมัคร/เปลี่ยนชนกันพร้อมกัน
+    if (isUniqueViolation(e)) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้งานแล้ว' }); // สมัคร/เปลี่ยนชนกันพร้อมกัน
     throw e;
   }
   let user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
@@ -62,10 +62,10 @@ meRouter.put('/', async (req, res) => {
 
 meRouter.post('/password', async (req, res) => {
   const body = z.object({ currentPassword: z.string().min(1).max(72), newPassword: passwordSchema }).parse(req.body);
-  if (!(await bcrypt.compare(body.currentPassword, req.user.password_hash))) {
+  if (!(await checkPassword(req.user, body.currentPassword))) {
     return res.status(400).json({ error: 'รหัสผ่านเดิมไม่ถูกต้อง' });
   }
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await bcrypt.hash(body.newPassword, 10), req.user.id);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await hashPassword(body.newPassword), req.user.id);
   // เพิกถอนเซสชันอื่นทั้งหมด แล้วออก token ใหม่ให้อุปกรณ์ที่ใช้อยู่ (ไม่ต้องล็อกอินใหม่)
   setAuthCookie(res, revokeSessions(req.user.id));
   res.json({ ok: true });

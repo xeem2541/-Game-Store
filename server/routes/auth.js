@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { db } from '../db/index.js';
 import { clearAuthCookie, publicUser, requireAuth, revokeSessions, setAuthCookie } from '../middleware/auth.js';
 import { sendMail } from '../services/mail.js';
+import { checkPassword, hashPassword, isUniqueViolation } from '../services/passwords.js';
 import { consumeToken, createToken } from '../services/tokens.js';
 
 export const authRouter = Router();
@@ -21,8 +21,6 @@ const email = z.string().trim().toLowerCase().email().max(254);
 const password = z.string().min(8, 'รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร').max(72);
 export const passwordSchema = password;
 
-const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', 10);
-
 export function sendVerificationMail(user) {
   const token = createToken('email_verifications', user.id, 24 * HOUR);
   return sendMail({
@@ -37,9 +35,16 @@ authRouter.post('/register', limiter, async (req, res) => {
   if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(body.email)) {
     return res.status(409).json({ error: 'อีเมลนี้ถูกใช้งานแล้ว' });
   }
-  const hash = await bcrypt.hash(body.password, 10);
-  const { lastInsertRowid } = db.prepare("INSERT INTO users (email, name, password_hash, role) VALUES (?, ?, ?, 'user')")
-    .run(body.email, body.name, hash);
+  const hash = await hashPassword(body.password);
+  let lastInsertRowid;
+  try {
+    ({ lastInsertRowid } = db.prepare("INSERT INTO users (email, name, password_hash, role) VALUES (?, ?, ?, 'user')")
+      .run(body.email, body.name, hash));
+  } catch (e) {
+    // สมัครอีเมลเดียวกันพร้อมกันสองคำขอ: คำขอหลังชน UNIQUE ระหว่างรอ bcrypt
+    if (isUniqueViolation(e)) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้งานแล้ว' });
+    throw e;
+  }
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(lastInsertRowid);
   await sendVerificationMail(user);
   setAuthCookie(res, user);
@@ -49,9 +54,7 @@ authRouter.post('/register', limiter, async (req, res) => {
 authRouter.post('/login', limiter, async (req, res) => {
   const body = z.object({ email, password: z.string().min(1).max(72) }).parse(req.body);
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(body.email);
-  // เทียบแฮชเสมอ แม้ไม่พบผู้ใช้ เพื่อไม่ให้เวลาตอบสนองบอกใบ้ว่ามีอีเมลนี้
-  const ok = await bcrypt.compare(body.password, user?.password_hash ?? DUMMY_HASH);
-  if (!user || !ok) return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
+  if (!(await checkPassword(user, body.password))) return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   if (user.status !== 'active') return res.status(403).json({ error: 'บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อร้านค้า', code: 'ACCOUNT_SUSPENDED' });
   setAuthCookie(res, user);
   res.json({ user: publicUser(user) });
@@ -84,17 +87,17 @@ authRouter.post('/resend', limiter, requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ตอบเหมือนกันเสมอ ไม่ว่ามีอีเมลนี้ในระบบหรือไม่
-authRouter.post('/forgot', limiter, async (req, res) => {
+// ตอบเหมือนกันเสมอ ไม่ว่ามีอีเมลนี้ในระบบหรือไม่ — และไม่รอส่งอีเมล (เวลาตอบสนองต้องไม่บอกใบ้ว่ามีบัญชีนี้)
+authRouter.post('/forgot', limiter, (req, res) => {
   const body = z.object({ email }).parse(req.body);
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(body.email);
   if (user) {
     const token = createToken('password_resets', user.id, HOUR);
-    await sendMail({
+    sendMail({
       to: user.email,
       subject: 'รีเซ็ตรหัสผ่าน – Game Store',
       text: `สวัสดี ${user.name},\n\nตั้งรหัสผ่านใหม่ได้ที่ลิงก์นี้ (หมดอายุใน 1 ชั่วโมง ใช้ได้ครั้งเดียว):\n${config.appUrl}/reset?token=${token}\n\nถ้าคุณไม่ได้ขอ ให้ละเว้นอีเมลนี้\n`,
-    });
+    }).catch((e) => console.error('ส่งอีเมลรีเซ็ตรหัสผ่านไม่สำเร็จ:', e.message));
   }
   res.json({ ok: true });
 });
@@ -103,7 +106,7 @@ authRouter.post('/reset', limiter, async (req, res) => {
   const body = z.object({ token: z.string().min(10).max(200), password }).parse(req.body);
   const userId = consumeToken('password_resets', body.token);
   if (!userId) return res.status(400).json({ error: 'ลิงก์รีเซ็ตไม่ถูกต้องหรือหมดอายุแล้ว' });
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await bcrypt.hash(body.password, 10), userId);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await hashPassword(body.password), userId);
   revokeSessions(userId); // ใครที่ถือเซสชันเก่าอยู่ (เช่น ผู้ที่ขโมยบัญชี) ถูกออกจากระบบทันที
   res.json({ ok: true });
 });

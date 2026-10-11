@@ -29,6 +29,21 @@ test('สมัครสมาชิก: ตรวจข้อมูลไม่
   assert.equal((await c.post('/api/auth/register', { ...creds, email: 'SomChai@Example.com' })).status, 409); // ไม่สนตัวพิมพ์
 });
 
+test('สมัครอีเมลเดียวกันพร้อมกัน: ได้บัญชีเดียว อีกคำขอได้ 409 (ไม่ใช่ 500)', async () => {
+  const body = { ...creds, email: `race-${Date.now()}@example.com` };
+  const results = await Promise.all([0, 1, 2, 3].map(async () => (await newClient()).post('/api/auth/register', body)));
+  assert.deepEqual(results.map((r) => r.status).sort(), [201, 409, 409, 409]);
+});
+
+test('ข้อความ error ของการตรวจข้อมูล: ข้อความที่กำหนดเองแสดงตามเดิม, ข้อความเริ่มต้นของ zod เป็นข้อความทั่วไปภาษาไทย', async () => {
+  const c = await newClient();
+  const short = await c.post('/api/auth/register', { ...creds, email: 'y@example.com', password: 'short' });
+  assert.equal(short.data.error, 'รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');
+  const bad = await c.post('/api/auth/register', { ...creds, email: 'not-an-email' });
+  assert.equal(bad.data.error, 'ข้อมูลไม่ถูกต้อง');
+  assert.equal(bad.data.details[0].path[0], 'email');
+});
+
 test('login: สำเร็จ / ผิดรหัส / ไม่มีผู้ใช้ ตอบข้อความเดียวกัน', async () => {
   const c = await newClient();
   const ok = await c.post('/api/auth/login', { email: creds.email, password: creds.password });

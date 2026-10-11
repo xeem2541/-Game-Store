@@ -18,8 +18,6 @@ export function getStripe() {
   return client;
 }
 
-// ตรวจลายเซ็น webhook ด้วย raw body — ไม่ต้องใช้เครือข่าย
-export function verifyWebhook(rawBody, signature) {
-  const s = new Stripe(config.stripe.secretKey || 'sk_test_unused');
-  return s.webhooks.constructEvent(rawBody, signature, config.stripe.webhookSecret);
-}
+// ตรวจลายเซ็น webhook ด้วย raw body — ไม่ต้องใช้เครือข่ายและไม่ต้องสร้าง client (ใช้ helper แบบ static)
+export const verifyWebhook = (rawBody, signature) =>
+  Stripe.webhooks.constructEvent(rawBody, signature, config.stripe.webhookSecret);

@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { config } from '../../config.js';
 import { db } from '../../db/index.js';
 import { adminAuth, adminOnly, clearAdminCookie, clearMfaPendingCookie, permissionsOf, requireMfa, requirePerm, setAdminCookie, setMfaPendingCookie, staffOrAdmin } from '../../middleware/adminAuth.js';
 import { audit } from '../../services/audit.js';
+import { checkPassword } from '../../services/passwords.js';
 import { auditRouter } from './audit.js';
 import { couponsAdminRouter } from './coupons.js';
 import { dashboardRouter } from './dashboard.js';
@@ -19,7 +19,6 @@ import { usersAdminRouter } from './users.js';
 
 export const adminRouter = Router();
 
-const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', 10);
 const loginLimiter = rateLimit({
   windowMs: 15 * 60_000, limit: config.authRateLimit, standardHeaders: true, legacyHeaders: false,
   message: { error: 'พยายามหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่' },
@@ -30,9 +29,9 @@ const publicAdmin = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.ro
 adminRouter.post('/auth/login', loginLimiter, async (req, res) => {
   const body = z.object({ email: z.string().trim().toLowerCase().email().max(254), password: z.string().min(1).max(72) }).parse(req.body);
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(body.email);
-  const ok = await bcrypt.compare(body.password, user?.password_hash ?? DUMMY_HASH);
+  const ok = await checkPassword(user, body.password);
   // ผู้ใช้ทั่วไป/รหัสผิด/บัญชีถูกระงับ ตอบข้อความเดียวกัน ไม่เปิดเผยว่าอีเมลนี้เป็นแอดมินหรือไม่
-  if (!user || !ok || user.status !== 'active' || !['staff', 'admin'].includes(user.role)) {
+  if (!ok || user.status !== 'active' || !['staff', 'admin'].includes(user.role)) {
     audit({ ip: req.ip }, 'admin.login_failed', 'user', null, { email: body.email });
     return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   }

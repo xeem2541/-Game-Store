@@ -59,7 +59,9 @@ export async function createCheckout(user, order) {
       expires_at: Math.floor(sessionExpiresAt / 1000),
     }, { idempotencyKey: `order-${order.id}-attempt-${attempt}` });
   } catch (e) {
-    throw new HttpError(502, `สร้างหน้าชำระเงินไม่สำเร็จ: ${e.message}`, 'PAYMENT_PROVIDER_ERROR');
+    // รายละเอียดจาก Stripe (อาจมีข้อมูลบัญชี/การตั้งค่าร้าน) เก็บไว้ใน log เท่านั้น ลูกค้าเห็นข้อความทั่วไป
+    console.error(`สร้าง Checkout Session ของออเดอร์ #${order.id} ไม่สำเร็จ:`, e.type ?? '', e.message);
+    throw new HttpError(502, 'สร้างหน้าชำระเงินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'PAYMENT_PROVIDER_ERROR');
   }
 
   db.transaction(() => {

@@ -27,6 +27,7 @@ const fakeStripe = {
   checkout: {
     sessions: {
       async create(params, opts) {
+        if (fakeStripe.failCreate) throw Object.assign(new Error('No such customer: cus_SECRET_acct_123'), { type: 'StripeInvalidRequestError' });
         const id = `cs_test_${++sessionN}`;
         calls.create.push({ params, opts, id });
         return { id, url: `https://checkout.stripe.test/c/${id}`, payment_intent: null };
@@ -635,4 +636,16 @@ test('webhook ชนิดที่ไม่ได้ใช้: ตอบ 200 (i
   const w = await webhook('customer.created', { id: 'cus_1', object: 'customer' });
   assert.equal(w.status, 200);
   assert.equal(w.data.result, 'ignored');
+});
+
+test('สร้าง Checkout Session ไม่สำเร็จ: ลูกค้าได้ข้อความทั่วไป ไม่เห็นรายละเอียดจาก Stripe', async () => {
+  const c = await makeUser(srv.url);
+  const order = await buy(c, ['dragon-realm']);
+  fakeStripe.failCreate = true;
+  const r = await c.post(`/api/orders/${order.id}/pay`, {});
+  fakeStripe.failCreate = false;
+  assert.equal(r.status, 502);
+  assert.equal(r.data.code, 'PAYMENT_PROVIDER_ERROR');
+  assert.ok(!JSON.stringify(r.data).includes('cus_SECRET'), 'ห้ามส่งข้อความจาก Stripe ให้ลูกค้า');
+  assert.equal((await c.post(`/api/orders/${order.id}/pay`, {})).status, 200, 'ลองใหม่ได้');
 });
