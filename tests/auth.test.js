@@ -1,6 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { Client, outbox, startServer, tokenFrom } from './helpers.js';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { Client, makeAdminClient, makeUser, outbox, startServer, tokenFrom } from './helpers.js';
 
 let srv;
 before(async () => { srv = await startServer(); });
@@ -160,4 +161,70 @@ test('รีวิว: 1 คน/1 เกม, แก้ไข, ลบ, คะแ�
   g = (await c.get('/api/games/dragon-realm')).data;
   assert.equal(g.rating, base); // กลับไปใช้คะแนนตั้งต้น
   assert.equal((await c.get('/api/games/99999/reviews')).status, 404);
+});
+
+// ---------- เพิกถอนเซสชัน (token_version) ----------
+// สำเนาคุกกี้ของ client = จำลองผู้ที่ขโมย token ไปใช้บนอีกเครื่อง
+const cloneSession = (c) => Object.assign(new Client(srv.url), { cookies: { ...c.cookies } });
+
+test('เปลี่ยนรหัสผ่าน: เซสชันอื่นถูกเพิกถอน แต่เครื่องที่เปลี่ยนยังล็อกอินอยู่', async () => {
+  const c = await makeUser(srv.url);
+  const stolen = cloneSession(c);
+  assert.ok((await stolen.get('/api/auth/me')).data.user);
+  assert.equal((await c.post('/api/me/password', { currentPassword: c.password, newPassword: 'rotated-pass-123' })).status, 200);
+  assert.equal((await stolen.get('/api/auth/me')).data.user, null, 'token เก่าต้องใช้ไม่ได้');
+  assert.equal((await stolen.get('/api/me')).status, 401);
+  assert.equal((await c.get('/api/auth/me')).data.user.email, c.email, 'เครื่องที่เปลี่ยนรหัสได้ token ใหม่');
+});
+
+test('รีเซ็ตรหัสผ่าน: เซสชันที่มีอยู่ทั้งหมดถูกเพิกถอน', async () => {
+  const c = await makeUser(srv.url);
+  const stolen = cloneSession(c);
+  await (await newClient()).post('/api/auth/forgot', { email: c.email });
+  const token = tokenFrom([...outbox].reverse().find((m) => m.to === c.email && m.subject.includes('รีเซ็ต')));
+  assert.equal((await (await newClient()).post('/api/auth/reset', { token, password: 'after-reset-123' })).status, 200);
+  assert.equal((await stolen.get('/api/auth/me')).data.user, null);
+  assert.equal((await c.get('/api/auth/me')).data.user, null);
+});
+
+test('ออกจากระบบทุกอุปกรณ์: token ทุกตัวใช้ไม่ได้, ล็อกอินใหม่ได้ตามปกติ', async () => {
+  const c = await makeUser(srv.url);
+  const other = cloneSession(c);
+  assert.equal((await (await newClient()).post('/api/auth/logout-all')).status, 401); // ต้องล็อกอิน
+  assert.equal((await c.post('/api/auth/logout-all')).status, 200);
+  assert.equal((await other.get('/api/auth/me')).data.user, null);
+  assert.equal((await c.get('/api/auth/me')).data.user, null);
+  const again = await newClient();
+  assert.equal((await again.post('/api/auth/login', { email: c.email, password: c.password })).status, 200);
+  assert.ok((await again.get('/api/auth/me')).data.user);
+});
+
+test('เซสชันแอดมินถูกเพิกถอนเมื่อเปลี่ยนรหัสผ่าน', async () => {
+  const a = await makeAdminClient(srv.url);
+  const stolen = cloneSession(a);
+  assert.equal((await stolen.get('/api/admin/auth/me')).status, 200);
+  assert.equal((await a.post('/api/me/password', { currentPassword: a.password, newPassword: 'admin-rotated-123' })).status, 200);
+  assert.equal((await stolen.get('/api/admin/auth/me')).status, 401);
+});
+
+// ---------- ค่าตั้งค่าแบบ fail-closed ----------
+const devEnv = (extra = {}) => {
+  const env = { ...process.env, NODE_ENV: 'development', DATABASE_PATH: ':memory:', LOG_REQUESTS: '0', JWT_SECRET: 'dev-jwt-secret-for-config-test-000000', KEY_ENCRYPTION_SECRET: 'dev-key-secret-for-config-test-00000', DEV_PAY: '', ...extra };
+  for (const [k, v] of Object.entries(env)) if (v === undefined) delete env[k];
+  return env;
+};
+const readConfig = (env) => JSON.parse(execFileSync(process.execPath, ['-e', "import('./server/config.js').then(({ config }) => console.log(JSON.stringify({ devPay: config.devPay })))"], { env, cwd: process.cwd() }).toString().trim().split('\n').pop());
+
+test('ไม่ตั้ง JWT_SECRET / KEY_ENCRYPTION_SECRET → ไม่ยอมเริ่ม แม้ไม่ใช่ production (ไม่มีค่าเริ่มต้นที่เดาได้)', () => {
+  for (const name of ['JWT_SECRET', 'KEY_ENCRYPTION_SECRET']) {
+    // dotenv ไม่ทับค่าที่มีอยู่แล้ว → ตั้งเป็นค่าว่างเพื่อให้แน่ใจว่าไม่ถูกเติมจากไฟล์ .env ในเครื่อง
+    const r = spawnSync(process.execPath, ['-e', "import('./server/config.js')"], { env: devEnv({ [name]: '' }), cwd: process.cwd(), encoding: 'utf8' });
+    assert.notEqual(r.status, 0, `${name} ว่างต้องสตาร์ทไม่ได้`);
+    assert.ok(r.stderr.includes(name), `ข้อความ error ควรบอกชื่อ ${name}`);
+  }
+});
+
+test('จำลองชำระเงิน (devPay) ปิดเป็นค่าเริ่มต้น: เปิดได้เฉพาะ DEV_PAY=1 นอก production', () => {
+  assert.equal(readConfig(devEnv()).devPay, false, 'ลืมตั้ง NODE_ENV=production ก็ต้องไม่มีปุ่มจ่ายฟรี');
+  assert.equal(readConfig(devEnv({ DEV_PAY: '1' })).devPay, true);
 });

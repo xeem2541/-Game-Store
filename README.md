@@ -85,8 +85,9 @@ docker compose ps                      # คอลัมน์ STATUS ควร�
 | `CORS_ORIGINS` | = `APP_URL` | โดเมนที่เรียก API ข้ามเว็บได้ (คั่น `,`) |
 | `LOG_REQUESTS` | `1` | `0` = ปิด access log (log เก็บแค่ method/path/status) |
 | `USE_DIST` | ว่าง | `1` = ใช้ `dist/` แม้ไม่ใช่ production |
-| `JWT_SECRET` | – | **บังคับใน production** ≥32 ตัว สุ่ม |
-| `KEY_ENCRYPTION_SECRET` | – | **บังคับใน production** ≥32 ตัว สุ่ม ต่างจาก JWT_SECRET — **ห้ามเปลี่ยน/ห้ามทำหาย** (โค้ดเกมที่เข้ารหัสไว้จะถอดไม่ได้) |
+| `JWT_SECRET` | – | **บังคับทุกโหมด** (ยกเว้นตอนรันเทส) — production ต้อง ≥32 ตัว สุ่ม · เปลี่ยนค่า = ทุกคนต้องล็อกอินใหม่ |
+| `KEY_ENCRYPTION_SECRET` | – | **บังคับทุกโหมด** (ยกเว้นตอนรันเทส) — production ต้อง ≥32 ตัว สุ่ม ต่างจาก JWT_SECRET — **ห้ามเปลี่ยน/ห้ามทำหาย** (โค้ดเกมที่เข้ารหัสไว้จะถอดไม่ได้) |
+| `DEV_PAY` | ว่าง | `1` = เปิดปุ่ม "จำลองการชำระเงิน" สำหรับพัฒนาในเครื่อง (ว่าง = ปิด; production เปิดไม่ได้) |
 | `AUTH_RATE_LIMIT` / `API_RATE_LIMIT` | `20` / `300` | จำกัดคำขอต่อ IP (login ต่อ 15 นาที / API ต่อนาที) |
 | `STRIPE_SECRET_KEY` | – | `sk_test_…` / `sk_live_…` |
 | `STRIPE_PUBLISHABLE_KEY` | – | `pk_…` |

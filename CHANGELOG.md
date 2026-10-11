@@ -2,6 +2,13 @@
 
 รูปแบบอิง [Keep a Changelog](https://keepachangelog.com/) · เวอร์ชันตาม [SemVer](https://semver.org/lang/th/)
 
+## [Unreleased]
+
+### Security
+- ไม่มีค่าเริ่มต้นของ `JWT_SECRET` / `KEY_ENCRYPTION_SECRET` อีกต่อไป — ไม่ตั้ง = ไม่ยอมเริ่ม ทุกโหมดยกเว้น `NODE_ENV=test`
+- การจำลองชำระเงินต้องเปิดเองด้วย `DEV_PAY=1` (เดิมเปิดอัตโนมัติเมื่อไม่ใช่ production)
+- เพิกถอนเซสชันได้: `users.token_version` ฝังใน JWT — เปลี่ยน/รีเซ็ตรหัสผ่าน หรือ `POST /api/auth/logout-all` ทำให้ token เก่าทั้งหมด (ลูกค้า + แอดมิน) ใช้ไม่ได้ทันที
+
 ## [1.0.0] — 2026-10-08
 
 รุ่นแรกที่ครบทั้ง 6 เฟส (ยังไม่เคยใช้กับ Stripe/SMTP/Docker จริง — ดู `docs/CHECKLIST.md`)

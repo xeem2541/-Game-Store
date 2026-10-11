@@ -43,7 +43,14 @@ const views = {
         <small>${t('auth.passwordHint')}</small>
         <p class="msg" id="msg" role="alert"></p>
         <button class="btn primary" type="submit">${t('common.save')}</button>
-      </form>`;
+      </form>
+      <div class="auth-form">
+        <small>${t('profile.logoutAllNote')}</small>
+        <button class="btn danger" id="logoutAllBtn" type="button">${t('profile.logoutAll')}</button>
+      </div>`;
+    $('#logoutAllBtn').onclick = async () => {
+      try { await api('/auth/logout-all', { method: 'POST', body: {} }); location.href = '/login'; } catch (err) { toast(err.message); }
+    };
     $('#pwForm').onsubmit = async (e) => {
       e.preventDefault();
       const f = e.target;

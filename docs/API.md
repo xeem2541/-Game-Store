@@ -32,7 +32,8 @@
 |---|---|---|---|
 | POST | `/register` | 🌐 | `{email,password,name}` → `201` + ล็อกอิน + ส่งอีเมลยืนยัน |
 | POST | `/login` | 🌐 | `{email,password}` |
-| POST | `/logout` | 🌐 | ล้างคุกกี้ |
+| POST | `/logout` | 🌐 | ล้างคุกกี้ (เฉพาะเครื่องนี้) |
+| POST | `/logout-all` | 👤 | ออกจากระบบทุกอุปกรณ์ — เพิกถอน token ทุกตัวของผู้ใช้ (รวมเซสชันแอดมิน) |
 | GET | `/me` | 🌐 | `{user}` หรือ `{user:null}` |
 | GET | `/verify?token=` | 🌐 | ยืนยันอีเมล |
 | POST | `/resend` | 👤 | ส่งอีเมลยืนยันอีกครั้ง |

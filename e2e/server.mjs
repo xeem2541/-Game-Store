@@ -12,7 +12,7 @@ export const LOG = path.join(tmp, 'server.log');
 Object.assign(process.env, {
   NODE_ENV: 'development', PORT: '3199', APP_URL: 'http://localhost:3199', USE_DIST: '1',
   DATABASE_PATH: path.join(tmp, 'e2e.db'), JWT_SECRET: 'e2e-jwt-secret-0123456789abcdef0123456789', KEY_ENCRYPTION_SECRET: 'e2e-key-secret-0123456789abcdef0123456789',
-  STRIPE_WEBHOOK_SECRET: 'whsec_e2e_local_only_secret_value', STRIPE_SECRET_KEY: '', SMTP_HOST: '', API_RATE_LIMIT: '100000', AUTH_RATE_LIMIT: '1000', LOG_REQUESTS: '0',
+  STRIPE_WEBHOOK_SECRET: 'whsec_e2e_local_only_secret_value', STRIPE_SECRET_KEY: '', SMTP_HOST: '', API_RATE_LIMIT: '100000', AUTH_RATE_LIMIT: '1000', LOG_REQUESTS: '0', DEV_PAY: '1',
 });
 const tee = (fn) => (...a) => { fs.appendFileSync(LOG, a.map(String).join(' ') + '\n'); fn(...a); };
 console.log = tee(console.log.bind(console));

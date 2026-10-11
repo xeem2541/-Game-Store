@@ -18,6 +18,15 @@ if (!isProd && stripeSecret && !/^(sk|rk)_test_/.test(stripeSecret)) {
   throw new Error('STRIPE_SECRET_KEY ที่ไม่ใช่โหมดทดสอบ (sk_test_...) ใช้ได้เฉพาะเมื่อ NODE_ENV=production');
 }
 
+// ความลับต้องตั้งเองเสมอ (ยกเว้นตอนรันเทส) — ไม่มีค่าเริ่มต้นที่ใครก็รู้ ลืมตั้ง NODE_ENV=production บนเซิร์ฟเวอร์จริงก็ปลอม token ไม่ได้
+const isTest = env === 'test';
+function requiredSecret(name, testFallback) {
+  const v = process.env[name];
+  if (v) return v;
+  if (isTest) return testFallback;
+  throw new Error(`ยังไม่ได้ตั้ง ${name} ใน .env (คัดลอกจาก .env.example แล้วใส่ค่าสุ่ม: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")`);
+}
+
 const appUrl = (process.env.APP_URL || process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 // TRUST_PROXY: เว้นว่าง/false = ไม่เชื่อ header จาก proxy | true | จำนวน hop (เช่น 1) | 'loopback' ฯลฯ (รูปแบบเดียวกับ express "trust proxy")
@@ -39,10 +48,11 @@ export const config = {
   appUrl,
   corsOrigins: (process.env.CORS_ORIGINS || appUrl).split(',').map((s) => s.trim().replace(/\/$/, '')).filter(Boolean),
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
-  jwtSecret: process.env.JWT_SECRET || 'dev-only-secret',
-  keySecret: process.env.KEY_ENCRYPTION_SECRET || 'dev-only-key-encryption-secret',
+  jwtSecret: requiredSecret('JWT_SECRET', 'test-only-jwt-secret'),
+  keySecret: requiredSecret('KEY_ENCRYPTION_SECRET', 'test-only-key-encryption-secret'),
   orderExpiryMinutes: Number(process.env.ORDER_EXPIRY_MINUTES) || 30,
-  devPay: !isProd, // ปุ่ม/endpoint จำลองการชำระเงิน เปิดเฉพาะนอก production
+  // ปุ่ม/endpoint จำลองการชำระเงิน: ต้องเปิดเองด้วย DEV_PAY=1 และไม่มีวันเปิดใน production (ลืมตั้งค่า = ปิด)
+  devPay: !isProd && process.env.DEV_PAY === '1',
   logRequests: env !== 'test' && process.env.LOG_REQUESTS !== '0',
   apiRateLimit: Number(process.env.API_RATE_LIMIT) || 300, // คำขอ /api ต่อนาทีต่อ IP
   authRateLimit: Number(process.env.AUTH_RATE_LIMIT) || 20, // ต่อ 15 นาที ต่อ IP

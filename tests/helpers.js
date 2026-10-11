@@ -9,6 +9,7 @@ process.env.STRIPE_SECRET_KEY = '';
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret_for_unit_tests';
 process.env.KEY_ENCRYPTION_SECRET = 'test-key-encryption-secret-0123456789abcdef';
 process.env.EMAIL_RESEND_LIMIT = '5';
+process.env.DEV_PAY = '1';
 
 const { createApp } = await import('../server/app.js');
 const { seedGames, seedKeys } = await import('../server/db/seed.js');

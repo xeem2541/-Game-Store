@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import { db } from '../db/index.js';
+import { tokenIsCurrent } from './auth.js';
 
 // เซสชันแอดมินแยกจากเซสชันลูกค้า: คุกกี้คนละตัว, SameSite=Strict, หมดอายุ 2 ชั่วโมง
 // คุกกี้ลูกค้า (token) ไม่ให้สิทธิ์แอดมินใด ๆ แม้ผู้ใช้นั้นจะมี role เป็น admin ก็ตาม — ต้องล็อกอินผ่าน /admin/login ทุกครั้ง
@@ -8,8 +9,8 @@ export const ADMIN_COOKIE = 'admin_token';
 export const ADMIN_SESSION_MS = 2 * 3600 * 1000;
 export const ADMIN_ROLES = ['staff', 'admin'];
 
-export function setAdminCookie(res, userId) {
-  const token = jwt.sign({ sub: userId, aud: 'admin' }, config.jwtSecret, { expiresIn: Math.floor(ADMIN_SESSION_MS / 1000) });
+export function setAdminCookie(res, user) {
+  const token = jwt.sign({ sub: user.id, tv: user.token_version, aud: 'admin' }, config.jwtSecret, { expiresIn: Math.floor(ADMIN_SESSION_MS / 1000) });
   res.cookie(ADMIN_COOKIE, token, { httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: ADMIN_SESSION_MS, path: '/' });
 }
 export const clearAdminCookie = (res) => res.clearCookie(ADMIN_COOKIE, { path: '/' });
@@ -19,9 +20,9 @@ export function adminFromCookies(cookies) {
   const token = cookies?.[ADMIN_COOKIE];
   if (!token) return null;
   try {
-    const { sub } = jwt.verify(token, config.jwtSecret, { audience: 'admin' });
-    const u = db.prepare('SELECT * FROM users WHERE id = ?').get(sub);
-    return u && u.status === 'active' && ADMIN_ROLES.includes(u.role) ? u : null;
+    const payload = jwt.verify(token, config.jwtSecret, { audience: 'admin' });
+    const u = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.sub);
+    return u && u.status === 'active' && ADMIN_ROLES.includes(u.role) && tokenIsCurrent(payload, u) ? u : null;
   } catch {
     return null;
   }

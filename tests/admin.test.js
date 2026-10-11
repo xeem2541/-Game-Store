@@ -632,8 +632,9 @@ test('Migration: รันซ้ำได้ ไม่คูณราคาซ�
   migrate(legacy);
   migrate(legacy);
   assert.deepEqual(snap(), { prices: [129000, 0, 19900], roles: ['user', 'admin'] });
-  assert.equal(legacy.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 6);
+  assert.equal(legacy.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 7);
   assert.equal(legacy.prepare('SELECT status FROM users').get().status, 'active');
+  assert.equal(legacy.prepare('SELECT token_version AS v FROM users').get().v, 0);
   assert.equal(legacy.prepare('SELECT low_stock_threshold AS t FROM games').get().t, 5);
   assert.ok(legacy.prepare('PRAGMA table_info(game_keys)').all().some((c) => c.name === 'revoke_reason'));
   // ฐานข้อมูลหลักที่ผ่านการ migrate แล้ว ก็ต้องรันซ้ำได้เช่นกัน

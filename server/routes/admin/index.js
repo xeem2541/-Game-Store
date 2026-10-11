@@ -35,7 +35,7 @@ adminRouter.post('/auth/login', loginLimiter, async (req, res) => {
     audit({ ip: req.ip }, 'admin.login_failed', 'user', null, { email: body.email });
     return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   }
-  setAdminCookie(res, user.id);
+  setAdminCookie(res, user);
   audit({ user, ip: req.ip }, 'admin.login', 'user', user.id);
   res.json({ user: publicAdmin(user) });
 });

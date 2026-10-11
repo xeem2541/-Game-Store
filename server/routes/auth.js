@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { db } from '../db/index.js';
-import { clearAuthCookie, publicUser, requireAuth, setAuthCookie } from '../middleware/auth.js';
+import { clearAuthCookie, publicUser, requireAuth, revokeSessions, setAuthCookie } from '../middleware/auth.js';
 import { sendMail } from '../services/mail.js';
 import { consumeToken, createToken } from '../services/tokens.js';
 
@@ -42,7 +42,7 @@ authRouter.post('/register', limiter, async (req, res) => {
     .run(body.email, body.name, hash);
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(lastInsertRowid);
   await sendVerificationMail(user);
-  setAuthCookie(res, user.id);
+  setAuthCookie(res, user);
   res.status(201).json({ user: publicUser(user) });
 });
 
@@ -53,11 +53,18 @@ authRouter.post('/login', limiter, async (req, res) => {
   const ok = await bcrypt.compare(body.password, user?.password_hash ?? DUMMY_HASH);
   if (!user || !ok) return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   if (user.status !== 'active') return res.status(403).json({ error: 'บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อร้านค้า', code: 'ACCOUNT_SUSPENDED' });
-  setAuthCookie(res, user.id);
+  setAuthCookie(res, user);
   res.json({ user: publicUser(user) });
 });
 
 authRouter.post('/logout', (_req, res) => {
+  clearAuthCookie(res);
+  res.json({ ok: true });
+});
+
+// ออกจากระบบทุกอุปกรณ์: token ทุกตัวที่เคยออกให้ผู้ใช้นี้ (รวมเซสชันแอดมิน) ใช้ไม่ได้อีก
+authRouter.post('/logout-all', requireAuth, (req, res) => {
+  revokeSessions(req.user.id);
   clearAuthCookie(res);
   res.json({ ok: true });
 });
@@ -97,5 +104,6 @@ authRouter.post('/reset', limiter, async (req, res) => {
   const userId = consumeToken('password_resets', body.token);
   if (!userId) return res.status(400).json({ error: 'ลิงก์รีเซ็ตไม่ถูกต้องหรือหมดอายุแล้ว' });
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await bcrypt.hash(body.password, 10), userId);
+  revokeSessions(userId); // ใครที่ถือเซสชันเก่าอยู่ (เช่น ผู้ที่ขโมยบัญชี) ถูกออกจากระบบทันที
   res.json({ ok: true });
 });

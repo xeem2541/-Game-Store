@@ -49,6 +49,11 @@ export const MIGRATIONS = [
       }
     },
   },
+  {
+    id: '007_users_token_version',
+    // ฝังใน JWT ทุกตัว: เพิ่มค่านี้ = เพิกถอนเซสชันทั้งหมดของผู้ใช้ (เปลี่ยน/รีเซ็ตรหัสผ่าน, ออกจากระบบทุกอุปกรณ์)
+    up: (db) => { addColumn(db, 'users', 'token_version', 'INTEGER NOT NULL DEFAULT 0'); },
+  },
 ];
 
 export function migrate(db) {

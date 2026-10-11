@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { db } from '../db/index.js';
-import { publicUser, requireAuth } from '../middleware/auth.js';
+import { publicUser, requireAuth, revokeSessions, setAuthCookie } from '../middleware/auth.js';
 import { audit } from '../services/audit.js';
 import { decrypt } from '../services/crypto.js';
 import { expirePending } from '../services/orders.js';
@@ -37,6 +37,8 @@ meRouter.post('/password', async (req, res) => {
     return res.status(400).json({ error: 'รหัสผ่านเดิมไม่ถูกต้อง' });
   }
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await bcrypt.hash(body.newPassword, 10), req.user.id);
+  // เพิกถอนเซสชันอื่นทั้งหมด แล้วออก token ใหม่ให้อุปกรณ์ที่ใช้อยู่ (ไม่ต้องล็อกอินใหม่)
+  setAuthCookie(res, revokeSessions(req.user.id));
   res.json({ ok: true });
 });
 
