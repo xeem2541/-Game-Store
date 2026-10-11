@@ -256,17 +256,18 @@ function mountLayout() {
   renderCart();
 
   let lastFocus;
+  // ย้ายโฟกัสเองทุกครั้งที่กด Tab (ไม่พึ่งลำดับ Tab ของเบราว์เซอร์): ช่วงที่ drawer กำลังเลื่อนเข้า Chromium ข้ามปุ่มใน drawer
+  // ทำให้โฟกัสหลุดออกไปหน้าเว็บด้านหลังถ้ากด Tab เร็ว ๆ — และถ้าโฟกัสอยู่นอก drawer อยู่แล้ว Tab จะดึงกลับเข้ามา
   const trapFocus = (e) => {
-    const focusable = $('#cart').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (e.key === 'Escape') { closeCart(); return; }
+    if (e.key !== 'Tab') return;
+    const focusable = [...$('#cart').querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter((el) => !el.disabled && el.getClientRects().length);
     if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.key === 'Tab') {
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    } else if (e.key === 'Escape') {
-      closeCart();
-    }
+    e.preventDefault();
+    const i = focusable.indexOf(document.activeElement);
+    const n = focusable.length;
+    focusable[e.shiftKey ? (i <= 0 ? n - 1 : i - 1) : (i + 1) % n].focus();
   };
   const openCart = () => {
     lastFocus = document.activeElement;
