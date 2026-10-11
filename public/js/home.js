@@ -1,8 +1,12 @@
-import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml } from './common.js';
+import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml, lang } from './common.js';
 import { canRender3D, prefersReducedMotion, whenIdle } from './motion.js';
+import { splitWords } from './kinetic.js';
 import { gsap, ScrollTrigger } from './vendor/gsap.js';
 
 gsap.registerPlugin(ScrollTrigger);
+
+// หัวข้อ hero แยกเป็นคำ (ทำก่อนรอ API เพื่อให้เปลี่ยนเร็วที่สุดหลังแสดงผลแรก) — ขนาดและตำแหน่งข้อความไม่เปลี่ยน แค่ห่อคำด้วย span
+const heroWords = splitWords($('#heroTitle'), { locale: lang });
 
 // hero อยู่ใน index.html แล้ว (แสดงผลทันทีไม่ต้องรอ API) — ที่นี่เติมแค่ลิงก์เกมแนะนำ
 const [data, facets] = await Promise.all([api('/games/home'), api('/games/facets').catch(() => ({ genres: [], platforms: [] }))]);
@@ -50,14 +54,45 @@ for (const key of ['bestsellers', 'newest', 'onSale']) {
 }
 markReady();
 
+// ---- ซื้อยังไง 3 ขั้น: ขั้นที่อยู่กลางจอเป็นขั้นปัจจุบัน → ภาพด้านซ้ายเปลี่ยนตาม (ทำงานแม้ขอลดการเคลื่อนไหว เพราะเป็นข้อมูล แค่ไม่มีแอนิเมชัน) ----
+const visual = $('.howto-visual');
+const progress = $('.howto-progress');
+const covers = $('.hv-covers').children;
+data.featured.slice(1, 4).forEach((g, i) => { if (covers[i]) covers[i].style.backgroundImage = `url('${g.cover}?size=sm')`; });
+const steps = [...document.querySelectorAll('.howto-step')];
+function setStep(el) {
+  for (const s of steps) s.classList.toggle('is-active', s === el);
+  visual.dataset.step = el.dataset.step;
+  if (!progress.classList.contains('scrub')) progress.style.setProperty('--p', el.dataset.step / steps.length);
+}
+setStep(steps[0]);
+const stepObserver = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) setStep(e.target);
+}, { rootMargin: '-45% 0px -45% 0px' }); // แถบบาง ๆ กลางจอ
+steps.forEach((s) => stepObserver.observe(s));
+
 if (!prefersReducedMotion()) {
   // หัวข้อ hero ไม่เริ่มจากโปร่งใส (เป็น LCP element — ถ้าซ่อนไว้ LCP จะช้าตามแอนิเมชัน) ขยับเฉพาะองค์ประกอบรอง
   // fromTo + ค่าปลายทางชัดเจน + clearProps: ไม่อ่านค่าจาก CSS ระหว่าง transition และคืน style ให้ CSS (hover) เมื่อจบ
   const done = { opacity: 1, y: 0, clearProps: 'opacity,transform' };
   gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.6 } })
-    .fromTo('.hero-eyebrow', { y: 12, opacity: 0 }, { ...done })
+    // kinetic: คำในหัวข้อลอยขึ้นทีละคำ (แสดงผลแรกเห็นหัวข้อเต็มแล้ว LCP จึงไม่รอแอนิเมชันนี้)
+    .fromTo(heroWords, { yPercent: 60, rotate: 4, opacity: 0 }, { yPercent: 0, rotate: 0, opacity: 1, duration: 0.7, stagger: 0.07, clearProps: 'opacity,transform' })
+    .fromTo('.hero-eyebrow', { y: 12, opacity: 0 }, { ...done }, 0)
     .fromTo('.hero-actions .btn', { y: 16, opacity: 0 }, { ...done, stagger: 0.08 }, '-=0.35')
     .fromTo('.hero-points li', { y: 12, opacity: 0 }, { ...done, stagger: 0.06 }, '-=0.35');
+
+  // หัวข้อ "ซื้อง่ายใน 3 ขั้น" แยกคำแล้วลอยขึ้นตอนเลื่อนถึง
+  const howtoTitle = $('#howtoTitle > span');
+  gsap.fromTo(splitWords(howtoTitle, { locale: lang }), { yPercent: 80, opacity: 0 }, {
+    yPercent: 0, opacity: 1, duration: 0.6, stagger: 0.06, ease: 'power3.out', clearProps: 'opacity,transform',
+    scrollTrigger: { trigger: howtoTitle, start: 'top 85%', once: true },
+  });
+  // แถบความคืบหน้าเลื่อนตามจริง (scrub) แทนการกระโดดทีละขั้น — desktop เท่านั้น (มือถือไม่มีภาพประกอบ)
+  if (matchMedia('(min-width: 901px)').matches) {
+    progress.classList.add('scrub');
+    gsap.fromTo(progress.firstElementChild, { scaleX: 0 }, { scaleX: 1, ease: 'none', scrollTrigger: { trigger: '.howto-steps', start: 'top center', end: 'bottom center', scrub: true } });
+  }
 
   for (const grid of document.querySelectorAll('.content-wrapper .grid')) {
     gsap.fromTo(grid.querySelectorAll(':scope > .tile, .card'), { y: 32, opacity: 0 }, {

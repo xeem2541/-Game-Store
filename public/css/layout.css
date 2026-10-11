@@ -82,7 +82,7 @@ button, select, input { font: inherit; }
 .hero-content { position: relative; width: 100%; }
 .hero-info { max-width: 640px; }
 .hero-eyebrow { display: inline-block; margin-bottom: var(--sp-4); padding: var(--sp-1) var(--sp-3); border: 1px solid rgb(var(--rgb-accent) / 0.5); border-radius: var(--r-pill); background: rgb(var(--rgb-accent) / 0.1); color: var(--c-accent); font-size: var(--fs-sm); font-weight: var(--fw-bold); }
-.hero-title { font-size: var(--fs-hero); line-height: var(--lh-head); letter-spacing: -0.02em; margin-bottom: var(--sp-5); text-transform: none; background: linear-gradient(90deg, var(--c-text) 40%, var(--c-text-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero-title { font-size: var(--fs-hero); line-height: var(--lh-head); letter-spacing: -0.02em; margin-bottom: var(--sp-5); text-transform: none; color: var(--c-text); } /* สีทึบ: ข้อความถูกแยกเป็นคำ (kinetic.js) และ background-clip:text ใช้กับคำที่ขยับ (transform) ไม่ได้ */
 .hero-desc { font-size: var(--fs-lg); color: var(--c-text-2); margin-bottom: var(--sp-6); max-width: 34em; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-6); }
 .hero-points { list-style: none; padding: var(--sp-5) 0 0; border-top: var(--border-thin); display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-6); color: var(--c-text-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }

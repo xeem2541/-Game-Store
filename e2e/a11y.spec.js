@@ -65,3 +65,30 @@ test('ภาษา/ธีม: ไม่มี key แปลหลุดเป็
   await expect(p2.locator('h1').first()).toContainText('Genuine games');
   expect(await p2.evaluate(() => document.documentElement.lang)).toBe('en');
 });
+
+test('Kinetic typography: screen reader อ่านหัวข้อเต็มประโยค และคำไทยไม่ถูกตัดกลางคำ', async ({ page }) => {
+  await page.addInitScript(() => { localStorage.setItem('lang', 'th'); });
+  await page.goto('/');
+  await page.waitForSelector('body.ready', { state: 'attached' });
+  await expect(page.getByRole('heading', { level: 1, name: 'เกมแท้ ราคาโดนใจ', exact: true })).toBeVisible();
+  const words = await page.locator('#heroTitle .kt-word').allTextContents();
+  expect(words.length).toBeGreaterThan(1);
+  expect(words.join('')).toBe('เกมแท้ราคาโดนใจ');
+  // คำต้องไม่ขึ้นต้นด้วยสระบน/ล่าง/วรรณยุกต์ (แปลว่าถูกตัดกลางพยางค์)
+  for (const w of words) expect(w, `ตัดคำผิด: "${w}"`).not.toMatch(/^[ัิ-ฺ็-๎]/);
+  await expect(page.locator('#heroTitle .kt')).toHaveAttribute('aria-hidden', 'true');
+});
+
+test('ซื้อยังไง 3 ขั้น: ภาพประกอบเปลี่ยนตามขั้นที่เลื่อนถึง (desktop) และทำงานเมื่อขอลดการเคลื่อนไหว', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await page.waitForSelector('body.ready', { state: 'attached' });
+  const visual = page.locator('.howto-visual');
+  for (const n of ['1', '2', '3']) {
+    await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' }));
+    await expect(visual).toHaveAttribute('data-step', n);
+    await expect(page.locator(`.howto-step[data-step="${n}"]`)).toHaveClass(/is-active/);
+  }
+  await expect(page.getByRole('link', { name: 'เริ่มเลือกเกม' })).toBeVisible();
+});

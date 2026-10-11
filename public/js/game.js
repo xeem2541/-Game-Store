@@ -28,7 +28,7 @@ if (game) {
 
   $('#detail').innerHTML = `
     <div class="game-backdrop" id="gameBackdrop"></div>
-    <div class="detail-hero reveal-scroll">
+    <div class="detail-hero">
       <div class="detail-cover-wrap">
         <img class="detail-cover" src="${esc(g.cover)}" alt="${esc(g.title)}" width="400" height="300">
         ${heartHtml(g.id)}
@@ -91,17 +91,7 @@ if (game) {
   if (stickyBtn) stickyBtn.onclick = (e) => cart.add(g, e);
   $('#gameBackdrop').style.backgroundImage = `url('${g.cover}')`;
 
-  if (!CSS.supports('animation-timeline: view()')) {
-    const obs = new IntersectionObserver((ents) => {
-      ents.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add('visible');
-          obs.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.1 });
-    document.querySelectorAll('.reveal-scroll').forEach(el => obs.observe(el));
-  }
+  // .reveal-scroll ค่อย ๆ ปรากฏตามการเลื่อนด้วย CSS (story.css) — เบราว์เซอร์ที่ไม่รองรับแสดงทันที ไม่ต้องใช้ JS
   renderHearts();
   initReviews(g);
 }

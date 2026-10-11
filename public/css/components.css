@@ -175,3 +175,6 @@ input[type="checkbox"]:checked::after {
   background: var(--c-ok);
   box-shadow: 0 0 10px rgb(var(--rgb-ok) / 0.5);
 }
+
+/* ซ่อนจากสายตาแต่ screen reader ยังอ่าน (เช่น ข้อความเต็มของหัวข้อที่ถูกแยกเป็นคำเพื่อทำแอนิเมชัน) */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }

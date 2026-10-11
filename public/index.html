@@ -38,6 +38,27 @@
         <!-- bento: ช่องแต่ละช่องมีตำแหน่งคงที่ (area-a … area-g) — skeleton อยู่ตำแหน่งเดียวกับของจริง เนื้อหาเข้ามาแล้วไม่ขยับ -->
         <div id="featured" class="grid bento-home" aria-busy="true"><div class="tile sk-tile area-a" aria-hidden="true"></div><div class="tile sk-tile area-b" aria-hidden="true"></div><div class="tile sk-tile area-c" aria-hidden="true"></div><div class="tile sk-tile area-d" aria-hidden="true"></div><div class="tile sk-tile area-e" aria-hidden="true"></div><div class="tile sk-tile area-f" aria-hidden="true"></div><div class="tile sk-tile area-g" aria-hidden="true"></div></div>
       </section>
+
+      <!-- ซื้อยังไง 3 ขั้น (scrollytelling): desktop ภาพด้านซ้ายติดอยู่กับที่และเปลี่ยนตามขั้นที่เลื่อนถึง / มือถือเรียงเป็นการ์ดธรรมดา
+           เนื้อหาจริงอยู่ใน <ol> (screen reader อ่านตามลำดับ) ภาพประกอบเป็น aria-hidden -->
+      <section class="howto" id="howto" aria-labelledby="howtoTitle">
+        <h2 class="sec" id="howtoTitle"><span data-i18n="howto.title">ซื้อง่ายใน 3 ขั้น</span></h2>
+        <div class="howto-layout">
+          <div class="howto-stage" aria-hidden="true">
+            <div class="howto-visual" data-step="1">
+              <div class="hv hv-1"><div class="hv-covers"><span></span><span></span><span></span></div><div class="hv-cart"><span class="hv-cart-icon">🛒</span><b>1</b></div></div>
+              <div class="hv hv-2"><div class="hv-pay"><div class="hv-methods"><span class="on" data-i18n="howto.v.card">บัตร</span><span>PromptPay</span></div><div class="hv-qr"></div><div class="hv-amount"><span data-i18n="howto.v.total">ยอดชำระ</span><b>฿890</b></div></div></div>
+              <div class="hv hv-3"><div class="hv-key"><span class="hv-key-label" data-i18n="howto.v.key">โค้ดเกมของคุณ</span><code>7KQ2X-M9PLA-4WZ8R</code><span class="hv-key-ok" data-i18n="howto.v.ready">✓ พร้อมใช้งาน</span></div></div>
+            </div>
+            <div class="howto-progress"><span></span></div>
+          </div>
+          <ol class="howto-steps">
+            <li class="howto-step" data-step="1"><span class="howto-num">01</span><h3 data-i18n="howto.s1">เลือกเกมที่ใช่</h3><p data-i18n="howto.s1d">ค้นหาตามชื่อ แนวเกม แพลตฟอร์ม หรืองบที่มี แล้วกดเพิ่มลงตะกร้า</p></li>
+            <li class="howto-step" data-step="2"><span class="howto-num">02</span><h3 data-i18n="howto.s2">ชำระเงินอย่างปลอดภัย</h3><p data-i18n="howto.s2d">จ่ายด้วยบัตรเครดิต/เดบิต หรือสแกน PromptPay ระบบไม่เก็บข้อมูลบัตรของคุณ</p></li>
+            <li class="howto-step" data-step="3"><span class="howto-num">03</span><h3 data-i18n="howto.s3">รับโค้ดแล้วเล่นได้เลย</h3><p data-i18n="howto.s3d">โค้ดแสดงในหน้าคำสั่งซื้อและส่งไปที่อีเมลทันที พร้อมใบเสร็จทุกออเดอร์</p><a class="btn primary" href="/games.html" data-i18n="howto.cta">เริ่มเลือกเกม</a></li>
+          </ol>
+        </div>
+      </section>
       
       <section><h2 class="sec"><span data-i18n="home.best">TRENDING NOW</span> <a href="/games.html?sort=bestseller" data-i18n="home.all">VIEW ALL</a></h2><div id="bestsellers" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
       
