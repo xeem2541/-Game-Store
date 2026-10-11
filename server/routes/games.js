@@ -5,7 +5,8 @@ import path from 'node:path';
 import { db } from '../db/index.js';
 import { UPLOAD_DIR } from '../services/images.js';
 import { FINAL_PRICE_SQL, finalPrice } from '../services/pricing.js';
-import { escHtml, likeArg } from '../services/text.js';
+import { likeArg } from '../services/text.js';
+import { coverSvg } from '../services/coverArt.js';
 import { BM25_WEIGHTS, ftsMatch, parseQuery, segmentThai, shortTermSql } from '../services/search.js';
 
 export const gamesRouter = Router();
@@ -125,9 +126,9 @@ gamesRouter.get('/home', (_req, res) => {
   });
 });
 
-// ภาพปกแบบ SVG สร้างจากสีของเกม
+// ภาพปกแบบ SVG สร้างอัตโนมัติ (ฉากตามแนวเกม + ชื่อเกม จากสีของเกม — services/coverArt.js)
 gamesRouter.get('/:slug/cover.svg', (req, res) => {
-  const g = db.prepare('SELECT title, color1, color2, cover_image FROM games WHERE slug = ?').get(req.params.slug);
+  const g = db.prepare('SELECT slug, title, genre, color1, color2, cover_image FROM games WHERE slug = ?').get(req.params.slug);
   if (!g) return res.status(404).end();
   // มีรูปปกที่แอดมินอัปโหลด → ส่งไปที่รูปนั้น (ทำให้ตะกร้า/ออเดอร์/og:image ใช้รูปจริงโดยไม่ต้องแก้หลายที่)
   if (g.cover_image) {
@@ -135,17 +136,7 @@ gamesRouter.get('/:slug/cover.svg', (req, res) => {
     const useThumb = req.query.size === 'sm' && fs.existsSync(path.join(UPLOAD_DIR, thumb));
     return res.set('Cache-Control', 'public, max-age=300').redirect(302, `/uploads/games/${useThumb ? thumb : g.cover_image}`);
   }
-  const words = g.title.split(' ');
-  const lines = [];
-  let cur = '';
-  for (const w of words) {
-    if ((cur + ' ' + w).trim().length > 14 && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim();
-  }
-  lines.push(cur);
-  const text = lines.map((l, i) => `<text x="24" y="${290 - (lines.length - 1 - i) * 36}" font-size="32" font-weight="800" fill="#fff" font-family="Segoe UI,Tahoma,sans-serif">${escHtml(l)}</text>`).join('');
-  res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g.color1}"/><stop offset="1" stop-color="${g.color2}"/></linearGradient></defs><rect width="400" height="300" fill="url(#g)"/><circle cx="330" cy="70" r="90" fill="#fff" opacity=".12"/><circle cx="60" cy="40" r="40" fill="#000" opacity=".1"/>${text}</svg>`,
-  );
+  res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(coverSvg(g));
 });
 
 // รายละเอียดเกม + เกมที่เกี่ยวข้อง

@@ -8,6 +8,7 @@
     "dev": "node --watch server/index.js",
     "start": "node server/index.js",
     "seed": "node server/db/seed.js",
+    "seed:demo": "node server/db/demo.js",
     "make-admin": "node server/scripts/make-role.js admin",
     "make-staff": "node server/scripts/make-role.js staff",
     "reset-mfa": "node server/scripts/reset-mfa.js",

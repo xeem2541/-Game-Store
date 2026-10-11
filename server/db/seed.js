@@ -136,7 +136,7 @@ export function seedKeys(perGame = 20) {
 
 // ข้อมูลตัวอย่าง (เกมสมมติ คูปองทดสอบ โค้ดปลอม) ใช้เฉพาะตอนพัฒนา/ทดสอบ — production ไม่ seed อะไรเลย
 // (ต้องการข้อมูลตัวอย่างบน staging ที่ NODE_ENV=production จริง ให้ตั้ง ALLOW_DEMO_SEED=1 เอง)
-const demoAllowed = () => process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEMO_SEED === '1';
+export const demoAllowed = () => process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEMO_SEED === '1';
 
 export function seedIfEmpty() {
   if (!demoAllowed()) return;

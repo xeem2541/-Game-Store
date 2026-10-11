@@ -53,6 +53,8 @@ a.tile:hover { transform: translateY(-4px); border-color: rgb(var(--rgb-accent) 
 /* เกมเด่น: ปกเต็มพื้นที่ที่เหลือ ชื่อใหญ่ขึ้น */
 .bento-home .area-a .card .cover { flex: 1; aspect-ratio: auto; min-height: 0; }
 .bento-home .area-a .card .info { flex: none; }
+/* กรอบกว้างกว่าภาพ 4:3 → ครอปจากด้านบน (ชื่อเกมที่อยู่ล่างภาพปกถูกตัดออกทั้งบรรทัด ไม่ใช่ครึ่งบรรทัด — ชื่อแสดงใต้ภาพอยู่แล้ว) */
+.bento-home .area-a .card .cover img, .tile-deal .tile-bg { object-position: top; }
 .bento-home .area-a .card .title { font-size: var(--fs-xl); }
 
 /* ดีลลดแรงสุด: ภาพปกจาง ๆ ด้านหลัง + ไล่สีทึบใต้ข้อความ (contrast AA) */
