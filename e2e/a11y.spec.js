@@ -90,7 +90,11 @@ test('ซื้อยังไง 3 ขั้น: ภาพประกอบเ
   for (const n of ['1', '2', '3']) {
     // เลื่อนซ้ำจนกว่าจะตรง: รายการเกมด้านบนอาจโหลดเสร็จทีหลังแล้วดันตำแหน่งลง (Safari ไม่ยึดตำแหน่งการเลื่อนไว้)
     await expect(async () => {
-      await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' }));
+      // เลื่อนด้วยลูกกลิ้งเมาส์เหมือนผู้ใช้จริง: WebKit แบบ headless ไม่ส่ง scroll event/IntersectionObserver หลัง scrollTo จากสคริปต์
+      // จนกว่าจะมีการวาดหน้าจอรอบถัดไป (ซึ่งอาจไม่เกิดเลยเมื่อหน้านิ่ง) — ส่วน wheel ผ่านลำดับเหตุการณ์ปกติของเบราว์เซอร์
+      const delta = await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => { const r = el.getBoundingClientRect(); return Math.round(r.top + r.height / 2 - innerHeight / 2); });
+      await page.mouse.move(640, 400);
+      await page.mouse.wheel(0, delta || 1);
       const state = await page.evaluate(() => JSON.stringify({ y: scrollY, ih: innerHeight, H: document.documentElement.scrollHeight,
         steps: [...document.querySelectorAll('.howto-step')].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }) }));
       await expect(visual, `ขั้น ${n}: ${state}`).toHaveAttribute('data-step', n, { timeout: 1000 });
