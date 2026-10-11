@@ -1,4 +1,7 @@
 import { markReady, api, descOf, cart, cardHtml, remember, priceHtml, esc, $, t, user, loginUrl, genreName, heartHtml, renderHearts, toast, lang } from './common.js';
+import { initScrollFx } from './scroll-fx.js';
+
+initScrollFx(); // parallax / ค่อย ๆ ปรากฏ สำรองสำหรับเบราว์เซอร์ที่ไม่รองรับ CSS scroll-driven animation
 
 const slug = $('#detail').dataset.slug;
 const stars = (n) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));

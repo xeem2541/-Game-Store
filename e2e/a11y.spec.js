@@ -24,12 +24,14 @@ for (const lang of ['th', 'en']) {
   });
 }
 
-test('การใช้คีย์บอร์ด: Tab ไปถึงปุ่มสำคัญและเห็นกรอบ focus', async ({ page }) => {
+test('การใช้คีย์บอร์ด: Tab ไปถึงปุ่มสำคัญและเห็นกรอบ focus', async ({ page, browserName }) => {
+  // Safari/WebKit: Tab ข้ามลิงก์โดยค่าตั้งต้น ผู้ใช้คีย์บอร์ดบน Safari ใช้ Option+Tab เพื่อไปทุกจุด
+  const tab = browserName === 'webkit' ? 'Alt+Tab' : 'Tab';
   await page.goto('/');
   await page.waitForSelector('body.ready', { state: 'attached' });
   const seen = new Set();
   for (let i = 0; i < 14; i += 1) {
-    await page.keyboard.press('Tab');
+    await page.keyboard.press(tab);
     const info = await page.evaluate(() => {
       const el = document.activeElement;
       const cs = el ? getComputedStyle(el) : null;

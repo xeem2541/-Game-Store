@@ -1,9 +1,11 @@
 import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml, lang } from './common.js';
 import { canRender3D, prefersReducedMotion, whenIdle } from './motion.js';
 import { splitWords } from './kinetic.js';
+import { initScrollFx } from './scroll-fx.js';
 import { gsap, ScrollTrigger } from './vendor/gsap.js';
 
 gsap.registerPlugin(ScrollTrigger);
+initScrollFx(); // parallax สำรองสำหรับเบราว์เซอร์ที่ไม่รองรับ CSS scroll-driven animation
 
 // หัวข้อ hero แยกเป็นคำ (ทำก่อนรอ API เพื่อให้เปลี่ยนเร็วที่สุดหลังแสดงผลแรก) — ขนาดและตำแหน่งข้อความไม่เปลี่ยน แค่ห่อคำด้วย span
 const heroWords = splitWords($('#heroTitle'), { locale: lang });

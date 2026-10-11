@@ -110,3 +110,9 @@
     .reveal-scroll { animation: reveal-in linear both; animation-timeline: view(); animation-range: entry 0% entry 70%; }
   }
 }
+
+/* สำรองเมื่อไม่รองรับ scroll-driven animation (scroll-fx.js ใส่ class .scroll-fx ที่ <html> หลังแสดงส่วนที่อยู่ในจอแล้ว) */
+@media (prefers-reduced-motion: no-preference) {
+  .scroll-fx .reveal-scroll { opacity: 0; transform: translateY(32px); transition: opacity var(--dur-4) var(--ease-out), transform var(--dur-4) var(--ease-out); }
+  .scroll-fx .reveal-scroll.revealed { opacity: 1; transform: none; }
+}
