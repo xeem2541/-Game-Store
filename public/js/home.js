@@ -70,11 +70,24 @@ function setStep(el) {
   visual.dataset.step = el.dataset.step;
   if (!progress.classList.contains('scrub')) progress.style.setProperty('--p', el.dataset.step / steps.length);
 }
+// ขั้นปัจจุบัน = ขั้นที่ครอบกลางจอ (หรือใกล้กลางจอที่สุด) — คำนวณจากตำแหน่งตอนเลื่อน ไม่เกินเฟรมละครั้ง
+// (เดิมใช้ IntersectionObserver แถบบาง ๆ กลางจอ ซึ่ง Safari/WebKit ไม่แจ้งเมื่อเลื่อนข้ามแถบในเฟรมเดียว)
+let stepFrame = 0;
+const pickStep = () => {
+  stepFrame = 0;
+  const mid = innerHeight / 2;
+  let best = steps[0];
+  let bestDist = Infinity;
+  for (const s of steps) {
+    const r = s.getBoundingClientRect();
+    const dist = r.top <= mid && r.bottom >= mid ? 0 : Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid));
+    if (dist < bestDist) { bestDist = dist; best = s; }
+  }
+  if (best.dataset.step !== visual.dataset.step) setStep(best);
+};
 setStep(steps[0]);
-const stepObserver = new IntersectionObserver((entries) => {
-  for (const e of entries) if (e.isIntersecting) setStep(e.target);
-}, { rootMargin: '-45% 0px -45% 0px' }); // แถบบาง ๆ กลางจอ
-steps.forEach((s) => stepObserver.observe(s));
+addEventListener('scroll', () => { stepFrame ||= requestAnimationFrame(pickStep); }, { passive: true });
+pickStep();
 
 if (!prefersReducedMotion()) {
   // หัวข้อ hero ไม่เริ่มจากโปร่งใส (เป็น LCP element — ถ้าซ่อนไว้ LCP จะช้าตามแอนิเมชัน) ขยับเฉพาะองค์ประกอบรอง
