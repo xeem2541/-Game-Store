@@ -82,7 +82,14 @@ export async function makeUser(url, { verify = true, prefix = 'user' } = {}) {
   return c;
 }
 
+// รหัส 2FA ณ ช่วงเวลาปัจจุบัน (+offset ช่วง) — รหัสที่ใช้แล้วใช้ซ้ำไม่ได้ เทสที่ต้องยืนยันหลายครั้งในช่วงเดียวกันจึงใช้ offset ถัดไป
+export async function totpNow(secret, offset = 0) {
+  const { totpCode, currentStep } = await import('../server/services/totp.js');
+  return totpCode(secret, currentStep() + offset);
+}
+
 // สร้างผู้ใช้ที่มี role (staff | admin) แล้วล็อกอินผ่านหน้าแอดมิน (คุกกี้ admin_token แยกจากคุกกี้ลูกค้า)
+// พร้อมตั้ง 2FA ผ่าน API จริง (setup → enable) → client มี .totpSecret และ .recoveryCodes
 export async function makeAdminClient(url, role = 'admin') {
   const { db } = await import('../server/db/index.js');
   const c = await makeUser(url, { prefix: role });
@@ -90,5 +97,19 @@ export async function makeAdminClient(url, role = 'admin') {
   const r = await c.post('/api/admin/auth/login', { email: c.email, password: c.password });
   if (r.status !== 200) throw new Error('admin login failed: ' + JSON.stringify(r.data));
   c.userId = r.data.user.id;
+  const setup = await c.post('/api/admin/auth/mfa/setup');
+  if (setup.status !== 200) throw new Error('mfa setup failed: ' + JSON.stringify(setup.data));
+  c.totpSecret = setup.data.secret;
+  const en = await c.post('/api/admin/auth/mfa/enable', { code: await totpNow(c.totpSecret) });
+  if (en.status !== 200) throw new Error('mfa enable failed: ' + JSON.stringify(en.data));
+  c.recoveryCodes = en.data.recoveryCodes;
+  c.totpOffset = 1; // รหัสของช่วงปัจจุบันถูกใช้ไปแล้ว
   return c;
+}
+
+// ล็อกอินหลังบ้านใหม่ (รหัสผ่าน + 2FA) ด้วย client ที่สร้างจาก makeAdminClient
+export async function adminRelogin(c) {
+  const r = await c.post('/api/admin/auth/login', { email: c.email, password: c.password });
+  if (!r.data?.mfaRequired) return r;
+  return c.post('/api/admin/auth/mfa/verify', { code: c.recoveryCodes.pop() }); // รหัสกู้คืนใช้ได้ทุกเวลา ไม่ติดเรื่องช่วงเวลา
 }

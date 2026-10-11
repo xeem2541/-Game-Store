@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { registerAndVerify, setRole } from './helpers.mjs';
+import { adminLogin, registerAndVerify, setRole } from './helpers.mjs';
 import { PUBLIC_PAGES, VIEWPORTS } from './pages.js';
 
 test.setTimeout(240_000);
@@ -33,11 +33,7 @@ test.describe('responsive (375 / 768 / 1280)', () => {
       setRole(u.email, 'admin');
       const ctx = await browser.newContext({ viewport: { width: w, height: h } });
       const ap = await ctx.newPage();
-      await ap.goto('/admin/login');
-      await ap.fill('input[name=email]', u.email);
-      await ap.fill('input[name=password]', u.password);
-      await ap.click('button[type=submit]');
-      await ap.waitForURL('**/admin/');
+      await adminLogin(ap, u); // ตั้ง 2FA ครั้งแรก / ใช้รหัสกู้คืนในรอบถัดไป
       for (const route of ['dashboard', 'games', 'games/1', 'stock', 'orders', 'users', 'coupons', 'reviews', 'reports', 'audit']) {
         await ap.goto(`/admin/#/${route}`);
         await ap.waitForLoadState('networkidle');

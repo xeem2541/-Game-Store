@@ -75,6 +75,11 @@ code { background: var(--hover); padding: 1px 6px; border-radius: 5px; font-size
 pre.json { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 12px; max-height: 160px; overflow: auto; white-space: pre-wrap; margin: 0; }
 .auth-box { max-width: 380px; margin: 12vh auto; padding: 26px; }
 .auth-box form { display: flex; flex-direction: column; gap: 14px; }
+.mfa-setup { max-width: 560px; display: flex; flex-direction: column; gap: 12px; }
+.mfa-qr { width: 220px; height: 220px; padding: 10px; background: #fff; border-radius: 10px; }
+.mfa-form { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+.mfa-setup .codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; padding: 0; list-style: none; font-size: 16px; }
+.mfa-setup .check { display: flex; gap: 8px; align-items: center; }
 .msg { min-height: 1.2em; color: var(--danger); font-size: 14px; }
 
 @media (max-width: 900px) {

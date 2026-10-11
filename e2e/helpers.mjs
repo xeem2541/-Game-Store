@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { currentStep, totpCode } from '../server/services/totp.js';
 
 const require = createRequire(import.meta.url);
 const Stripe = require('stripe');
@@ -56,4 +57,41 @@ export async function registerAndVerify(page, { name = 'ผู้ทดสอบ
   await page.goto(await mailLink(email, 'verify'));
   await page.waitForSelector('#msg.ok');
   return { email, password: pw, name };
+}
+
+// ล็อกอินหลังบ้านผ่าน UI รวม 2FA: ครั้งแรกตั้งค่าผ่านหน้าจอจริง (อ่านรหัสลับ → คำนวณรหัส 6 หลัก → เก็บรหัสกู้คืน)
+// ครั้งถัดไปใช้รหัสกู้คืนที่เก็บไว้ (รหัสจากแอปใช้ซ้ำในช่วง 30 วินาทีเดียวกันไม่ได้)
+const recoveryCodes = new Map();
+export async function adminLogin(page, { email, password: pw }) {
+  await page.goto('/admin/login');
+  await page.fill('#form input[name=email]', email);
+  await page.fill('#form input[name=password]', pw);
+  await page.click('#form button[type=submit]');
+  const step = await Promise.race([
+    page.waitForSelector('#mfaForm:not([hidden])').then(() => 'verify'),
+    page.waitForURL('**/admin/').then(() => 'app'),
+  ]);
+  if (step === 'verify') {
+    const codes = recoveryCodes.get(email);
+    if (!codes?.length) throw new Error(`ไม่มีรหัสกู้คืนของ ${email}`);
+    await page.fill('#mfaForm input[name=code]', codes.shift());
+    await page.click('#mfaForm button[type=submit]');
+    await page.waitForURL('**/admin/');
+  }
+  // บัญชีที่ยังไม่ตั้ง 2FA → หน้าแอดมินแสดงหน้าตั้งค่าแทนเมนู
+  const setup = await Promise.race([
+    page.waitForSelector('#mfaStart').then(() => true),
+    page.waitForSelector('#nav a').then(() => false),
+  ]);
+  if (setup) {
+    await page.click('#mfaStart');
+    const secret = (await page.textContent('#mfaSecret')).replace(/\s/g, '');
+    await page.fill('#mfaEnable input[name=code]', totpCode(secret, currentStep()));
+    await page.click('#mfaEnable button[type=submit]');
+    await page.waitForSelector('#recoveryCodes');
+    recoveryCodes.set(email, (await page.locator('#recoveryCodes code').allTextContents()).map((c) => c.trim()));
+    await page.check('#savedCodes');
+    await page.click('#mfaDone');
+    await page.waitForSelector('#nav a');
+  }
 }

@@ -35,6 +35,7 @@ export function checkProductionEnv(env = process.env) {
   if (!env.SHOP_NAME || !env.SHOP_ADDRESS || !env.SHOP_TAX_ID || env.SHOP_TAX_ID === '0000000000000') warnings.push('ข้อมูลร้าน (SHOP_NAME / SHOP_ADDRESS / SHOP_TAX_ID) ยังเป็นค่าตัวอย่าง — จะพิมพ์ลงใบเสร็จ');
   if (!env.TRUST_PROXY) warnings.push('ไม่ได้ตั้ง TRUST_PROXY — ถ้าอยู่หลัง reverse proxy (Caddy/nginx) ให้ตั้ง TRUST_PROXY=1 ไม่งั้น rate limit จะนับ IP ของ proxy แทน IP ลูกค้า');
   if (env.DEV_PAY === '1') errors.push('ห้ามเปิด DEV_PAY ใน production');
+  if (env.ADMIN_MFA_REQUIRED === '0') warnings.push('ปิด 2FA ของหลังบ้านอยู่ (ADMIN_MFA_REQUIRED=0) — บัญชีที่คืนเงินและดูโค้ดเกมได้ป้องกันด้วยรหัสผ่านอย่างเดียว');
   if (env.RENDER && env.REQUIRE_EXISTING_DB !== '1') warnings.push('ยังไม่ได้ตั้ง REQUIRE_EXISTING_DB=1 — หลัง deploy ครั้งแรกสำเร็จให้ตั้งไว้ ถ้า disk ไม่ถูก mount ระบบจะหยุดแทนที่จะเริ่มด้วยฐานข้อมูลว่าง');
   return { errors, warnings };
 }

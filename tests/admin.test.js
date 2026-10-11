@@ -2,7 +2,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import Database from 'better-sqlite3';
-import { Client, makeAdminClient, makeUser, outbox, startServer } from './helpers.js';
+import { Client, makeAdminClient, makeUser, outbox, startServer, totpNow } from './helpers.js';
 
 const { db } = await import('../server/db/index.js');
 const { migrate } = await import('../server/db/migrations.js');
@@ -90,7 +90,15 @@ test('ล็อกอินแอดมิน: ผู้ใช้ทั่วไ
 
   assert.equal((await admin.post('/api/admin/auth/logout', {})).status, 200);
   assert.equal((await admin.get('/api/admin/dashboard')).status, 401);
-  assert.equal((await admin.post('/api/admin/auth/login', { email: admin.email, password: admin.password })).status, 200);
+  // เปิด 2FA แล้ว: รหัสผ่านถูกยังไม่ได้เซสชัน ต้องยืนยันรหัสจากแอปก่อน
+  const pw = await admin.post('/api/admin/auth/login', { email: admin.email, password: admin.password });
+  assert.equal(pw.status, 200);
+  assert.equal(pw.data.mfaRequired, true);
+  assert.ok(!admin.cookies.admin_token);
+  assert.equal((await admin.get('/api/admin/dashboard')).status, 401);
+  assert.equal((await admin.post('/api/admin/auth/mfa/verify', { code: await totpNow(admin.totpSecret, admin.totpOffset++) })).status, 200);
+  assert.equal(JSON.parse(Buffer.from(admin.cookies.admin_token.split('.')[1], 'base64url').toString()).mfa, true);
+  assert.equal((await admin.get('/api/admin/dashboard')).status, 200);
 });
 
 test('สิทธิ์ staff: ดูข้อมูล/ออเดอร์/รีวิวได้ แต่ทำสิ่งที่ admin เท่านั้นไม่ได้ (403)', async () => {
@@ -638,7 +646,8 @@ test('Migration: รันซ้ำได้ ไม่คูณราคาซ�
   migrate(legacy);
   migrate(legacy);
   assert.deepEqual(snap(), { prices: [129000, 0, 19900], roles: ['user', 'admin'] });
-  assert.equal(legacy.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 8);
+  assert.equal(legacy.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 9);
+  assert.deepEqual(legacy.prepare('SELECT totp_enabled AS e, totp_last_step AS s, totp_secret_enc AS k FROM users WHERE id = 1').get(), { e: 0, s: 0, k: null });
   // 008: สรุปรีวิวเดิมถูกคำนวณย้อนหลัง (เกมที่ไม่มีรีวิว rating_avg = NULL)
   assert.deepEqual(legacy.prepare('SELECT review_count AS c, rating_avg AS a FROM games ORDER BY id').all(), [{ c: 3, a: 4.3 }, { c: 0, a: null }, { c: 0, a: null }]);
   assert.equal(legacy.prepare('SELECT status FROM users').get().status, 'active');

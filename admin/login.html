@@ -18,6 +18,13 @@
       <p class="msg" id="msg" role="alert"></p>
       <button class="btn primary" type="submit">เข้าสู่ระบบ</button>
     </form>
+    <form id="mfaForm" novalidate hidden>
+      <p class="muted">เปิดแอป Authenticator แล้วกรอกรหัส 6 หลัก (หรือรหัสกู้คืน เช่น ABCDE-FGHIJ)</p>
+      <label class="f">รหัสยืนยัน<input name="code" required autocomplete="one-time-code" inputmode="numeric" maxlength="20" autocapitalize="characters"></label>
+      <p class="msg" id="mfaMsg" role="alert"></p>
+      <button class="btn primary" type="submit">ยืนยัน</button>
+      <button class="btn" id="mfaBack" type="button">← ใช้บัญชีอื่น</button>
+    </form>
   </main>
   <script src="/admin/login.js"></script>
 </body>

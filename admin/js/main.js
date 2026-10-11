@@ -8,6 +8,7 @@ import * as coupons from './coupons.js';
 import * as reviews from './reviews.js';
 import * as reports from './reports.js';
 import * as audit from './audit.js';
+import { renderSetup as renderMfaSetup } from './mfa.js';
 
 // เมนู: roles = บทบาทที่เห็นเมนูนี้ (staff ไม่เห็น ผู้ใช้ / คูปอง / Audit log) — เซิร์ฟเวอร์ตรวจสิทธิ์ซ้ำทุก endpoint อยู่แล้ว
 const ROUTES = [
@@ -44,17 +45,33 @@ async function route() {
   }
 }
 
+const whoHtml = () => `<div><strong>${esc(state.me.name)}</strong></div><div>${esc(state.me.email)}</div>
+    <div><span class="badge ${esc(state.me.role)}">${state.me.role === 'admin' ? 'admin' : 'staff'}</span></div>
+    <p><a href="/" target="_blank" rel="noopener">เปิดหน้าร้าน ↗</a></p><button class="btn sm" id="logout" type="button">ออกจากระบบ</button>`;
+const bindLogout = () => { $('#logout').onclick = async () => { await api('/auth/logout', { method: 'POST', body: {} }).catch(() => {}); location.href = '/admin/login'; }; };
+
 async function start() {
+  let me;
   try {
-    const me = await api('/auth/me');
+    me = await api('/auth/me');
     state.me = me.user;
     state.perms = me.permissions ?? [];
   } catch { return; } // 401 → api() พาไปหน้า login แล้ว
+  if (me.mfa?.setupRequired) { // ต้องตั้ง 2FA ก่อนใช้หลังบ้าน (เซิร์ฟเวอร์ปฏิเสธ API อื่นอยู่แล้ว — หน้านี้แค่พาไปตั้งค่า)
+    $('#who').innerHTML = whoHtml();
+    bindLogout();
+    renderMfaSetup(view);
+    return;
+  }
+  let warn = null;
+  try { warn = sessionStorage.getItem('mfaWarn'); sessionStorage.removeItem('mfaWarn'); } catch { /* ไม่สำคัญ */ }
+  const left = me.mfa?.enabled ? me.mfa.recoveryCodesLeft : null;
+  if (warn !== null || (left !== null && left <= 2)) {
+    toast(`เหลือรหัสกู้คืน 2FA ${left ?? warn} รหัส — ให้ admin ล้าง 2FA แล้วตั้งใหม่เพื่อรับรหัสชุดใหม่`, true);
+  }
   $('#nav').innerHTML = ROUTES.filter((r) => r.roles.includes(state.me.role) && (!r.perm || hasPerm(r.perm))).map((r) => `<a href="#/${r.key}" data-key="${r.key}">${r.label}</a>`).join('');
-  $('#who').innerHTML = `<div><strong>${esc(state.me.name)}</strong></div><div>${esc(state.me.email)}</div>
-    <div><span class="badge ${esc(state.me.role)}">${state.me.role === 'admin' ? 'admin' : 'staff'}</span></div>
-    <p><a href="/" target="_blank" rel="noopener">เปิดหน้าร้าน ↗</a></p><button class="btn sm" id="logout" type="button">ออกจากระบบ</button>`;
-  $('#logout').onclick = async () => { await api('/auth/logout', { method: 'POST', body: {} }).catch(() => {}); location.href = '/admin/login'; };
+  $('#who').innerHTML = whoHtml();
+  bindLogout();
   $('#menuBtn').onclick = () => $('#sidebar').classList.toggle('open');
   window.addEventListener('hashchange', route);
   if (!location.hash) location.hash = '#/dashboard'; else route();

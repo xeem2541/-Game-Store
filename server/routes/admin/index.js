@@ -4,12 +4,13 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { config } from '../../config.js';
 import { db } from '../../db/index.js';
-import { adminAuth, adminOnly, clearAdminCookie, permissionsOf, requirePerm, setAdminCookie, staffOrAdmin } from '../../middleware/adminAuth.js';
+import { adminAuth, adminOnly, clearAdminCookie, clearMfaPendingCookie, permissionsOf, requireMfa, requirePerm, setAdminCookie, setMfaPendingCookie, staffOrAdmin } from '../../middleware/adminAuth.js';
 import { audit } from '../../services/audit.js';
 import { auditRouter } from './audit.js';
 import { couponsAdminRouter } from './coupons.js';
 import { dashboardRouter } from './dashboard.js';
 import { gamesAdminRouter } from './games.js';
+import { enable as enableMfa, mfaStatus, setup as setupMfa, verifyLogin as verifyMfaLogin } from './mfa.js';
 import { ordersAdminRouter } from './orders.js';
 import { reportsRouter } from './reports.js';
 import { reviewsAdminRouter } from './reviews.js';
@@ -35,19 +36,34 @@ adminRouter.post('/auth/login', loginLimiter, async (req, res) => {
     audit({ ip: req.ip }, 'admin.login_failed', 'user', null, { email: body.email });
     return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   }
-  setAdminCookie(res, user);
-  audit({ user, ip: req.ip }, 'admin.login', 'user', user.id);
-  res.json({ user: publicAdmin(user) });
+  if (user.totp_enabled) {
+    // รหัสผ่านถูก → ยังไม่ให้เซสชัน รอรหัส 2FA ที่ /auth/mfa/verify (ภายใน 5 นาที)
+    clearAdminCookie(res);
+    setMfaPendingCookie(res, user);
+    audit({ user, ip: req.ip }, 'admin.login_password_ok', 'user', user.id);
+    return res.json({ mfaRequired: true });
+  }
+  // ยังไม่ได้ตั้ง 2FA: ถ้าระบบบังคับ เซสชันนี้ใช้ได้เฉพาะหน้าตั้งค่า 2FA (requireMfa ด้านล่าง)
+  setAdminCookie(res, user, { mfa: false });
+  audit({ user, ip: req.ip }, 'admin.login', 'user', user.id, { mfa: 'none' });
+  res.json({ user: publicAdmin(user), mfaSetupRequired: config.adminMfaRequired });
 });
+adminRouter.post('/auth/mfa/verify', loginLimiter, verifyMfaLogin);
 
 adminRouter.post('/auth/logout', (req, res) => {
   clearAdminCookie(res);
+  clearMfaPendingCookie(res);
   res.json({ ok: true });
 });
 
 // ทุกเส้นทางต่อจากนี้ต้องมีเซสชันแอดมิน (staff / admin) ที่ยังใช้ได้
 adminRouter.use(adminAuth);
-adminRouter.get('/auth/me', (req, res) => res.json({ user: publicAdmin(req.user), permissions: permissionsOf(req.user) }));
+adminRouter.get('/auth/me', (req, res) => res.json({ user: publicAdmin(req.user), permissions: permissionsOf(req.user), mfa: mfaStatus(req.user, req.adminMfa) }));
+adminRouter.post('/auth/mfa/setup', setupMfa);
+adminRouter.post('/auth/mfa/enable', loginLimiter, enableMfa);
+
+// ทุกเส้นทางต่อจากนี้ต้องผ่าน 2FA แล้ว (หรือระบบไม่บังคับ 2FA และผู้ใช้ยังไม่ได้เปิด)
+adminRouter.use(requireMfa);
 
 // สิทธิ์ละเอียดกำหนดในแต่ละ router (staff = ดูข้อมูล + ออเดอร์/รีวิว/แจ้งเตือน, admin = ทุกอย่าง)
 adminRouter.use('/dashboard', staffOrAdmin, dashboardRouter);

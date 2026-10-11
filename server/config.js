@@ -60,6 +60,8 @@ export const config = {
   authRateLimit: Number(process.env.AUTH_RATE_LIMIT) || 20, // ต่อ 15 นาที ต่อ IP
   emailResendLimit: Number(process.env.EMAIL_RESEND_LIMIT) || 5, // ต่อ 10 นาทีต่อผู้ใช้
   // กันกักสต็อก: ออเดอร์ pending จองโค้ดไว้ → จำกัดจำนวนที่ค้างได้พร้อมกัน และความถี่การสร้างออเดอร์ต่อผู้ใช้
+  // 2FA (TOTP) สำหรับบัญชีหลังบ้าน (staff/admin): ค่าเริ่มต้น = บังคับ ตั้ง 0 เพื่อปิด (production จะเตือน)
+  adminMfaRequired: process.env.ADMIN_MFA_REQUIRED !== '0',
   maxPendingOrders: Number(process.env.MAX_PENDING_ORDERS) || 3,
   orderRateLimit: Number(process.env.ORDER_RATE_LIMIT) || 10, // ต่อ 10 นาทีต่อผู้ใช้
   get staffPermissions() { return staffPermissions(); },

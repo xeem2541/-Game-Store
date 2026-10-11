@@ -69,6 +69,15 @@ export const MIGRATIONS = [
       }
     },
   },
+  {
+    id: '009_users_totp',
+    // 2FA ของหลังบ้าน: secret เข้ารหัสด้วย KEY_ENCRYPTION_SECRET (เหมือนโค้ดเกม), totp_last_step กันใช้รหัสเดิมซ้ำ
+    up: (db) => {
+      addColumn(db, 'users', 'totp_secret_enc', 'TEXT');
+      addColumn(db, 'users', 'totp_enabled', 'INTEGER NOT NULL DEFAULT 0');
+      addColumn(db, 'users', 'totp_last_step', 'INTEGER NOT NULL DEFAULT 0');
+    },
+  },
 ];
 
 export function migrate(db) {

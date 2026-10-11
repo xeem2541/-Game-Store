@@ -97,9 +97,14 @@
 
 | Method | Path | สิทธิ์ | หมายเหตุ |
 |---|---|---|---|
-| POST | `/auth/login` | 🌐 (จำกัดความถี่) | เฉพาะบัญชี role `staff`/`admin` ที่ active |
+| POST | `/auth/login` | 🌐 (จำกัดความถี่) | เฉพาะบัญชี role `staff`/`admin` ที่ active · เปิด 2FA แล้ว → `{mfaRequired: true}` (ยังไม่ได้เซสชัน) · ยังไม่ตั้ง → `{user, mfaSetupRequired}` |
+| POST | `/auth/mfa/verify` | 🌐 (จำกัดความถี่) | ขั้นที่ 2: `{code}` = รหัส 6 หลักจากแอปหรือรหัสกู้คืน (ภายใน 5 นาทีหลังรหัสผ่านถูก) → เซสชันแอดมิน · `401 MFA_INVALID` / `MFA_SESSION_EXPIRED` |
+| POST | `/auth/mfa/setup` | 🛠 | เริ่มตั้ง 2FA → `{secret, otpauthUrl, qrSvg}` (`409` ถ้าเปิดอยู่แล้ว) |
+| POST | `/auth/mfa/enable` | 🛠 | `{code}` ยืนยันรหัสจากแอป → เปิด 2FA + `{recoveryCodes}` (แสดงครั้งเดียว) |
 | POST | `/auth/logout` | 🌐 | |
-| GET | `/auth/me` | 🛠 | ข้อมูล + รายการสิทธิ์ (`permissions`) |
+| GET | `/auth/me` | 🛠 | ข้อมูล + รายการสิทธิ์ (`permissions`) + สถานะ 2FA (`mfa`) |
+
+ทุก endpoint หลังบ้านอื่นต้องผ่าน 2FA ก่อน: ยังไม่ตั้ง → `403 MFA_SETUP_REQUIRED`, เปิดแล้วแต่เซสชันยังไม่ยืนยัน → `401 MFA_REQUIRED` · admin ล้าง 2FA ของคนอื่นได้ที่ `POST /users/:id/mfa/reset`
 | GET | `/dashboard` · `/dashboard/sales` | 🛠 | สถิติ/กราฟ/การแจ้งเตือน |
 | POST | `/dashboard/alerts/:id/resolve` | 🛠 | ปิดการแจ้งเตือน |
 | GET | `/orders` · `/orders/:id` | 🛠 | ค้นหา/กรอง/แบ่งหน้า (โค้ดเกมถูกซ่อน) |

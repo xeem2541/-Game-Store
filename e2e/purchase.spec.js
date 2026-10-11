@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
-import { db, registerAndVerify, sendStripeWebhook, sessionCompleted, setRole } from './helpers.mjs';
+import { adminLogin, db, registerAndVerify, sendStripeWebhook, sessionCompleted, setRole } from './helpers.mjs';
 
 // เส้นทางหลักทั้งเส้น: สมัคร → ยืนยันอีเมล → ตะกร้า → คูปอง → checkout → webhook จำลองยืนยันจ่าย → โค้ดในคลัง → ใบเสร็จ PDF → แอดมินคืนเงิน → โค้ดถูกเพิกถอน
 test('ลูกค้าซื้อเกมครบวงจร แล้วแอดมินคืนเงิน', async ({ browser }) => {
@@ -72,11 +72,7 @@ test('ลูกค้าซื้อเกมครบวงจร แล้ว�
   const ap = await adminCtx.newPage();
   const admin = await registerAndVerify(ap, { name: 'แอดมิน e2e' });
   setRole(admin.email, 'admin');
-  await ap.goto('/admin/login');
-  await ap.fill('input[name=email]', admin.email);
-  await ap.fill('input[name=password]', admin.password);
-  await ap.click('button[type=submit]');
-  await ap.waitForURL('**/admin/');
+  await adminLogin(ap, admin); // ครั้งแรก: ตั้งค่า 2FA ผ่านหน้าจอ
   await ap.goto(`/admin/#/orders/${orderId}`);
   await expect(ap.locator('h1')).toContainText(`#${orderId}`);
   await expect(ap.locator('body')).not.toContainText(code); // หน้าแอดมินไม่แสดงโค้ดเต็ม
