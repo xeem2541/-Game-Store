@@ -103,7 +103,7 @@ docker compose ps                      # คอลัมน์ STATUS ควร�
 | `BACKUP_DIR` / `BACKUP_KEEP` | `./backups` / `14` | ที่เก็บ/จำนวนชุดสำรอง |
 | `ALLOW_HTTP_APP_URL` | – | `1` = ยอมให้ `APP_URL` เป็น http ใน production (เฉพาะทดลอง) |
 | `REQUIRE_EXISTING_DB` | – | `1` = ไม่ยอมเริ่มถ้าไม่พบไฟล์ฐานข้อมูล (กัน disk/volume ไม่ถูก mount แล้วได้ฐานข้อมูลว่างใหม่) — ตั้งหลังติดตั้งครั้งแรก |
-| `ALLOW_DEMO_SEED` | – | `1` = ยอมให้ seed ข้อมูลตัวอย่างใน production (**ห้ามใช้กับร้านจริง**) |
+| `ALLOW_DEMO_SEED` | – | `1` = ยอมให้ seed ข้อมูลตัวอย่างใน production (**ห้ามใช้กับร้านจริง** — `check:env` เตือน) |
 
 **สิทธิ์ของ staff (`STAFF_PERMISSIONS`):** ค่าเริ่มต้นว่าง = staff **อ่านอย่างเดียว** (ดูแดชบอร์ด ออเดอร์ สต็อก รีวิว รายงาน) และยกเลิก/ส่งอีเมลซ้ำของออเดอร์ที่ยังไม่จ่ายได้ ต้องการให้ทำมากกว่านี้ ให้ระบุ (คั่น `,`):
 `games.write` (เพิ่ม/แก้/ลบเกมและรูป) · `stock.write` (นำเข้า/เพิกถอนโค้ด, ตั้งเกณฑ์สต็อก) · `coupons.manage` (คูปอง) · `reports.users` (รายงานผู้ใช้ใหม่)
@@ -125,7 +125,7 @@ docker compose ps                      # คอลัมน์ STATUS ควร�
 5. ทดสอบ: บัตร `4242 4242 4242 4242` (วันหมดอายุอนาคต, CVC ใดก็ได้) → หน้า `/order/:id` แสดงโค้ดเมื่อ webhook มาถึง
 6. **เปิดขายจริง:** Dashboard (Live mode) → Developers → Webhooks → Add endpoint `https://โดเมนคุณ/api/webhooks/stripe` เลือก event: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded` → ใช้ Signing secret ของ endpoint นั้น + คีย์ `sk_live_…`
 
-กรณีผิดปกติที่ระบบจัดการให้ (คืนเงินอัตโนมัติ + แจ้งเตือนแอดมินในแดชบอร์ด): จ่ายหลังออเดอร์หมดอายุ, ยอด/สกุลเงินไม่ตรง, จ่ายซ้ำ, โค้ดหมดระหว่างจ่าย · คืนเงินบางส่วนจาก Stripe Dashboard → แจ้งเตือนเท่านั้น (ระบบรองรับคืนเต็มจำนวน)
+กรณีผิดปกติที่ระบบจัดการให้ (คืนเงินอัตโนมัติ + แจ้งเตือนแอดมินในแดชบอร์ด): จ่ายหลังออเดอร์หมดอายุ, ยอด/สกุลเงินไม่ตรง, จ่ายซ้ำ, โค้ดหมดระหว่างจ่าย · คืนเงินบางส่วนจาก Stripe Dashboard → บันทึกยอดที่คืน (หน้าออเดอร์ในหลังบ้าน + คอลัมน์ `refunded_via_stripe_thb` ใน CSV) และแจ้งเตือน ออเดอร์ยังเป็น "ชำระแล้ว" (หลังบ้านคืนได้เฉพาะเต็มจำนวน)
 
 ## ตั้งค่า SMTP (อีเมล)
 

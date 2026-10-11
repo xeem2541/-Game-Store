@@ -24,12 +24,28 @@
 
 - **2FA (TOTP) สำหรับหลังบ้าน** บังคับทุกบัญชี staff/admin (ปิดได้ด้วย `ADMIN_MFA_REQUIRED=0`): ตั้งค่าด้วย QR ตอนเข้าครั้งแรก, รหัสกู้คืน 8 รหัส, กันใช้รหัสเดิมซ้ำ, secret เข้ารหัสในฐานข้อมูล, admin ล้าง 2FA ของคนอื่นได้ + `npm run reset-mfa` (migration 009)
 
+### Fixed (รายการระดับ Low จากการตรวจโค้ด)
+- สมัคร/เปลี่ยนอีเมลซ้ำพร้อมกันได้ 409 แทน 500; `/forgot` ไม่รอส่งอีเมล (เวลาตอบไม่บอกใบ้ว่ามีบัญชี)
+- ลูกค้าไม่เห็นข้อความ error จาก Stripe ตอนสร้างหน้าชำระเงิน (บันทึกใน log แทน)
+- ใบเสร็จ PDF รายการยาวขึ้นหน้าใหม่พร้อมหัวตาราง + เลขหน้า และสร้างเสร็จก่อนส่ง (error ระหว่างสร้างไม่ได้ไฟล์ครึ่ง ๆ)
+- เลขที่ใบเสร็จใช้ปีตามเวลาไทย (เดิมใช้เวลาเครื่อง ช่วงข้ามปีอาจได้ปีผิด)
+- ค้นหาหน้าร้าน: `%` และ `_` ค้นเป็นตัวอักษรจริง ไม่ใช่ wildcard
+- คืนเงินบางส่วนจาก Stripe Dashboard บันทึกยอดสะสมไว้ (`payments.amount_refunded`, migration 010) แสดงในหลังบ้านและ CSV
+- `ALLOW_DEMO_SEED=1` ใน production มีคำเตือนใน `check:env` และ log
+- ข้อความ error ของการตรวจข้อมูล: ข้อความเริ่มต้นของ zod แปลงเป็นข้อความไทยด้วย `z.config` (เดิมเดาจากคำว่า "Invalid")
+
 ### Performance
+- `/api/me/orders` ดึงชื่อเกมของทั้งหน้าใน query เดียว (เดิม query ทีละออเดอร์), `/api/me/library` และสต็อกต่ำในแดชบอร์ดไม่วน/ไม่ subquery ซ้ำ
+- การอ่านออเดอร์ของลูกค้ายกเลิกเฉพาะออเดอร์ที่หมดเวลาของผู้ใช้นั้น (เดิมสแกนออเดอร์ pending ทั้งระบบทุกคำขอ)
 - คะแนนเฉลี่ย/จำนวนรีวิวเก็บในตาราง `games` (`rating_avg`, `review_count`, migration 008) อัปเดตด้วย trigger บนตาราง `reviews` — `games_v` ไม่ต้องรัน subquery 2 ตัวต่อแถวอีก (เกม 2,000 / รีวิว 100,000: เรียงตามคะแนน 50.6 ms → 0.24 ms)
 
 ### Tests / CI
 - เทส webhook ที่ขาด: PromptPay ยืนยันทีหลัง (async succeeded/failed), session หมดอายุ, ได้เงินแต่ไม่พบออเดอร์, จ่ายซ้ำ, event ที่ไม่ใช้ — `payments.js` branch coverage 64% → 80%
 - GitHub Actions: เทส + build บน Node 22/24, e2e Chromium (ต้องผ่านก่อน merge)
+- เทส route สาธารณะ (`tests/catalog.test.js`): รายการ/กรอง/เรียง/แบ่งหน้า, suggest, facets, หน้าแรก, ภาพปก SVG, รูป OG, meta หน้าเกม
+
+### Refactor
+- ตัวช่วยที่เคยเขียนซ้ำรวมไว้ที่เดียว: `services/text.js` (`escHtml`, `likeArg`, `slugify`), `formatBaht`, `services/passwords.js` (ตรวจรหัสผ่านแบบเวลาคงที่); ลบ `requireRole` ที่ไม่มีใครใช้
 
 ### Deploy
 - `render.yaml`: เปลี่ยนจาก plan ฟรี (ไม่มีดิสก์ถาวร → ฐานข้อมูลหายทุกครั้งที่ deploy) เป็น `starter` + persistent disk ที่ `/app/data`, instance เดียว และประกาศตัวแปรที่ production ต้องใช้ครบ (`sync: false` สำหรับความลับที่ต้องกรอก)
