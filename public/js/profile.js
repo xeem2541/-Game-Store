@@ -21,14 +21,23 @@ const views = {
         <label><span>${t('auth.name')}</span><input name="name" required maxlength="80" value="${esc(user.name)}"></label>
         <label><span>${t('auth.email')}</span><input name="email" type="email" required value="${esc(user.email)}"></label>
         <small>${t('profile.emailChangeNote')}</small>
+        <label id="curPwRow" hidden><span>${t('profile.currentPassword')}</span><input name="cur" type="password" autocomplete="current-password"></label>
         <p class="msg" id="msg" role="alert"></p>
         <button class="btn primary" type="submit">${t('common.save')}</button>
       </form>`;
+    // เปลี่ยนอีเมลต้องยืนยันด้วยรหัสผ่านปัจจุบัน → แสดงช่องรหัสผ่านเมื่ออีเมลต่างจากเดิม
+    const emailChanged = () => $('#infoForm').email.value.trim().toLowerCase() !== user.email.toLowerCase();
+    $('#infoForm').email.oninput = () => {
+      $('#curPwRow').hidden = !emailChanged();
+      $('#infoForm').cur.required = emailChanged();
+    };
     $('#infoForm').onsubmit = async (e) => {
       e.preventDefault();
       const f = e.target;
       try {
-        await api('/me', { method: 'PUT', body: { name: f.name.value, email: f.email.value } });
+        const body = { name: f.name.value, email: f.email.value };
+        if (emailChanged()) body.currentPassword = f.cur.value;
+        await api('/me', { method: 'PUT', body });
         $('#msg').classList.add('ok');
         $('#msg').textContent = t('profile.saved');
         setTimeout(() => location.reload(), 600);

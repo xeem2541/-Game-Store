@@ -5,6 +5,8 @@ import { db } from '../db/index.js';
 import { publicUser, requireAuth, revokeSessions, setAuthCookie } from '../middleware/auth.js';
 import { audit } from '../services/audit.js';
 import { decrypt } from '../services/crypto.js';
+import { HttpError } from '../services/errors.js';
+import { sendMail } from '../services/mail.js';
 import { expirePending } from '../services/orders.js';
 import { withFinal } from './games.js';
 import { passwordSchema, sendVerificationMail } from './auth.js';
@@ -14,20 +16,47 @@ meRouter.use(requireAuth);
 
 meRouter.get('/', (req, res) => res.json({ user: publicUser(req.user) }));
 
+// แสดงอีเมลใหม่แบบปิดบังบางส่วนในอีเมลแจ้งเตือน: somchai@example.com → so****@example.com
+const maskEmail = (e) => e.replace(/^(.{1,2})[^@]*/, (_m, head) => `${head}****`);
+
 meRouter.put('/', async (req, res) => {
   const body = z.object({
     name: z.string().trim().min(1).max(80),
     email: z.string().trim().toLowerCase().email().max(254),
+    currentPassword: z.string().max(72).optional(),
   }).parse(req.body);
-  const changed = body.email !== req.user.email;
-  if (changed && db.prepare('SELECT 1 FROM users WHERE email = ? AND id != ?').get(body.email, req.user.id)) {
-    return res.status(409).json({ error: 'อีเมลนี้ถูกใช้งานแล้ว' });
+  const oldEmail = req.user.email;
+  const changed = body.email !== oldEmail.toLowerCase();
+  if (changed) {
+    // เปลี่ยนอีเมล = เปลี่ยนช่องทางกู้บัญชี → ต้องยืนยันด้วยรหัสผ่าน (ผู้ที่ได้เซสชันไปอย่างเดียวยึดบัญชีไม่ได้)
+    if (!body.currentPassword) throw new HttpError(400, 'กรุณากรอกรหัสผ่านปัจจุบันเพื่อเปลี่ยนอีเมล', 'PASSWORD_REQUIRED');
+    if (!(await bcrypt.compare(body.currentPassword, req.user.password_hash))) {
+      throw new HttpError(400, 'รหัสผ่านเดิมไม่ถูกต้อง', 'WRONG_PASSWORD');
+    }
+    if (db.prepare('SELECT 1 FROM users WHERE email = ? AND id != ?').get(body.email, req.user.id)) {
+      return res.status(409).json({ error: 'อีเมลนี้ถูกใช้งานแล้ว' });
+    }
   }
-  // เปลี่ยนอีเมล → ต้องยืนยันใหม่
-  db.prepare('UPDATE users SET name = ?, email = ?, email_verified = ? WHERE id = ?')
-    .run(body.name, body.email, changed ? 0 : req.user.email_verified, req.user.id);
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-  if (changed) await sendVerificationMail(user);
+  try {
+    // เปลี่ยนอีเมล → ต้องยืนยันใหม่
+    db.prepare('UPDATE users SET name = ?, email = ?, email_verified = ? WHERE id = ?')
+      .run(body.name, body.email, changed ? 0 : req.user.email_verified, req.user.id);
+  } catch (e) {
+    if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') return res.status(409).json({ error: 'อีเมลนี้ถูกใช้งานแล้ว' }); // สมัคร/เปลี่ยนชนกันพร้อมกัน
+    throw e;
+  }
+  let user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (changed) {
+    user = revokeSessions(user.id); // เซสชันอื่นทั้งหมดออกจากระบบ เครื่องนี้ได้ token ใหม่
+    setAuthCookie(res, user);
+    audit(req, 'user.email_change', 'user', user.id, { from: oldEmail, to: body.email });
+    await sendVerificationMail(user);
+    await sendMail({
+      to: oldEmail,
+      subject: 'อีเมลบัญชีของคุณถูกเปลี่ยน – Game Store',
+      text: `สวัสดี ${user.name},\n\nอีเมลของบัญชีคุณถูกเปลี่ยนเป็น ${maskEmail(body.email)} เมื่อสักครู่\n\nถ้าคุณไม่ได้เป็นคนเปลี่ยน กรุณาติดต่อร้านค้าทันทีเพื่อระงับบัญชีและกู้คืน\n`,
+    });
+  }
   res.json({ user: publicUser(user) });
 });
 

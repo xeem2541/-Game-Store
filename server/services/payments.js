@@ -1,12 +1,18 @@
 import { config } from '../config.js';
 import { db } from '../db/index.js';
 import { adminAlert } from './audit.js';
+import { enqueueAutoRefund, processAutoRefunds } from './autoRefunds.js';
 import { HttpError } from './errors.js';
 import { orderEvents, transition } from './orders.js';
 import { getStripe, stripeConfigured } from './stripe.js';
 
 const MIN_AMOUNT = 1000; // ขั้นต่ำการเรียกเก็บของ Stripe สำหรับ THB = ฿10.00 (หน่วยสตางค์)
 const REUSE_WINDOW = '-25 minutes'; // Checkout Session อายุ 31 นาที — เกินนี้ไม่ใช้ซ้ำ
+const SESSION_TTL_MS = 31 * 60_000; // Stripe กำหนดอย่างน้อย 30 นาที
+const PAYMENT_GRACE_MS = 5 * 60_000; // เผื่อ webhook มาช้าหลังลูกค้าจ่ายตอนท้าย session
+const MAX_ORDER_LIFETIME_MS = 2 * 3600_000; // ต่ออายุออเดอร์ได้ไม่เกินนี้นับจากตอนสร้าง (กันกดชำระวนเพื่อกักโค้ดในสต็อก)
+
+const createdAtMs = (order) => Date.parse(`${order.created_at.replace(' ', 'T')}Z`);
 
 const touch = (id, fields) => {
   const keys = Object.keys(fields);
@@ -23,6 +29,13 @@ export async function createCheckout(user, order) {
   const open = db.prepare(`SELECT * FROM payments WHERE order_id = ? AND provider = 'stripe' AND status = 'created'
     AND checkout_url IS NOT NULL AND created_at > datetime('now', ?) ORDER BY id DESC`).get(order.id, REUSE_WINDOW);
   if (open) return { url: open.checkout_url };
+
+  // ออเดอร์ต้องอยู่ได้นานกว่า session ที่จะสร้าง ไม่งั้นลูกค้าที่จ่ายช่วงท้าย (โดยเฉพาะ PromptPay) จะจ่ายหลังออเดอร์ถูกยกเลิกแล้วโดนคืนเงิน
+  const sessionExpiresAt = Date.now() + SESSION_TTL_MS;
+  const orderMustLastUntil = sessionExpiresAt + PAYMENT_GRACE_MS;
+  if (orderMustLastUntil > createdAtMs(order) + MAX_ORDER_LIFETIME_MS) {
+    throw new HttpError(409, 'คำสั่งซื้อนี้เปิดไว้นานเกินกำหนดแล้ว กรุณายกเลิกแล้วสั่งซื้อใหม่', 'ORDER_TOO_OLD');
+  }
 
   const titles = db.prepare('SELECT title FROM order_items WHERE order_id = ? ORDER BY id').all(order.id).map((r) => r.title).join(', ');
   const attempt = db.prepare("SELECT COUNT(*) AS n FROM payments WHERE order_id = ? AND provider = 'stripe'").get(order.id).n + 1;
@@ -43,15 +56,18 @@ export async function createCheckout(user, order) {
       customer_email: user.email,
       success_url: `${config.appUrl}/order/${order.id}?checkout=return`,
       cancel_url: `${config.appUrl}/order/${order.id}?checkout=canceled`,
-      expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
+      expires_at: Math.floor(sessionExpiresAt / 1000),
     }, { idempotencyKey: `order-${order.id}-attempt-${attempt}` });
   } catch (e) {
     throw new HttpError(502, `สร้างหน้าชำระเงินไม่สำเร็จ: ${e.message}`, 'PAYMENT_PROVIDER_ERROR');
   }
 
-  db.prepare(`INSERT OR IGNORE INTO payments (order_id, provider, provider_ref, payment_intent, amount, currency, status, checkout_url)
-    VALUES (?, 'stripe', ?, ?, ?, 'thb', 'created', ?)`)
-    .run(order.id, session.id, session.payment_intent ?? null, order.total, session.url);
+  db.transaction(() => {
+    db.prepare(`INSERT OR IGNORE INTO payments (order_id, provider, provider_ref, payment_intent, amount, currency, status, checkout_url)
+      VALUES (?, 'stripe', ?, ?, ?, 'thb', 'created', ?)`)
+      .run(order.id, session.id, session.payment_intent ?? null, order.total, session.url);
+    db.prepare("UPDATE orders SET expires_at = MAX(expires_at, ?) WHERE id = ? AND status = 'pending'").run(orderMustLastUntil, order.id);
+  })();
   return { url: session.url };
 }
 
@@ -67,9 +83,8 @@ export function devPay(orderId) {
 
 // ---------- Webhook ----------
 // ประมวลผลใน transaction เดียว (event id ถูกบันทึกพร้อมผลลัพธ์) → event เดิมมาซ้ำจะไม่ทำซ้ำ และถ้าพังกลางทางจะ rollback ให้ Stripe ส่งใหม่
-// งานที่ต้องเรียก Stripe API (คืนเงินอัตโนมัติ) ทำหลัง commit
+// งานคืนเงินอัตโนมัติถูกบันทึกลงคิว auto_refunds ใน transaction เดียวกัน แล้วเรียก Stripe หลัง commit (ล้มเหลว/ล่ม → retry ภายหลัง)
 export async function processStripeEvent(event) {
-  const actions = [];
   const result = db.transaction(() => {
     const ins = db.prepare('INSERT OR IGNORE INTO webhook_events (id, type) VALUES (?, ?)').run(event.id, event.type);
     if (!ins.changes) return 'duplicate';
@@ -78,14 +93,14 @@ export async function processStripeEvent(event) {
       case 'checkout.session.completed':
         // บัตร: payment_status = paid ทันที / ช่องทางที่ยืนยันทีหลังจะมาเป็น async_payment_succeeded
         if (obj.payment_status === 'paid') {
-          confirm(event, { orderId: orderIdOf(obj), amount: obj.amount_total, currency: obj.currency, paymentIntent: obj.payment_intent, sessionId: obj.id }, actions);
+          confirm(event, { orderId: orderIdOf(obj), amount: obj.amount_total, currency: obj.currency, paymentIntent: obj.payment_intent, sessionId: obj.id });
         }
         break;
       case 'checkout.session.async_payment_succeeded':
-        confirm(event, { orderId: orderIdOf(obj), amount: obj.amount_total, currency: obj.currency, paymentIntent: obj.payment_intent, sessionId: obj.id }, actions);
+        confirm(event, { orderId: orderIdOf(obj), amount: obj.amount_total, currency: obj.currency, paymentIntent: obj.payment_intent, sessionId: obj.id });
         break;
       case 'payment_intent.succeeded':
-        confirm(event, { orderId: orderIdOf(obj), amount: obj.amount_received ?? obj.amount, currency: obj.currency, paymentIntent: obj.id, sessionId: null }, actions);
+        confirm(event, { orderId: orderIdOf(obj), amount: obj.amount_received ?? obj.amount, currency: obj.currency, paymentIntent: obj.id, sessionId: null });
         break;
       case 'payment_intent.payment_failed':
         markFailed({ paymentIntent: obj.id, orderId: orderIdOf(obj), error: obj.last_payment_error?.message ?? 'payment failed' });
@@ -106,7 +121,7 @@ export async function processStripeEvent(event) {
     }
     return 'processed';
   })();
-  for (const a of actions) await runAction(a);
+  await processAutoRefunds(); // คืนเงินทันทีถ้าทำได้ — ไม่สำเร็จก็ยังอยู่ในคิว (ไม่ทำให้ webhook ล้ม)
   return result;
 }
 
@@ -125,8 +140,8 @@ function markFailed({ paymentIntent, sessionId, orderId, error }) {
   // ออเดอร์ยังเป็น pending: ลูกค้ากดชำระใหม่ได้ (จะสร้าง session ใหม่)
 }
 
-function confirm(event, { orderId, amount, currency, paymentIntent, sessionId }, actions) {
-  const refund = (reason) => paymentIntent && actions.push({ type: 'refund', paymentIntent, orderId, reason });
+function confirm(event, { orderId, amount, currency, paymentIntent, sessionId }) {
+  const refund = (reason) => paymentIntent && enqueueAutoRefund({ paymentIntent, orderId, reason });
   const order = orderId && db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
   if (!order) {
     adminAlert('PAYMENT_UNKNOWN_ORDER', null, `ได้รับเงินแต่ไม่พบออเดอร์ (event ${event.id}, order_id=${orderId})`);
@@ -190,18 +205,6 @@ function onChargeRefunded(event, charge) {
   db.prepare("INSERT OR IGNORE INTO refunds (order_id, amount, reason, source) VALUES (?, ?, 'refunded via Stripe Dashboard', 'stripe_dashboard')").run(order.id, charge.amount_refunded);
   transition(order.id, 'refunded');
   touch(pay.id, { status: 'refunded' });
-}
-
-async function runAction(a) {
-  if (a.type !== 'refund') return;
-  try {
-    const stripe = getStripe();
-    await stripe.refunds.create({ payment_intent: a.paymentIntent, metadata: { auto_reason: a.reason, order_id: String(a.orderId ?? '') } },
-      { idempotencyKey: `auto-refund-${a.paymentIntent}` });
-    db.prepare("UPDATE payments SET status = 'refunded', updated_at = CURRENT_TIMESTAMP WHERE payment_intent = ? AND status = 'needs_review'").run(a.paymentIntent);
-  } catch (e) {
-    adminAlert('REFUND_FAILED', a.orderId, `คืนเงินอัตโนมัติไม่สำเร็จ (${a.reason}, ${a.paymentIntent}): ${e.message} — ต้องคืนเงินด้วยตนเอง`);
-  }
 }
 
 // ---------- ออเดอร์ถูกยกเลิก/หมดอายุ → expire Checkout Session ฝั่ง Stripe ----------

@@ -106,8 +106,8 @@ test('โปรไฟล์: แก้ชื่อ/อีเมล, เปลี
   // เปลี่ยนอีเมล → ต้องยืนยันใหม่ ; อีเมลชนกับคนอื่น → 409
   const other = await newClient();
   await other.post('/api/auth/register', { email: 'other@example.com', password: 'other-pass-123', name: 'อื่น' });
-  assert.equal((await c.put('/api/me', { name: 'x', email: 'other@example.com' })).status, 409);
-  const ch = await c.put('/api/me', { name: 'x', email: 'new-somchai@example.com' });
+  assert.equal((await c.put('/api/me', { name: 'x', email: 'other@example.com', currentPassword: creds.password })).status, 409);
+  const ch = await c.put('/api/me', { name: 'x', email: 'new-somchai@example.com', currentPassword: creds.password });
   assert.equal(ch.data.user.emailVerified, false);
   creds.email = 'new-somchai@example.com';
 });
@@ -227,4 +227,37 @@ test('ไม่ตั้ง JWT_SECRET / KEY_ENCRYPTION_SECRET → ไม่ย�
 test('จำลองชำระเงิน (devPay) ปิดเป็นค่าเริ่มต้น: เปิดได้เฉพาะ DEV_PAY=1 นอก production', () => {
   assert.equal(readConfig(devEnv()).devPay, false, 'ลืมตั้ง NODE_ENV=production ก็ต้องไม่มีปุ่มจ่ายฟรี');
   assert.equal(readConfig(devEnv({ DEV_PAY: '1' })).devPay, true);
+});
+
+test('เปลี่ยนอีเมล: ต้องใส่รหัสผ่านปัจจุบัน, แจ้งอีเมลเดิม, เพิกถอนเซสชันอื่น; เปลี่ยนแค่ชื่อไม่ต้องใช้รหัสผ่าน', async () => {
+  const c = await makeUser(srv.url);
+  const stolen = cloneSession(c);
+  const oldEmail = c.email;
+  const newEmail = `moved-${Date.now()}@example.com`;
+
+  // ผู้ที่มีแค่เซสชัน (ไม่รู้รหัสผ่าน) เปลี่ยนอีเมลเพื่อยึดบัญชีไม่ได้
+  const noPw = await stolen.put('/api/me', { name: 'Hacker', email: 'attacker@example.com' });
+  assert.equal(noPw.status, 400);
+  assert.equal(noPw.data.code, 'PASSWORD_REQUIRED');
+  const wrongPw = await stolen.put('/api/me', { name: 'Hacker', email: 'attacker@example.com', currentPassword: 'guess-guess-1' });
+  assert.equal(wrongPw.status, 400);
+  assert.equal(wrongPw.data.code, 'WRONG_PASSWORD');
+  assert.equal((await c.get('/api/me')).data.user.email, oldEmail);
+
+  // เปลี่ยนแค่ชื่อ (อีเมลเดิม ต่างตัวพิมพ์ได้) ไม่ต้องใช้รหัสผ่าน และไม่เพิกถอนเซสชัน
+  assert.equal((await c.put('/api/me', { name: 'ชื่อใหม่', email: oldEmail.toUpperCase() })).status, 200);
+  assert.ok((await stolen.get('/api/auth/me')).data.user);
+
+  const before = outbox.length;
+  const ok = await c.put('/api/me', { name: 'ชื่อใหม่', email: newEmail, currentPassword: c.password });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.data.user.email, newEmail);
+  assert.equal(ok.data.user.emailVerified, false);
+  const sent = outbox.slice(before);
+  const notice = sent.find((m) => m.to === oldEmail);
+  assert.ok(notice, 'อีเมลเดิมต้องได้รับแจ้งเตือน');
+  assert.ok(notice.text.includes('mo****@example.com') && !notice.text.includes(newEmail), 'แสดงอีเมลใหม่แบบปิดบังบางส่วน');
+  assert.ok(sent.some((m) => m.to === newEmail && m.subject.includes('ยืนยัน')));
+  assert.equal((await stolen.get('/api/auth/me')).data.user, null, 'เซสชันอื่นถูกเพิกถอน');
+  assert.equal((await c.get('/api/auth/me')).data.user.email, newEmail, 'เครื่องที่เปลี่ยนยังล็อกอินอยู่');
 });

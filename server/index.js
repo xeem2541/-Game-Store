@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { config } from './config.js';
 import { db } from './db/index.js';
 import { seedIfEmpty } from './db/seed.js';
+import { isAutoRefundBusy, processAutoRefunds } from './services/autoRefunds.js';
 import { isEmailQueueBusy, processEmailQueue } from './services/emailQueue.js';
 import { expirePending } from './services/orders.js';
 
@@ -17,6 +18,8 @@ export function start({ port = config.port } = {}) {
     setInterval(() => { try { const n = expirePending(); if (n) console.log(`หมดอายุ ${n} ออเดอร์`); } catch (e) { console.error(e.stack ?? e); } }, 60_000),
     // คิวอีเมล: ส่งงานที่ค้าง/ถึงเวลา retry ทุก 15 วินาที
     setInterval(() => { processEmailQueue().catch((e) => console.error('email queue:', e.message)); }, 15_000),
+    // คิวคืนเงินอัตโนมัติ: retry งานที่ถึงเวลา ทุก 1 นาที (งานใหม่ถูกประมวลผลทันทีตอนรับ webhook อยู่แล้ว)
+    setInterval(() => { processAutoRefunds().catch((e) => console.error('auto refunds:', e.message)); }, 60_000),
   ];
   timers.forEach((t) => t.unref());
 
@@ -26,7 +29,7 @@ export function start({ port = config.port } = {}) {
       timers.forEach(clearInterval); // หยุดงานตั้งเวลาก่อน ไม่รับงานใหม่
       // หยุดรับ connection ใหม่ แล้วรอคำขอที่กำลังทำอยู่ให้จบ (connection ที่ว่างอยู่ปิดทันที)
       await new Promise((resolve) => { server.close(() => resolve()); server.closeIdleConnections(); setTimeout(() => { server.closeAllConnections(); resolve(); }, 8000).unref(); });
-      for (let i = 0; i < 50 && isEmailQueueBusy(); i += 1) await new Promise((r) => setTimeout(r, 100)); // รอการส่งอีเมลที่ค้างอยู่
+      for (let i = 0; i < 50 && (isEmailQueueBusy() || isAutoRefundBusy()); i += 1) await new Promise((r) => setTimeout(r, 100)); // รอการส่งอีเมล/คืนเงินที่ค้างอยู่
       try { db.pragma('wal_checkpoint(TRUNCATE)'); db.close(); } catch (e) { console.error('ปิดฐานข้อมูลไม่สำเร็จ:', e.message); }
     })();
     return stopping;

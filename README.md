@@ -144,7 +144,7 @@ npm run make-staff -- helper@example.com  # พนักงาน (สิทธ�
 ## รันเทสต์
 
 ```bash
-npm test                     # เทสต์ฝั่งเซิร์ฟเวอร์ 85 ข้อ (auth, ตะกร้า/ออเดอร์, ชำระเงิน/webhook, แอดมิน, ความปลอดภัย, SEO, สำรอง/กู้คืน)
+npm test                     # เทสต์ฝั่งเซิร์ฟเวอร์ 109 ข้อ (auth, ตะกร้า/ออเดอร์, ชำระเงิน/webhook, คืนเงินอัตโนมัติ, แอดมิน, ความปลอดภัย, deploy, SEO, สำรอง/กู้คืน)
 npm run test:coverage        # + รายงาน coverage
 npm run e2e                  # Playwright (ต้อง `npx playwright install chromium` ก่อนครั้งแรก): เส้นทางซื้อครบวงจร,
                              #   responsive 375/768/1280, a11y (axe), คีย์บอร์ด, ไทย/อังกฤษ × มืด/สว่าง
@@ -152,6 +152,8 @@ npm run build && npm run bench   # load test เบา ๆ ด้วย autocann
 ```
 
 เทสต์ไม่เรียก Stripe/SMTP จริง (ใช้ Stripe ปลอม + webhook ที่เซ็นลายเซ็นเอง) ภาพหน้าจอ responsive อยู่ที่ `e2e/screenshots/`
+
+**CI** (`.github/workflows/ci.yml`): ทุก push เข้า `main` และทุก pull request รัน `npm test` + `npm run build` บน Node 22 และ 24 และตรวจว่าค่าตัวอย่างใน `.env.example` ไม่ผ่านการตรวจ production · e2e (Chromium) รันด้วยแต่ยังไม่บล็อก (เทส a11y บางตัวไม่เสถียร)
 
 ## สำรองและกู้คืนข้อมูล
 
