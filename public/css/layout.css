@@ -469,6 +469,10 @@ a { color: var(--c-accent); }
 
 /* ---- 404 / 500 ---- */
 .center-page { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 96px 16px 64px; text-align: center; }
+/* ภาพประกอบสถานะว่าง/หน้าผิดพลาด */
+.empty-art { display: block; width: min(220px, 70%); height: auto; margin: 0 auto var(--sp-3); }
+.cart .empty-art { width: 140px; }
+.center-page .empty-art { margin-bottom: calc(-1 * var(--sp-4)); }
 .center-page .big-code { font-size: clamp(96px, 18vw, 180px); font-weight: var(--fw-bold); line-height: 1; color: var(--c-accent); text-shadow: 0 0 40px rgb(var(--rgb-accent) / 0.35); }
 .center-page h1 { font-size: var(--fs-2xl); }
 .center-page p { color: var(--c-text-2); }

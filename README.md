@@ -53,7 +53,7 @@ Dockerfile, docker-compose.yml, .env.example
 npm install
 cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
 npm run seed                # เกม/คูปอง/โค้ดปลอม (FAKE-...) สำหรับทดสอบ — เฉพาะ dev
-npm run seed:demo           # + ลูกค้าสมมติ 48 คน, ออเดอร์ย้อนหลัง 120 วัน, รีวิว, รายการโปรด (ดู Dashboard/กราฟ/รีวิวกับข้อมูลจริง) — เฉพาะ dev, รันซ้ำไม่สร้างซ้ำ
+npm run seed:demo           # + ลูกค้าสมมติ 48 คน, ออเดอร์ย้อนหลัง 120 วัน, รีวิว, รายการโปรด, ภาพตัวอย่างเกม 3 ภาพ/เกม — เฉพาะ dev, รันซ้ำไม่สร้างซ้ำ
 npm run dev                 # http://localhost:3000   (แอดมิน: http://localhost:3000/admin/)
 ```
 
@@ -174,7 +174,7 @@ npm run reset-mfa -- you@example.com   # Docker: docker compose exec app node se
 ## รันเทสต์
 
 ```bash
-npm test                     # เทสต์ฝั่งเซิร์ฟเวอร์ 142 ข้อ (auth, ตะกร้า/ออเดอร์, ชำระเงิน/webhook, คืนเงินอัตโนมัติ, แอดมิน, ความปลอดภัย, deploy, SEO, สำรอง/กู้คืน)
+npm test                     # เทสต์ฝั่งเซิร์ฟเวอร์ 143 ข้อ (auth, ตะกร้า/ออเดอร์, ชำระเงิน/webhook, คืนเงินอัตโนมัติ, แอดมิน, ความปลอดภัย, deploy, SEO, สำรอง/กู้คืน)
 npm run test:coverage        # + รายงาน coverage
 npm run e2e                  # Playwright (ต้อง `npx playwright install chromium` ก่อนครั้งแรก): เส้นทางซื้อครบวงจร,
                              #   responsive 375/768/1280, a11y (axe), คีย์บอร์ด, ไทย/อังกฤษ,

@@ -6,6 +6,10 @@ export { t, applyI18n, lang, genreName, descOf };
 export const $ = (s, r = document) => r.querySelector(s);
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // เงินจากเซิร์ฟเวอร์เป็นสตางค์ (จำนวนเต็ม) → แสดงเป็นบาท
+// ภาพประกอบสถานะว่าง (ตกแต่งเท่านั้น alt ว่าง) — กำหนดขนาดไว้ จึงไม่ดันเนื้อหาตอนโหลดภาพ
+// (ประกาศไว้ต้นไฟล์: mountLayout() ด้านล่างเรียกใช้ตอนโหลดโมดูล)
+export const emptyArt = (name) => `<img class="empty-art" src="/img/${name}.svg" alt="" width="240" height="190" decoding="async">`;
+
 export const money = (satang) => '฿' + (satang / 100).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: satang % 100 ? 2 : 0, maximumFractionDigits: 2 });
 export const fmtDateTime = (s) => new Date(typeof s === 'number' ? s : s.replace(' ', 'T') + 'Z').toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });
 // ราคาทุกที่ในระบบเป็น "สตางค์" (จำนวนเต็ม) — แสดงผลเป็นบาท; 0 = ฟรี
@@ -246,7 +250,7 @@ function mountLayout() {
           <strong>${priceText(i.finalPrice)}</strong>
           <button class="rm" data-rm="${esc(i.slug)}" type="button" aria-label="${t('cart.remove')}"><svg class="icon"><use href="/icons.svg#icon-trash" /></svg></button>
         </div>`).join('')
-      : `<p class="empty">${t('cart.empty')}</p>`;
+      : `<div class="empty">${emptyArt('empty-cart')}<p>${t('cart.empty')}</p></div>`;
   };
   document.addEventListener('cart:change', renderCart);
   renderCart();

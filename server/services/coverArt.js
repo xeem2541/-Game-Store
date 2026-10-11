@@ -79,16 +79,20 @@ function titleSvg(title) {
   return lines.map((l, i) => `<text x="48" y="${f(y0 + i * size * 1.05)}" font-size="${size}" font-weight="800" fill="#fff" font-family="Segoe UI,Tahoma,Arial,sans-serif" letter-spacing="-1" filter="url(#ts)">${escHtml(l)}</text>`).join('');
 }
 
-export function coverSvg({ slug, title, genre, color1, color2 }) {
-  const r = seeded(slug);
+// ฉากอย่างเดียว (ไม่มีชื่อเกม) ขนาด 800×600 — variant: สุ่มตำแหน่งชุดอื่นจากเกมเดิม (ใช้ทำภาพตัวอย่างหลายภาพ / ภาพแชร์)
+export function sceneSvg({ slug, genre, color1, color2 }, { variant = '', shade = true } = {}) {
+  const r = seeded(slug + variant);
   const scene = (SCENES[genre] ?? SCENES['แอ็กชัน'])(r);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice">
 <defs>
   <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${escHtml(color1)}"/><stop offset="1" stop-color="${escHtml(color2)}"/></linearGradient>
   <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".65"/></linearGradient>
-  <filter id="ts" x="-5%" y="-20%" width="110%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity=".55"/></filter>
 </defs>
-<rect width="${W}" height="${H}" fill="url(#bg)"/>${scene}
-<rect width="${W}" height="${H}" fill="url(#shade)"/>${titleSvg(title)}
+<rect width="${W}" height="${H}" fill="url(#bg)"/>${scene}${shade ? `<rect width="${W}" height="${H}" fill="url(#shade)"/>` : ''}
 </svg>`;
+}
+
+export function coverSvg(g) {
+  // ฉาก + ชื่อเกม: ใส่ชื่อก่อนปิด </svg> ของฉาก
+  return sceneSvg(g).replace(/<\/svg>$/, `<defs><filter id="ts" x="-5%" y="-20%" width="110%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity=".55"/></filter></defs>${titleSvg(g.title)}\n</svg>`);
 }

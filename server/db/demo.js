@@ -11,6 +11,8 @@ import { demoAllowed, seedCoupons, seedGames, seedKeys } from './seed.js';
 import { createOrder, transition } from '../services/orders.js';
 import { devPay } from '../services/payments.js';
 import { hashPassword } from '../services/passwords.js';
+import { saveGameImage } from '../services/images.js';
+import { screenshotSvg } from '../services/screenshotArt.js';
 
 export const DEMO_DOMAIN = 'demo.gamestore.test'; // โดเมนสงวนสำหรับทดสอบ (.test) — ไม่มีวันเป็นอีเมลจริง
 const DAY = 86_400_000;
@@ -169,10 +171,28 @@ export async function seedDemo({ now = Date.now(), log = console.log } = {}) {
   return { users: users.length, ...counts };
 }
 
+// ภาพตัวอย่าง (screenshot) ที่สร้างอัตโนมัติ perGame ภาพต่อเกม — เฉพาะเกมที่ยังไม่มีภาพตัวอย่างเลย (ไม่ทับรูปที่แอดมินอัปโหลด)
+// บันทึกผ่าน saveGameImage เหมือนการอัปโหลดจริง (WebP ในโฟลเดอร์ uploads + แถวใน game_images) แอดมินลบ/เพิ่มต่อได้ตามปกติ
+export async function seedScreenshots(perGame = 3, { log = console.log } = {}) {
+  const sharp = (await import('sharp')).default;
+  const games = db.prepare(`SELECT id, slug, title, genre, color1, color2 FROM games
+    WHERE NOT EXISTS (SELECT 1 FROM game_images i WHERE i.game_id = games.id AND i.kind = 'screenshot')`).all();
+  const ins = db.prepare("INSERT INTO game_images (game_id, filename, kind, position) VALUES (?, ?, 'screenshot', ?)");
+  for (const g of games) {
+    for (let n = 0; n < perGame; n += 1) {
+      const png = await sharp(Buffer.from(screenshotSvg(g, n))).png().toBuffer();
+      ins.run(g.id, await saveGameImage(png, 'screenshot'), n + 1);
+    }
+  }
+  if (games.length) log(`ภาพตัวอย่าง: ${games.length} เกม × ${perGame} ภาพ`);
+  return games.length * perGame;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (!demoAllowed()) {
     console.error('npm run seed:demo สร้างลูกค้าและคำสั่งซื้อสมมติ — ปฏิเสธการรันเมื่อ NODE_ENV=production (ตั้ง ALLOW_DEMO_SEED=1 ถ้าเป็น staging จริง ๆ)');
     process.exit(1);
   }
   await seedDemo();
+  await seedScreenshots(); // ทำแยกจากข้างบน: รันซ้ำได้ (เติมเฉพาะเกมที่ยังไม่มีภาพ)
 }

@@ -32,3 +32,19 @@ test('ภาพปกอัตโนมัติ: ฉากตามแนวเ
   assert.ok(coverSvg({ ...g, genre: 'ไม่รู้จัก' }).startsWith('<svg'), 'แนวเกมที่ไม่มีฉากเฉพาะใช้ฉากตั้งต้น');
   assert.ok(!coverSvg({ ...g, color1: '"><script>' }).includes('"><script>'), 'สีถูก escape');
 });
+
+test('ภาพตัวอย่างและภาพปกอัตโนมัติ: แปลงเป็นรูปได้ทุกแนวเกม (SVG ถูกต้อง) ขนาด 16:9 / 4:3', async () => {
+  const sharp = (await import('sharp')).default;
+  const { screenshotSvg } = await import('../server/services/screenshotArt.js');
+  const genres = db.prepare('SELECT DISTINCT genre FROM games').all().map((r) => r.genre);
+  assert.ok(genres.length >= 8);
+  for (const genre of [...genres, 'แนวที่ไม่รู้จัก']) {
+    const g = { slug: `t-${genre}`, title: 'Test Game', genre, color1: '#123456', color2: '#abcdef' };
+    for (const n of [0, 1, 2]) {
+      const meta = await sharp(Buffer.from(screenshotSvg(g, n))).metadata();
+      assert.deepEqual([meta.width, meta.height], [1280, 720], `${genre} #${n}`);
+    }
+    const cover = await sharp(Buffer.from(coverSvg(g))).metadata();
+    assert.deepEqual([cover.width, cover.height], [800, 600], genre);
+  }
+});

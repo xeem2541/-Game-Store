@@ -110,6 +110,11 @@ if (fs.existsSync(path.join(ROOT, 'public/fonts'))) {
     fs.copyFileSync(path.join(ROOT, 'public/fonts', f), path.join(DIST, 'public/fonts', f));
   }
 }
+// ไอคอนเว็บ + ภาพประกอบ (ไฟล์คงที่ ไม่ต้อง hash)
+for (const f of ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png']) {
+  if (fs.existsSync(path.join(ROOT, 'public', f))) fs.copyFileSync(path.join(ROOT, 'public', f), path.join(DIST, 'public', f));
+}
+if (fs.existsSync(path.join(ROOT, 'public/img'))) fs.cpSync(path.join(ROOT, 'public/img'), path.join(DIST, 'public/img'), { recursive: true });
 if (fs.existsSync(path.join(ROOT, 'public/icons.svg'))) {
   fs.copyFileSync(path.join(ROOT, 'public/icons.svg'), path.join(DIST, 'public/icons.svg'));
 }

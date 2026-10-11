@@ -155,4 +155,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exit(1);
   }
   console.log(`seeded ${seedGames()} games, ${seedCoupons()} coupons, ${seedKeys()} new FAKE test keys`);
+  const { seedScreenshots } = await import('./demo.js'); // ภาพตัวอย่างของเกม (เฉพาะเกมที่ยังไม่มี)
+  await seedScreenshots();
 }

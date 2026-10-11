@@ -1,5 +1,5 @@
 import { renderKeys } from './keys-ui.js';
-import { markReady, api, $, esc, t, user, loginUrl, cardHtml, remember, toast, money, fmtDateTime } from './common.js';
+import { markReady, api, $, esc, t, user, loginUrl, cardHtml, remember, toast, money, fmtDateTime, emptyArt } from './common.js';
 
 if (!user) { location.replace(loginUrl()); throw new Error('redirect'); }
 
@@ -75,7 +75,7 @@ const views = {
   },
   async orders(page = 1) {
     const data = await api('/me/orders?page=' + page);
-    if (!data.items.length) { panel.innerHTML = `<p class="empty">${t('profile.noOrders')}</p>`; return; }
+    if (!data.items.length) { panel.innerHTML = `<div class="empty">${emptyArt('empty-cart')}<p>${t('profile.noOrders')}</p></div>`; return; }
     panel.innerHTML = `
       <div class="order-list">${data.items.map((o) => `
         <div class="order-row">
@@ -105,7 +105,7 @@ const views = {
   },
   async library() {
     const { items } = await api('/me/library');
-    if (!items.length) { panel.innerHTML = `<p class="empty">${t('profile.noLibrary')}</p>`; return; }
+    if (!items.length) { panel.innerHTML = `<div class="empty">${emptyArt('empty-library')}<p>${t('profile.noLibrary')}</p></div>`; return; }
     panel.innerHTML = `<div class="order-list">${items.map((g, i) => `
       <div class="order-row lib-row">
         <img class="thumb" src="${esc(g.cover)}" alt="">
@@ -118,7 +118,7 @@ const views = {
   async wishlist() {
     const { items } = await api('/wishlist');
     remember(items);
-    panel.innerHTML = items.length ? `<div class="grid">${items.map(cardHtml).join('')}</div>` : `<p class="empty">${t('profile.noWishlist')}</p>`;
+    panel.innerHTML = items.length ? `<div class="grid">${items.map(cardHtml).join('')}</div>` : `<div class="empty">${emptyArt('empty-wishlist')}<p>${t('profile.noWishlist')}</p></div>`;
   },
 };
 

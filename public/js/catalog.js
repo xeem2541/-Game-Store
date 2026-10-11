@@ -1,4 +1,4 @@
-import { markReady, api, cardHtml, remember, $, esc, t, genreName } from './common.js';
+import { markReady, api, cardHtml, remember, $, esc, t, genreName, emptyArt } from './common.js';
 
 const form = $('#filters');
 const heading = $('h1.sec > span');
@@ -52,7 +52,7 @@ async function load() {
   setHeading(q);
   // ข้อความ "ไม่พบครบทุกคำ" อยู่ในกริดเดียวกับการ์ด (เข้ามาพร้อมผลลัพธ์ ไม่ดันเนื้อหาที่แสดงอยู่แล้ว)
   $('#grid').innerHTML = (data.relaxed ? `<p class="search-note" role="status">${esc(t('catalog.relaxed'))}</p>` : '') + data.items.map(cardHtml).join('');
-  $('#empty').innerHTML = q ? `${esc(t('catalog.emptyQ', { q }))} <a href="/games.html">${esc(t('catalog.clear'))}</a>` : esc(t('catalog.empty'));
+  $('#empty').innerHTML = emptyArt('no-results') + (q ? `<p>${esc(t('catalog.emptyQ', { q }))} <a href="/games.html">${esc(t('catalog.clear'))}</a></p>` : `<p>${esc(t('catalog.empty'))}</p>`);
   $('#empty').hidden = data.items.length > 0;
   $('#count').textContent = `${t('catalog.count', { n: data.total })}`;
   const pages = Array.from({ length: data.pages }, (_, i) => i + 1);
