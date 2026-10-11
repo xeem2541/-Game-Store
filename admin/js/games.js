@@ -1,4 +1,4 @@
-import { $, api, badge, bahtInput, confirmBox, dt, empty, errorState, esc, formValues, hasPerm, hashParams, loading, money, pager, qs, setHashQuery, table, toSatang, toast } from './core.js';
+import { $, api, badge, bahtInput, confirmBox, dt, errorState, esc, formValues, hasPerm, hashParams, loading, money, pager, qs, setHashQuery, table, toSatang, toast } from './core.js';
 
 export async function render(el, rest, alive) {
   if (rest[0] === 'new') return renderForm(el, null, alive);

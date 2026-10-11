@@ -57,7 +57,7 @@ fs.writeFileSync(path.join(DIST, 'admin/vendor', chartName), chart);
 map.set('/admin/vendor/chart.umd.js', `/admin/vendor/${chartName}`);
 
 // ---------- HTML / JSON / อื่นๆ ----------
-const htmlCopy = (srcDir, dstDir, urlPrefix) => {
+const htmlCopy = (srcDir, dstDir) => {
   fs.mkdirSync(dstDir, { recursive: true });
   for (const f of fs.readdirSync(srcDir).filter((n) => n.endsWith('.html'))) {
     let h = fs.readFileSync(path.join(srcDir, f), 'utf8');
