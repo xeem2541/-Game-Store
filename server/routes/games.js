@@ -6,6 +6,7 @@ import { db } from '../db/index.js';
 import { UPLOAD_DIR } from '../services/images.js';
 import { FINAL_PRICE_SQL, finalPrice } from '../services/pricing.js';
 import { escHtml, likeArg } from '../services/text.js';
+import { BM25_WEIGHTS, ftsMatch, parseQuery, segmentThai, shortTermSql } from '../services/search.js';
 
 export const gamesRouter = Router();
 
@@ -39,32 +40,69 @@ const listQuery = z.object({
 });
 
 // รายการเกม + ค้นหา/กรอง/เรียง/แบ่งหน้า
+// ค้นหา: เรียงตามความเกี่ยวข้อง (ชื่อเกมขึ้นต้นด้วยคำค้นก่อน แล้วตามคะแนน bm25) เมื่อไม่ได้เลือกการเรียงเอง
+// ไม่พบ → ผ่อนปรนทีละขั้น: (1) แยกวลีไทยเป็นคำ ต้องมีครบทุกคำ (2) มีคำใดคำหนึ่ง — แล้วตอบ relaxed: true ให้หน้าเว็บบอกผู้ใช้
 gamesRouter.get('/', (req, res) => {
   const p = listQuery.parse(req.query);
-  const where = ['active = 1'];
+  const where = ['g.active = 1'];
   const args = [];
-  // LIKE สแกนทั้งตาราง — พอสำหรับร้านขนาดหลักร้อย-พันเกม (FTS5 unicode61 ตัดคำภาษาไทยไม่ได้ จึงยังไม่เปลี่ยน)
-  if (p.q) { where.push("(title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')"); args.push(likeArg(p.q), likeArg(p.q)); }
-  if (p.genre) { where.push('genre = ?'); args.push(p.genre); }
-  if (p.platform) { where.push('platform = ?'); args.push(p.platform); }
+  if (p.genre) { where.push('g.genre = ?'); args.push(p.genre); }
+  if (p.platform) { where.push('g.platform = ?'); args.push(p.platform); }
   if (p.minPrice !== undefined) { where.push(`${FINAL_PRICE_SQL} >= ?`); args.push(p.minPrice); }
   if (p.maxPrice !== undefined) { where.push(`${FINAL_PRICE_SQL} <= ?`); args.push(p.maxPrice); }
-  if (p.onSale) where.push('discount > 0');
-  if (p.featured) where.push('featured = 1');
-  const w = where.join(' AND ');
+  if (p.onSale) where.push('g.discount > 0');
+  if (p.featured) where.push('g.featured = 1');
 
-  const total = db.prepare(`SELECT COUNT(*) AS n FROM games_v WHERE ${w}`).get(...args).n;
-  const items = db.prepare(`SELECT * FROM games_v WHERE ${w} ORDER BY ${SORTS[p.sort]} LIMIT ? OFFSET ?`)
-    .all(...args, p.limit, (p.page - 1) * p.limit).map(withFinal);
-  res.json({ items, total, page: p.page, pages: Math.max(1, Math.ceil(total / p.limit)) });
+  const parsed = parseQuery(p.q);
+  const { terms } = parsed;
+  const run = ({ long, short }, any = false) => {
+    const w = [...where];
+    const a = [...args];
+    let from = 'games_v g';
+    const fa = [];
+    if (long.length) {
+      from += ` JOIN (SELECT rowid, bm25(games_fts, ${BM25_WEIGHTS}) AS score FROM games_fts WHERE games_fts MATCH ?) f ON f.rowid = g.id`;
+      fa.push(ftsMatch(long, { any }));
+    }
+    if (short.length && !any) { // โหมดผ่อนปรนไม่บังคับคำสั้น (เช่น "ใน", "of")
+      const st = shortTermSql(short);
+      w.push(...st.sql);
+      a.push(...st.args);
+    }
+    const order = terms.length && p.sort === 'default'
+      ? `(g.title LIKE ? ESCAPE '\\') DESC, ${long.length ? 'f.score, ' : ''}g.sales DESC`
+      : SORTS[p.sort];
+    const oa = terms.length && p.sort === 'default' ? [likeArg(terms.join(' ')).slice(1)] : []; // ชื่อขึ้นต้นด้วยคำค้น ("dragon%")
+    const sqlW = w.join(' AND ');
+    const total = db.prepare(`SELECT COUNT(*) AS n FROM ${from} WHERE ${sqlW}`).get(...fa, ...a).n;
+    const items = db.prepare(`SELECT g.* FROM ${from} WHERE ${sqlW} ORDER BY ${order} LIMIT ? OFFSET ?`)
+      .all(...fa, ...a, ...oa, p.limit, (p.page - 1) * p.limit).map(withFinal);
+    return { items, total };
+  };
+  let r = run(parsed);
+  let relaxed = false;
+  if (!r.total && terms.length) {
+    const words = segmentThai(terms) ?? parsed;
+    if (words !== parsed) r = run(words);
+    if (!r.total && words.terms.length > 1 && words.long.length) r = run(words, true);
+    relaxed = r.total > 0;
+  }
+  res.json({ items: r.items, total: r.total, page: p.page, pages: Math.max(1, Math.ceil(r.total / p.limit)), ...(relaxed && { relaxed }) });
 });
 
-// autocomplete
+// autocomplete: ชื่อเกมที่ขึ้นต้นด้วยคำค้นก่อน แล้วตามความเกี่ยวข้อง (ชื่อมีน้ำหนักสูงสุด) — ค้นทุกคอลัมน์
+// เพื่อให้คำไทย เช่น "มังกร" แนะนำ Dragon Realm ได้ (ชื่อเกมเป็นภาษาอังกฤษ)
 gamesRouter.get('/suggest', (req, res) => {
-  const q = String(req.query.q ?? '').trim().slice(0, 50);
+  const q = String(req.query.q ?? '').normalize('NFC').trim().slice(0, 50);
   if (!q) return res.json([]);
-  const rows = db.prepare("SELECT slug, title, genre FROM games_v WHERE active = 1 AND title LIKE ? ESCAPE '\\' ORDER BY sales DESC LIMIT 6")
-    .all(likeArg(q));
+  const { long, short } = parseQuery(q);
+  const prefix = likeArg(q).slice(1); // "q%"
+  const rows = long.length && !short.length
+    ? db.prepare(`SELECT g.slug, g.title, g.genre FROM games_v g
+        JOIN (SELECT rowid, bm25(games_fts, ${BM25_WEIGHTS}) AS score FROM games_fts WHERE games_fts MATCH ?) f ON f.rowid = g.id
+        WHERE g.active = 1 ORDER BY (g.title LIKE ? ESCAPE '\\') DESC, f.score, g.sales DESC LIMIT 6`).all(ftsMatch(long), prefix)
+    : db.prepare(`SELECT slug, title, genre FROM games_v WHERE active = 1 AND title LIKE ? ESCAPE '\\'
+        ORDER BY (title LIKE ? ESCAPE '\\') DESC, sales DESC LIMIT 6`).all(likeArg(q), prefix);
   res.json(rows);
 });
 

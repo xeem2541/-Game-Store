@@ -36,3 +36,28 @@ SELECT g.id, g.slug, g.title, g.description, g.description_en, g.genre, g.platfo
        g.release_date, g.sales, g.featured, g.color1, g.color2, g.trailer_url, g.spec_min, g.spec_rec, g.active,
        g.cover_image, g.low_stock_threshold
 FROM games g;
+
+-- ค้นหาเกม (FTS5 แบบ trigram — จับข้อความย่อยได้ทุกภาษารวมภาษาไทย ดู services/search.js)
+-- external content: ข้อความอยู่ในตาราง games ที่เดียว ดัชนีเก็บแค่ trigram; trigger ด้านล่างอัปเดตดัชนีทุกครั้งที่ข้อความเปลี่ยน
+CREATE VIRTUAL TABLE IF NOT EXISTS games_fts USING fts5(
+  title, description, description_en, genre, platform,
+  content = 'games', content_rowid = 'id', tokenize = 'trigram remove_diacritics 1'
+);
+DROP TRIGGER IF EXISTS games_fts_ai;
+CREATE TRIGGER games_fts_ai AFTER INSERT ON games BEGIN
+  INSERT INTO games_fts (rowid, title, description, description_en, genre, platform)
+  VALUES (NEW.id, NEW.title, NEW.description, NEW.description_en, NEW.genre, NEW.platform);
+END;
+DROP TRIGGER IF EXISTS games_fts_ad;
+CREATE TRIGGER games_fts_ad AFTER DELETE ON games BEGIN
+  INSERT INTO games_fts (games_fts, rowid, title, description, description_en, genre, platform)
+  VALUES ('delete', OLD.id, OLD.title, OLD.description, OLD.description_en, OLD.genre, OLD.platform);
+END;
+-- เฉพาะคอลัมน์ที่ค้นหาได้ (ยอดขาย/ส่วนลดเปลี่ยนบ่อย ไม่ต้องแตะดัชนี)
+DROP TRIGGER IF EXISTS games_fts_au;
+CREATE TRIGGER games_fts_au AFTER UPDATE OF title, description, description_en, genre, platform ON games BEGIN
+  INSERT INTO games_fts (games_fts, rowid, title, description, description_en, genre, platform)
+  VALUES ('delete', OLD.id, OLD.title, OLD.description, OLD.description_en, OLD.genre, OLD.platform);
+  INSERT INTO games_fts (rowid, title, description, description_en, genre, platform)
+  VALUES (NEW.id, NEW.title, NEW.description, NEW.description_en, NEW.genre, NEW.platform);
+END;

@@ -1,6 +1,13 @@
 import { markReady, api, cardHtml, remember, $, esc, t, genreName } from './common.js';
 
 const form = $('#filters');
+const heading = $('h1.sec > span');
+// หัวข้อบอกคำค้น — ตั้งก่อนรอข้อมูลใด ๆ (ทำงานต่อจากการใส่คำแปลทันที ก่อนเบราว์เซอร์วาดหน้า จึงไม่กระพริบ/ไม่ขยับ)
+const setHeading = (q) => {
+  heading.textContent = q ? t('catalog.results', { q }) : t('catalog.title');
+  heading.parentElement.classList.toggle('is-search', Boolean(q));
+};
+setHeading(new URLSearchParams(location.search).get('q'));
 const FIELDS = ['q', 'genre', 'platform', 'minPrice', 'maxPrice', 'onSale', 'sort'];
 
 const facets = await api('/games/facets');
@@ -41,7 +48,11 @@ async function load() {
   for (const k of ['minPrice', 'maxPrice']) if (p.get(k)) p.set(k, String(Math.round(Number(p.get(k)) * 100)));
   const data = await api('/games?' + p);
   remember(data.items);
-  $('#grid').innerHTML = data.items.map(cardHtml).join('');
+  const q = p.get('q');
+  setHeading(q);
+  // ข้อความ "ไม่พบครบทุกคำ" อยู่ในกริดเดียวกับการ์ด (เข้ามาพร้อมผลลัพธ์ ไม่ดันเนื้อหาที่แสดงอยู่แล้ว)
+  $('#grid').innerHTML = (data.relaxed ? `<p class="search-note" role="status">${esc(t('catalog.relaxed'))}</p>` : '') + data.items.map(cardHtml).join('');
+  $('#empty').innerHTML = q ? `${esc(t('catalog.emptyQ', { q }))} <a href="/games.html">${esc(t('catalog.clear'))}</a>` : esc(t('catalog.empty'));
   $('#empty').hidden = data.items.length > 0;
   $('#count').textContent = `${t('catalog.count', { n: data.total })}`;
   const pages = Array.from({ length: data.pages }, (_, i) => i + 1);

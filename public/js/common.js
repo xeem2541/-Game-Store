@@ -293,21 +293,78 @@ function mountLayout() {
     location.href = '/';
   });
 
-  // autocomplete
+  // ช่องค้นหา + รายการแนะนำ (ARIA combobox): ลูกศรขึ้น/ลงเลือก, Enter เปิด, Esc ปิด, คำที่ตรงเป็นตัวเน้น
   const input = $('#search');
   const box = $('#suggest');
+  const pageQ = location.pathname.startsWith('/games') ? new URLSearchParams(location.search).get('q') : null;
+  if (pageQ) input.value = pageQ; // หน้ารายการเกม: ช่องค้นหาแสดงคำที่ค้นอยู่
+  input.setAttribute('role', 'combobox');
+  input.setAttribute('aria-autocomplete', 'list');
+  input.setAttribute('aria-controls', 'suggest');
+  input.setAttribute('aria-expanded', 'false');
+  box.setAttribute('role', 'listbox');
+  box.setAttribute('aria-label', t('search.suggestions'));
   let timer;
+  let seq = 0; // กันผลของคำค้นเก่าที่ตอบช้ามาเขียนทับคำค้นใหม่
+  let active = -1;
+  const options = () => [...box.querySelectorAll('[role="option"]')];
+  const show = (open) => {
+    box.hidden = !open;
+    input.setAttribute('aria-expanded', String(open));
+    if (!open) { active = -1; input.removeAttribute('aria-activedescendant'); }
+  };
+  const select = (i) => {
+    const opts = options();
+    if (!opts.length) return;
+    active = (i + opts.length) % opts.length;
+    opts.forEach((o, n) => o.setAttribute('aria-selected', String(n === active)));
+    input.setAttribute('aria-activedescendant', opts[active].id);
+    opts[active].scrollIntoView({ block: 'nearest' });
+  };
   input.addEventListener('input', () => {
     clearTimeout(timer);
     const q = input.value.trim();
-    if (!q) { box.hidden = true; return; }
+    if (!q) { show(false); return; }
     timer = setTimeout(async () => {
+      const mine = ++seq;
       const rows = await api('/games/suggest?q=' + encodeURIComponent(q)).catch(() => []);
-      box.innerHTML = rows.map((r) => `<li><a href="/game/${esc(r.slug)}">${esc(r.title)} <small>${esc(genreName(r.genre))}</small></a></li>`).join('');
-      box.hidden = !rows.length;
-    }, 200);
+      if (mine !== seq || input.value.trim() !== q) return;
+      const all = `/games.html?q=${encodeURIComponent(q)}`;
+      // ตัวเลือกเป็น option ล้วน (ห้ามมีลิงก์ซ้อนใน option) — ปลายทางอยู่ใน data-href
+      box.innerHTML = rows.map((r, i) => `<li id="sug-${i}" role="option" aria-selected="false" data-href="/game/${esc(r.slug)}">${highlight(r.title, q)} <small>${esc(genreName(r.genre))}</small></li>`).join('')
+        + `<li id="sug-all" role="option" aria-selected="false" class="suggest-all" data-href="${esc(all)}">${t('search.all', { q: esc(q) })}</li>`;
+      show(true);
+    }, 150);
   });
-  document.addEventListener('click', (e) => { if (!e.target.closest('.search')) box.hidden = true; });
+  input.addEventListener('keydown', (e) => {
+    if (box.hidden) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); select(active + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); select(active - 1); }
+    else if (e.key === 'Escape') { e.preventDefault(); show(false); }
+    else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); location.href = options()[active].dataset.href; }
+  });
+  box.addEventListener('mousedown', (e) => e.preventDefault()); // คลิกตัวเลือกแล้วโฟกัสยังอยู่ที่ช่องค้นหา (รายการไม่ปิดก่อนคลิกสำเร็จ)
+  box.addEventListener('click', (e) => { const o = e.target.closest('[role="option"]'); if (o) location.href = o.dataset.href; });
+  input.addEventListener('blur', () => show(false));
+  document.addEventListener('click', (e) => { if (!e.target.closest('.search')) show(false); });
+}
+
+// เน้นส่วนของชื่อที่ตรงกับคำค้น (ทุกคำ ไม่สนตัวพิมพ์เล็ก/ใหญ่) — escape ข้อความก่อนเสมอ ใส่ได้แค่ <mark>
+export function highlight(text, q) {
+  const lower = text.toLowerCase();
+  const ranges = [];
+  for (const term of q.toLowerCase().split(/\s+/).filter(Boolean)) {
+    for (let i = lower.indexOf(term); i !== -1; i = lower.indexOf(term, i + term.length)) ranges.push([i, i + term.length]);
+  }
+  ranges.sort((a, b) => a[0] - b[0]);
+  let out = '';
+  let pos = 0;
+  for (const [a, b] of ranges) {
+    if (a < pos) { if (b > pos) { out += `<mark>${esc(text.slice(pos, b))}</mark>`; pos = b; } continue; }
+    out += esc(text.slice(pos, a)) + `<mark>${esc(text.slice(a, b))}</mark>`;
+    pos = b;
+  }
+  return out + esc(text.slice(pos));
 }
 
 mountLayout();

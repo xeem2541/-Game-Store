@@ -51,9 +51,68 @@ test('ค้นหา: % และ _ ถูกค้นเป็นตัวอ�
   assert.deepEqual(await get('/api/games/suggest?q=%25'), []);
   assert.deepEqual(await get('/api/games/suggest?q='), []);
   const s = await get('/api/games/suggest?q=legend');
-  assert.ok(s.length > 0 && s.length <= 6 && s.every((g) => /legend/i.test(g.title) && g.slug && g.genre));
+  assert.ok(s.length > 0 && s.length <= 6 && s.every((g) => g.slug && g.genre));
+  // ค้นทุกคอลัมน์ (คำไทยในคำอธิบายจึงแนะนำเกมได้) แต่เกมที่ชื่อตรงต้องมาก่อน
+  const titled = s.map((g) => /legend/i.test(g.title));
+  const firstOther = titled.includes(false) ? titled.indexOf(false) : titled.length;
+  assert.ok(titled[0], 'อันดับแรกต้องเป็นเกมที่ชื่อตรง');
+  assert.ok(titled.slice(firstOther).every((x) => !x), 'เกมที่ชื่อตรงต้องอยู่ก่อนเกมที่ตรงแค่คำอธิบาย');
 
   assert.equal(likeArg('50%_a\\b'), '%50\\%\\_a\\\\b%');
+});
+
+test('ค้นหา (FTS5): ภาษาไทย, เรียงตามความเกี่ยวข้อง, ชื่อแนวเกมภาษาอังกฤษ, ผ่อนปรนเมื่อไม่พบครบทุกคำ', async () => {
+  // คำไทยในคำอธิบาย (ไม่มีช่องว่างระหว่างคำ) — ตรงกับ "มังกร" ในคำอธิบายของ Dragon Realm
+  const th = await get('/api/games?q=' + encodeURIComponent('มังกร'));
+  assert.ok(th.items.some((g) => g.slug === 'dragon-realm'));
+  // สระ/วรรณยุกต์ไทยไม่ถูกตัดทิ้ง: "มงกร" ต้องไม่เจอ "มังกร"
+  assert.ok(!(await get('/api/games?q=' + encodeURIComponent('มงกร'))).items.some((g) => g.slug === 'dragon-realm'));
+  // ชื่อเกมที่ขึ้นต้นด้วยคำค้นมาก่อน
+  assert.equal((await get('/api/games?q=legend')).items[0].title.toLowerCase().includes('legend'), true);
+  // "action" / "sim" (ชื่ออังกฤษของแนวเกมที่เก็บเป็นภาษาไทย)
+  const action = await get('/api/games?q=action&limit=60');
+  assert.ok(action.total > 0 && action.items.every((g) => g.genre === 'แอ็กชัน' || /action/i.test(g.title + g.description_en)));
+  assert.ok((await get('/api/games?q=sim&limit=60')).items.some((g) => g.genre === 'จำลอง'));
+  // หลายคำ: ต้องมีครบทุกคำ (ลำดับไม่สำคัญ)
+  assert.deepEqual((await get('/api/games?q=realm%20dragon')).items.map((g) => g.slug), ['dragon-realm']);
+  // ไม่มีเกมไหนมีครบทุกคำ → เกมที่มีบางคำ + relaxed
+  const relaxed = await get('/api/games?q=' + encodeURIComponent('dragon zzzqqq'));
+  assert.equal(relaxed.relaxed, true);
+  assert.ok(relaxed.items.some((g) => g.slug === 'dragon-realm'));
+  assert.equal((await get('/api/games?q=zzzqqq')).total, 0);
+  // วลีไทยพิมพ์ติดกัน ไม่ตรงทั้งก้อน → แยกเป็นคำ ("ผจญภัย ใน โลก แฟนตาซี มังกร") แล้วหาเกมที่มีครบทุกคำ
+  const phrase = await get('/api/games?q=' + encodeURIComponent('ผจญภัยในโลกแฟนตาซีมังกร'));
+  assert.equal(phrase.relaxed, true);
+  assert.equal(phrase.items[0]?.slug, 'dragon-realm');
+  // คำสั้นกว่า 3 ตัวอักษร (trigram หาไม่ได้) ใช้ LIKE แทน
+  assert.ok((await get('/api/games?q=X')).items.some((g) => /x/i.test(g.title)));
+  // ตัวอักษรพิเศษของ FTS ไม่ทำให้ error
+  for (const q of ['"', '*', 'dragon"', '(a OR b)', 'NEAR(x y)', 'title:dragon', '-dragon', '^dragon']) {
+    assert.equal((await raw('/api/games?q=' + encodeURIComponent(q))).status, 200, q);
+    assert.equal((await raw('/api/games/suggest?q=' + encodeURIComponent(q))).status, 200, q);
+  }
+  // เลือกการเรียงเอง → ใช้การเรียงนั้นแทนความเกี่ยวข้อง
+  const byPrice = (await get('/api/games?q=legend&sort=priceAsc')).items;
+  assert.ok(byPrice.every((g, i, a) => i === 0 || a[i - 1].finalPrice <= g.finalPrice));
+});
+
+test('ค้นหา: รายการแนะนำจากคำไทย และดัชนีอัปเดตเมื่อแก้/ซ่อน/ลบเกม', async () => {
+  assert.equal((await get('/api/games/suggest?q=' + encodeURIComponent('มังกร')))[0]?.slug, 'dragon-realm');
+  const id = db.prepare(`INSERT INTO games (slug, title, description, genre, platform, price, release_date, color1, color2)
+    VALUES ('fts-probe', 'Quokka Quest', 'ผจญภัยกับควอกก้า', 'ผจญภัย', 'PC', 10000, '2026-01-01', '#000', '#fff')`).run().lastInsertRowid;
+  try {
+    assert.equal((await get('/api/games/suggest?q=quokka'))[0]?.slug, 'fts-probe');
+    assert.ok((await get('/api/games?q=' + encodeURIComponent('ควอกก้า'))).items.some((g) => g.slug === 'fts-probe'));
+    db.prepare("UPDATE games SET title = 'Wombat Walk' WHERE id = ?").run(id);
+    assert.deepEqual(await get('/api/games/suggest?q=quokka'), []);
+    assert.equal((await get('/api/games/suggest?q=wombat'))[0]?.slug, 'fts-probe');
+    db.prepare('UPDATE games SET active = 0 WHERE id = ?').run(id);
+    assert.deepEqual(await get('/api/games/suggest?q=wombat'), []);
+  } finally {
+    db.prepare('DELETE FROM games WHERE id = ?').run(id);
+  }
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM games_fts WHERE games_fts MATCH 'wombat'").get().n, 0, 'ลบเกมแล้วดัชนีต้องลบด้วย');
+  assert.equal(db.prepare("INSERT INTO games_fts (games_fts, rank) VALUES ('integrity-check', 1)").run().changes >= 0, true);
 });
 
 test('ตัวกรอง (facets), หน้าแรก และรายละเอียดเกม', async () => {

@@ -37,3 +37,7 @@ db.pragma('temp_store = MEMORY');
 db.exec(fs.readFileSync(path.join(dir, 'schema.sql'), 'utf8')); // ตาราง (CREATE IF NOT EXISTS)
 migrate(db);                                                      // แก้ตารางเดิม/ย้ายข้อมูล (ครั้งเดียวต่อรายการ)
 db.exec(fs.readFileSync(path.join(dir, 'views.sql'), 'utf8'));   // view สร้างใหม่ทุกครั้ง หลัง migration
+// ดัชนีค้นหาว่างแต่มีเกมอยู่แล้ว (ฐานข้อมูลเดิมก่อนมี games_fts) → สร้างดัชนีจากข้อมูลเดิมครั้งเดียว
+if (!db.prepare('SELECT 1 FROM games_fts_docsize LIMIT 1').get() && db.prepare('SELECT 1 FROM games LIMIT 1').get()) {
+  db.exec("INSERT INTO games_fts (games_fts) VALUES ('rebuild')");
+}
