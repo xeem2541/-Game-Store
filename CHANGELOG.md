@@ -22,6 +22,9 @@
 
 - กันกักสต็อกด้วยออเดอร์รอชำระ: ค้างได้ไม่เกิน `MAX_PENDING_ORDERS` (3) ต่อผู้ใช้ และสร้างคำสั่งซื้อได้ `ORDER_RATE_LIMIT` (10) ครั้ง/10 นาที/ผู้ใช้
 
+### Performance
+- คะแนนเฉลี่ย/จำนวนรีวิวเก็บในตาราง `games` (`rating_avg`, `review_count`, migration 008) อัปเดตด้วย trigger บนตาราง `reviews` — `games_v` ไม่ต้องรัน subquery 2 ตัวต่อแถวอีก (เกม 2,000 / รีวิว 100,000: เรียงตามคะแนน 50.6 ms → 0.24 ms)
+
 ### Tests / CI
 - เทส webhook ที่ขาด: PromptPay ยืนยันทีหลัง (async succeeded/failed), session หมดอายุ, ได้เงินแต่ไม่พบออเดอร์, จ่ายซ้ำ, event ที่ไม่ใช้ — `payments.js` branch coverage 64% → 80%
 - GitHub Actions: เทส + build บน Node 22/24, e2e Chromium (ยังไม่บล็อก)

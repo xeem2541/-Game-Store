@@ -54,6 +54,21 @@ export const MIGRATIONS = [
     // ฝังใน JWT ทุกตัว: เพิ่มค่านี้ = เพิกถอนเซสชันทั้งหมดของผู้ใช้ (เปลี่ยน/รีเซ็ตรหัสผ่าน, ออกจากระบบทุกอุปกรณ์)
     up: (db) => { addColumn(db, 'users', 'token_version', 'INTEGER NOT NULL DEFAULT 0'); },
   },
+  {
+    id: '008_games_review_stats',
+    // สรุปรีวิวเก็บในตาราง games (trigger ใน views.sql อัปเดตทุกครั้งที่รีวิวเปลี่ยน) แทน subquery ต่อแถวใน games_v
+    // rating_avg = NULL เมื่อยังไม่มีรีวิว (games_v จะใช้คะแนนตั้งต้น games.rating)
+    up: (db) => {
+      addColumn(db, 'games', 'review_count', 'INTEGER NOT NULL DEFAULT 0');
+      addColumn(db, 'games', 'rating_avg', 'REAL');
+      const hasReviews = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'reviews'").get();
+      if (hasReviews) {
+        db.exec(`UPDATE games SET
+          review_count = (SELECT COUNT(*) FROM reviews r WHERE r.game_id = games.id),
+          rating_avg = (SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.game_id = games.id)`);
+      }
+    },
+  },
 ];
 
 export function migrate(db) {
