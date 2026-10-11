@@ -1,6 +1,6 @@
 // สำรองของ parallax / ค่อย ๆ ปรากฏตามการเลื่อน สำหรับเบราว์เซอร์ที่ยังไม่รองรับ CSS scroll-driven animation
 // (Firefox, Safari รุ่นเก่า) — เบราว์เซอร์ที่รองรับใช้ CSS ใน story.css อย่างเดียว ไฟล์นี้ไม่ทำอะไร
-// ค่าเดียวกับ story.css: ฉากหลังเลื่อนลง 28% ของความสูงตัวเอง ตลอดการเลื่อน 1 หน้าจอ, ภาพปกเกมขึ้น 56px ตลอด 0.8 หน้าจอ
+// ค่าเดียวกับ story.css: ฉากหลังเลื่อนลง 28% ของความสูงตัวเอง (ชั้นแสงสี 14%) ตลอดการเลื่อน 1 หน้าจอ, ภาพปกเกมขึ้น 56px ตลอด 0.8 หน้าจอ
 import { onReducedMotionChange, prefersReducedMotion } from './motion.js';
 
 export const supportsScrollTimeline = () => typeof CSS !== 'undefined' && CSS.supports('animation-timeline: scroll()');
@@ -8,6 +8,7 @@ export const supportsScrollTimeline = () => typeof CSS !== 'undefined' && CSS.su
 const PARALLAX = [
   { sel: '.hero-bg', range: 1, move: (el, p) => p * 0.28 * el.offsetHeight },
   { sel: '.game-backdrop', range: 1, move: (el, p) => p * 0.28 * el.offsetHeight },
+  { sel: '.game-glow', range: 1, move: (el, p) => p * 0.14 * el.offsetHeight },
   { sel: '.detail-cover-wrap', range: 0.8, move: (_el, p) => -56 * p },
 ];
 

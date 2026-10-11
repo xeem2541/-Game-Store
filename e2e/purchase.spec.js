@@ -16,7 +16,7 @@ test('ลูกค้าซื้อเกมครบวงจร แล้ว�
 
   // 2) ใส่ตะกร้า
   await page.goto('/game/dragon-realm');
-  await expect(page.locator('h1')).toHaveText('Dragon Realm');
+  await expect(page.getByRole('heading', { level: 1, name: 'Dragon Realm' })).toBeVisible(); // ชื่อตามที่ screen reader อ่าน (คำที่แยกไว้ทำแอนิเมชันซ่อนจาก screen reader)
   await page.click('#addBtn');
   await expect(page.locator('#cartCount')).toHaveText('1');
 

@@ -34,7 +34,6 @@ body::before {
   box-shadow: var(--shadow-3), var(--glass-highlight);
 }
 .topbar.scrolled { background: var(--glass-bg-strong); }
-.sticky-cta { border-width: 1px 0 0; border-radius: 0; }
 /* เบราว์เซอร์ที่ไม่รองรับ backdrop-filter: ใช้พื้นทึบแทน (ไม่โปร่งจนอ่านไม่ออก) */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .topbar, .side, .filters, .sticky-cta, .cart, .usermenu .menu, .suggest, .toast, .modal { background: var(--c-surface); }

@@ -395,9 +395,6 @@ a { color: var(--c-accent); }
 .specs strong { display: block; margin-bottom: 4px; letter-spacing: 0.05em; }
 .specs p { color: var(--c-text-2); }
 .trailer { display: block; width: 100%; aspect-ratio: 16 / 9; border: var(--border-thin); border-radius: var(--r-brutal); margin-bottom: 48px; }
-.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 48px; }
-.shots img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-md); border: var(--border-thin); transition: transform var(--dur-2); }
-.shots a:hover img { transform: scale(1.02); }
 .reviews .sec small { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c-text-2); text-transform: none; }
 .review-form { display: flex; flex-direction: column; gap: 16px; max-width: 640px; padding: 24px; margin-bottom: 24px; border: var(--border-thin); border-radius: var(--r-brutal); background: var(--surface-1); }
 .review-form label { display: flex; flex-direction: column; gap: 6px; color: var(--c-text-2); font-size: var(--fs-sm); font-weight: 700; }
@@ -411,19 +408,12 @@ a { color: var(--c-accent); }
 .reviews .tag { padding: 2px 8px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-ok); background: rgb(var(--rgb-ok) / 0.1); border: 1px solid rgb(var(--rgb-ok) / 0.3); }
 .stars { color: var(--c-star); letter-spacing: 1px; }
 #moreRev { margin-top: 16px; }
-.sticky-cta { display: none; }
 @media (max-width: 900px) {
   .detail-cover-wrap { flex-basis: auto; width: min(440px, 100%); }
   .detail-hero-content { align-items: center; }
   .detail-hero-content h1 { font-size: var(--fs-2xl); }
 }
 @media (max-width: 700px) {
-  .sticky-cta { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-nav); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgb(var(--rgb-surface) / 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: var(--border-thin); }
-  .sticky-cta-info { min-width: 0; }
-  .sticky-cta-title { font-weight: var(--fw-bold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sticky-cta-price { display: flex; gap: 6px; align-items: baseline; font-weight: var(--fw-bold); font-size: var(--fs-lg); }
-  .sticky-cta .btn { flex-shrink: 0; }
-  .sticky-cta-spacer { height: 88px; }
   .review-form { padding: 16px; }
 }
 
