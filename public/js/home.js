@@ -59,7 +59,7 @@ if (!mql.matches) {
 
 for (const key of ['featured', 'bestsellers', 'newest', 'onSale']) {
   let items = data[key];
-  if (key === 'featured') items = items.slice(1); // skip the hero one
+  if (key === 'featured') items = items.slice(1, 5); // skip the hero one; bento grid has 4 slots
   remember(items);
   $('#' + key).innerHTML = items.map(cardHtml).join('');
 }
