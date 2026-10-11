@@ -69,6 +69,18 @@ test('/healthz: 200 + ไม่เปิดเผยข้อมูลภาย�
   assert.deepEqual(Object.keys(body).sort(), ['status', 'uptime']);
 });
 
+test('CSRF: คำตอบ /api ส่งโทเคนใน header ตรงกับคุกกี้ และใช้ค่าจาก header ส่งคำขอ POST ได้ (Safari อ่านคุกกี้ใหม่ไม่ทัน)', async () => {
+  const r = await get('/api/health');
+  const cookie = (r.headers.get('set-cookie') || '').match(/csrf=([a-f0-9]+)/)?.[1];
+  assert.ok(cookie, 'ต้องตั้งคุกกี้ csrf');
+  assert.equal(r.headers.get('x-csrf-token'), cookie);
+  // คำขอถัดไปที่มีคุกกี้อยู่แล้ว: header ยังเป็นค่าเดิม (ไม่สุ่มใหม่)
+  assert.equal((await get('/api/health', { cookie: `csrf=${cookie}` })).headers.get('x-csrf-token'), cookie);
+  const post = (token) => fetch(srv.url + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json', cookie: `csrf=${cookie}`, 'x-csrf-token': token }, body: JSON.stringify({ email: 'no@example.com', password: 'whatever-123' }) });
+  assert.equal((await post(r.headers.get('x-csrf-token'))).status, 401, 'โทเคนจาก header ผ่าน CSRF (ไปถึงการตรวจรหัสผ่าน)');
+  assert.equal((await post('0'.repeat(48))).status, 403);
+});
+
 test('CORS: ค่าเริ่มต้นไม่อนุญาต origin อื่น, อนุญาตเฉพาะที่อยู่ใน CORS_ORIGINS', async () => {
   const r = await get('/api/games', { origin: 'https://evil.example' });
   assert.equal(r.headers.get('access-control-allow-origin'), null);

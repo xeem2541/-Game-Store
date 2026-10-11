@@ -4,12 +4,14 @@ const form = document.getElementById('form');
 const msg = document.getElementById('msg');
 const mfaForm = document.getElementById('mfaForm');
 const mfaMsg = document.getElementById('mfaMsg');
-const csrf = () => (document.cookie.split('; ').find((c) => c.startsWith('csrf=')) || '').slice(5);
+// คุกกี้ csrf หรือค่าจาก header ของคำตอบ /api/health (Safari อาจยังไม่เห็นคุกกี้ที่เพิ่งตั้งใน document.cookie ทันที)
+let lastCsrf = '';
+const csrf = () => (document.cookie.split('; ').find((c) => c.startsWith('csrf=')) || '').slice(5) || lastCsrf;
 
 // ปุ่มแสดงวงหมุนระหว่างรอ (admin.css: .btn[aria-busy])
 const setBusy = (btn, on) => { btn.disabled = on; if (on) btn.setAttribute('aria-busy', 'true'); else btn.removeAttribute('aria-busy'); };
 
-async function ensureCsrf() { if (!csrf()) await fetch('/api/health'); }
+async function ensureCsrf() { if (!csrf()) lastCsrf = (await fetch('/api/health')).headers.get('x-csrf-token') || ''; }
 
 async function post(path, body) {
   await ensureCsrf();

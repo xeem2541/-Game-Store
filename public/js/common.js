@@ -15,13 +15,19 @@ export const fmtDateTime = (s) => new Date(typeof s === 'number' ? s : s.replace
 // ราคาทุกที่ในระบบเป็น "สตางค์" (จำนวนเต็ม) — แสดงผลเป็นบาท; 0 = ฟรี
 export const priceText = (satang) => (satang === 0 ? t('price.free') : money(satang));
 
-const csrfToken = () => document.cookie.split('; ').find((c) => c.startsWith('csrf='))?.slice(5) ?? '';
+// โทเคน CSRF: อ่านจากคุกกี้ หรือจาก header X-CSRF-Token ของคำตอบล่าสุด (Safari อาจยังไม่เห็นคุกกี้ที่เพิ่งตั้งใน document.cookie)
+let lastCsrf = '';
+const csrfToken = () => document.cookie.split('; ').find((c) => c.startsWith('csrf='))?.slice(5) || lastCsrf;
 
 export async function api(path, { method = 'GET', body } = {}) {
   const opts = { method, headers: {}, credentials: 'same-origin' };
   if (body !== undefined) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
-  if (method !== 'GET') opts.headers['x-csrf-token'] = csrfToken();
+  if (method !== 'GET') {
+    if (!csrfToken()) lastCsrf = (await fetch('/api/health', { credentials: 'same-origin' })).headers.get('x-csrf-token') || '';
+    opts.headers['x-csrf-token'] = csrfToken();
+  }
   const r = await fetch('/api' + path, opts);
+  lastCsrf = r.headers.get('x-csrf-token') || lastCsrf;
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {
     const e = new Error(errText(data.error || r.statusText, data.code, data.params));

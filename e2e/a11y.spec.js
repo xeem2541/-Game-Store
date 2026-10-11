@@ -99,10 +99,15 @@ test('ซื้อยังไง 3 ขั้น: ภาพประกอบเ
     // เลื่อนซ้ำจนกว่าจะตรง: รายการเกมด้านบนอาจโหลดเสร็จทีหลังแล้วดันตำแหน่งลง (Safari ไม่ยึดตำแหน่งการเลื่อนไว้)
     await expect(async () => {
       await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' }));
-      // WebKit แบบ headless หยุดวาดหน้าเมื่อหน้านิ่งและไม่มีแอนิเมชัน (ขอลดการเคลื่อนไหว) → scroll event/IntersectionObserver
-      // ที่ส่งตอนวาดหน้าจะค้างไว้ (บันทึกจาก CI: scrollY เลื่อนแล้วแต่ได้ scroll event แค่ครั้งเดียว) — จับภาพหน้าจอเพื่อให้วาดหน้า 1 รอบ
-      // (Safari จริงที่แสดงบนจอวาดหน้าทุกครั้งที่เลื่อนอยู่แล้ว)
-      await page.screenshot();
+      // WebKit แบบ headless ไม่วาดหน้าใหม่เมื่อหน้านิ่งและไม่มีแอนิเมชัน (ขอลดการเคลื่อนไหว) แม้สคริปต์เลื่อนหน้าแล้ว → scroll event
+      // และ IntersectionObserver ที่ส่งตอนวาดหน้าไม่มาเลย (บันทึกจาก CI: scrollY เลื่อนแล้ว แต่ได้ scroll event ครั้งเดียวทั้งเทสต์,
+      // จับภาพหน้าจอก็ไม่ช่วย) — เปลี่ยนสีจุด 1px ที่มุมจอให้หน้าต้องวาดใหม่ เหมือน Safari บนจอจริงที่วาดหน้าทุกครั้งที่เลื่อน
+      await page.evaluate(() => {
+        const dot = document.getElementById('e2e-paint') || Object.assign(document.body.appendChild(document.createElement('div')), { id: 'e2e-paint' });
+        Object.assign(dot.style, { position: 'fixed', left: '0', top: '0', width: '1px', height: '1px', pointerEvents: 'none' });
+        dot.style.background = dot.style.background === 'red' ? 'blue' : 'red';
+      });
+      await page.waitForTimeout(100);
       const state = await page.evaluate(() => JSON.stringify({ y: scrollY, scrolls: window.__scrolls, history: window.__steps,
         steps: [...document.querySelectorAll('.howto-step')].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }) }));
       await expect(visual, `ขั้น ${n}: ${state}`).toHaveAttribute('data-step', n, { timeout: 1000 });

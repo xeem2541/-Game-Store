@@ -15,16 +15,19 @@ export const STATUS_TH = { pending: 'รอชำระ', paid: 'ชำระแ
 export const badge = (v, label) => `<span class="badge ${esc(v)}">${esc(label ?? STATUS_TH[v] ?? v)}</span>`;
 
 export const state = { me: null, perms: [] };
-const csrf = () => (document.cookie.split('; ').find((c) => c.startsWith('csrf=')) || '').slice(5);
+// คุกกี้ csrf หรือค่าจาก header ของคำตอบล่าสุด (Safari อาจยังไม่เห็นคุกกี้ที่เพิ่งตั้งใน document.cookie)
+let lastCsrf = '';
+const csrf = () => (document.cookie.split('; ').find((c) => c.startsWith('csrf=')) || '').slice(5) || lastCsrf;
 
 // body = object (JSON) หรือ FormData (อัปโหลดไฟล์)
 export async function api(path, { method = 'GET', body } = {}) {
-  if (method !== 'GET' && !csrf()) await fetch('/api/health');
+  if (method !== 'GET' && !csrf()) lastCsrf = (await fetch('/api/health')).headers.get('x-csrf-token') || '';
   const opts = { method, credentials: 'same-origin', headers: {} };
   if (method !== 'GET') opts.headers['x-csrf-token'] = csrf();
   if (body instanceof FormData) opts.body = body;
   else if (body !== undefined) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
   const r = await fetch('/api/admin' + path, opts);
+  lastCsrf = r.headers.get('x-csrf-token') || lastCsrf;
   const data = await r.json().catch(() => ({}));
   if (r.status === 401) { location.href = '/admin/login'; throw new Error('หมดเวลาเข้าสู่ระบบ'); }
   if (!r.ok) { const e = new Error(data.error || r.statusText); e.status = r.status; e.code = data.code; throw e; }
