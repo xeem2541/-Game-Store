@@ -27,8 +27,11 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
+      - run: npm run lint
       - run: npm test
-      - run: npm run build
+      - run: npm run build # ล้มเหลวถ้า JS หน้าใดเกินงบ 150 KB gzip
+      - name: Vendor bundles match node_modules
+        run: npm run vendor && git diff --exit-code -- public/js/vendor
       - name: Production config preflight rejects placeholder secrets
         run: |
           cp .env.example .env

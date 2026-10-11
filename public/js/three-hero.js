@@ -1,100 +1,94 @@
-import { THREE } from './vendor.bundle.js';
+// ฉาก 3D ของ hero หน้าแรก — โหลดด้วย import() เฉพาะเมื่อ canRender3D() ผ่าน (ดู home.js)
+// หลักประสิทธิภาพ: render เฉพาะตอนอยู่ในจอและแท็บเปิดอยู่, จำกัด pixel ratio, คืนหน่วยความจำ GPU เมื่อเลิกใช้
+import {
+  AmbientLight, Clock, DirectionalLight, IcosahedronGeometry, Mesh, MeshBasicMaterial, MeshPhysicalMaterial,
+  PerspectiveCamera, Scene, TorusKnotGeometry, WebGLRenderer,
+} from './vendor/three.js';
+import { onReducedMotionChange, watchVisibility } from './motion.js';
 
-export function initThreeHero(containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
+const MAX_PIXEL_RATIO = 1.5;
 
-  const scene = new THREE.Scene();
+export function mountHeroScene(container) {
+  if (!container) return null;
+  const renderer = new WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
+  renderer.domElement.className = 'hero-canvas';
+  container.append(renderer.domElement);
 
-  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+  const scene = new Scene();
+  const camera = new PerspectiveCamera(45, 1, 0.1, 100);
   camera.position.z = 15;
 
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  container.appendChild(renderer.domElement);
+  const torus = new Mesh(
+    new TorusKnotGeometry(3, 0.8, 128, 32),
+    // ไม่ใช้ transmission (กระจกหักเหแสง) เพราะต้อง render ฉากซ้ำอีกรอบทุกเฟรม — หนักเกินไปบนมือถือ
+    new MeshPhysicalMaterial({ color: 0x8b5cf6, metalness: 0.9, roughness: 0.15, clearcoat: 1, emissive: 0x100030, emissiveIntensity: 0.2 }),
+  );
+  const core = new Mesh(new IcosahedronGeometry(1.5, 1), new MeshBasicMaterial({ color: 0xff5a1f, wireframe: true, transparent: true, opacity: 0.5 }));
+  scene.add(torus, core, new AmbientLight(0xffffff, 0.5));
+  const key = new DirectionalLight(0xa3ff5f, 2); key.position.set(5, 5, 5);
+  const rim = new DirectionalLight(0xff5a1f, 2); rim.position.set(-5, -5, 5);
+  scene.add(key, rim);
 
-  // Holographic/Abstract Portal
-  const geometry = new THREE.TorusKnotGeometry(3, 0.8, 128, 32);
-  
-  // Custom Material for Futuristic Glass/Chrome look
-  const material = new THREE.MeshPhysicalMaterial({
-    color: 0x8B5CF6,
-    metalness: 0.9,
-    roughness: 0.1,
-    transmission: 0.8, // glass-like
-    ior: 1.5,
-    thickness: 1.0,
-    wireframe: false,
-    emissive: 0x100030,
-    emissiveIntensity: 0.2
-  });
-  
-  const torus = new THREE.Mesh(geometry, material);
-  scene.add(torus);
-
-  // Inner abstract core
-  const coreGeom = new THREE.IcosahedronGeometry(1.5, 1);
-  const coreMat = new THREE.MeshBasicMaterial({ color: 0xFF5A1F, wireframe: true, transparent: true, opacity: 0.5 });
-  const core = new THREE.Mesh(coreGeom, coreMat);
-  scene.add(core);
-
-  // Lights
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-  scene.add(ambientLight);
-
-  const dirLight = new THREE.DirectionalLight(0xA3FF5F, 2);
-  dirLight.position.set(5, 5, 5);
-  scene.add(dirLight);
-
-  const dirLight2 = new THREE.DirectionalLight(0xFF5A1F, 2);
-  dirLight2.position.set(-5, -5, 5);
-  scene.add(dirLight2);
-
-  let targetX = 0;
-  let targetY = 0;
-  
-  const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-  if (!mql.matches) {
-    document.addEventListener('mousemove', (e) => {
-      targetX = (e.clientX / window.innerWidth - 0.5) * 2;
-      targetY = (e.clientY / window.innerHeight - 0.5) * 2;
-    });
-  }
-
-  const clock = new THREE.Clock();
-
-  function animate() {
-    requestAnimationFrame(animate);
-
-    const time = clock.getElapsedTime();
-
-    if (!mql.matches) {
-      torus.rotation.x += 0.005;
-      torus.rotation.y += 0.01;
-      
-      core.rotation.x -= 0.01;
-      core.rotation.y -= 0.015;
-
-      // Pointer interaction
-      torus.rotation.x += (targetY * 0.5 - torus.rotation.x) * 0.05;
-      torus.rotation.y += (targetX * 0.5 - torus.rotation.y) * 0.05;
-      
-      // Floating
-      torus.position.y = Math.sin(time) * 0.5;
-      core.position.y = Math.sin(time) * 0.5;
-    }
-
-    renderer.render(scene, camera);
-  }
-
-  animate();
-
-  window.addEventListener('resize', () => {
-    if(!container) return;
-    camera.aspect = container.clientWidth / container.clientHeight;
+  const resize = () => {
+    const w = container.clientWidth || 1;
+    const h = container.clientHeight || 1;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
-  });
+  };
+  resize();
+  const ro = new ResizeObserver(resize);
+  ro.observe(container);
+
+  let pointerX = 0;
+  let pointerY = 0;
+  const onPointer = (e) => { pointerX = (e.clientX / innerWidth - 0.5) * 2; pointerY = (e.clientY / innerHeight - 0.5) * 2; };
+
+  const clock = new Clock();
+  let frame = 0;
+  let inView = true;
+  const loop = () => {
+    frame = requestAnimationFrame(loop);
+    const t = clock.getElapsedTime();
+    torus.rotation.x += 0.004 + (pointerY * 0.5 - torus.rotation.x) * 0.04;
+    torus.rotation.y += 0.008 + (pointerX * 0.5 - torus.rotation.y) * 0.04;
+    core.rotation.x -= 0.01;
+    core.rotation.y -= 0.015;
+    torus.position.y = core.position.y = Math.sin(t) * 0.5;
+    renderer.render(scene, camera);
+  };
+  const start = () => {
+    if (frame || !inView || document.hidden) return;
+    clock.start();
+    window.addEventListener('pointermove', onPointer, { passive: true });
+    renderer.domElement.dataset.running = 'true'; // ให้เทสตรวจได้ว่าหยุด render จริงเมื่อออกนอกจอ
+    loop();
+  };
+  const stop = () => {
+    cancelAnimationFrame(frame);
+    frame = 0;
+    clock.stop();
+    window.removeEventListener('pointermove', onPointer);
+    renderer.domElement.dataset.running = 'false';
+  };
+
+  const unwatch = watchVisibility(container, (visible) => { inView = visible; visible ? start() : stop(); });
+  const onVisibility = () => (document.hidden ? stop() : start());
+  document.addEventListener('visibilitychange', onVisibility);
+
+  const destroy = () => {
+    stop();
+    unwatch();
+    ro.disconnect();
+    document.removeEventListener('visibilitychange', onVisibility);
+    scene.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
+    renderer.dispose();
+    renderer.domElement.remove();
+  };
+  onReducedMotionChange((reduce) => { if (reduce) destroy(); }); // ผู้ใช้เปิดลดการเคลื่อนไหวระหว่างดูหน้า → กลับไปใช้พื้นหลังนิ่ง
+
+  requestAnimationFrame(() => renderer.domElement.classList.add('ready')); // ค่อย ๆ ปรากฏทับพื้นหลังนิ่ง
+  start();
+  return { destroy };
 }

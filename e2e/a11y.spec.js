@@ -4,26 +4,24 @@ import { PUBLIC_PAGES } from './pages.js';
 
 test.setTimeout(240_000);
 
-// ตรวจ accessibility ด้วย axe (WCAG 2 A/AA: alt, label, คอนทราสต์สี, ชื่อปุ่ม ฯลฯ) ทุกหน้า × 2 ภาษา × 2 ธีม
+// ตรวจ accessibility ด้วย axe (WCAG 2 A/AA: alt, label, คอนทราสต์สี, ชื่อปุ่ม ฯลฯ) ทุกหน้า × 2 ภาษา (ธีมมืดอย่างเดียว)
 const serious = (r) => r.violations.filter((v) => ['serious', 'critical'].includes(v.impact));
 const fmt = (vs) => vs.map((v) => `${v.id} (${v.impact}):\n${v.nodes.slice(0, 4).map((n) => `   ${n.target.join(' ')} — ${(n.any[0]?.message ?? n.failureSummary ?? '').replace(/\s+/g, ' ').slice(0, 150)}`).join('\n')}`).join('\n');
 
 for (const lang of ['th', 'en']) {
-  for (const theme of ['dark', 'light']) {
-    test(`a11y: ${lang} / ${theme}`, async ({ page }) => {
-      await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.addInitScript(([l, t]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', t); }, [lang, theme]);
-      for (const [name, url] of PUBLIC_PAGES) {
-        await page.goto(url);
-        await page.waitForLoadState('networkidle');
-        await page.waitForSelector('body.ready, body:not([data-async])', { state: 'attached' });
-        const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-        const bad = serious(res);
-        if (bad.length) throw new Error(`${name} [${lang}/${theme}]\n${fmt(bad)}`);
-        expect(await page.evaluate(() => document.documentElement.lang)).toBe(lang);
-      }
-    });
-  }
+  test(`a11y: ${lang}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.addInitScript((l) => { localStorage.setItem('lang', l); }, lang);
+    for (const [name, url] of PUBLIC_PAGES) {
+      await page.goto(url);
+      await page.waitForLoadState('networkidle');
+      await page.waitForSelector('body.ready, body:not([data-async])', { state: 'attached' });
+      const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+      const bad = serious(res);
+      if (bad.length) throw new Error(`${name} [${lang}]\n${fmt(bad)}`);
+      expect(await page.evaluate(() => document.documentElement.lang)).toBe(lang);
+    }
+  });
 }
 
 test('การใช้คีย์บอร์ด: Tab ไปถึงปุ่มสำคัญและเห็นกรอบ focus', async ({ page }) => {

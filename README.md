@@ -31,8 +31,11 @@ server/
   services/           ธุรกิจหลัก: orders, payments, refunds, keys, crypto, coupons, receipt, emailQueue, images ...
   scripts/            check-env, backup, restore, make-role
 public/               หน้าร้าน (HTML/CSS/JS ธรรมดา ไม่มี framework) + i18n/th.json, en.json
+  css/tokens.css      design tokens (สี ฟอนต์ ระยะ เงา กระจก การเคลื่อนไหว) — ใช้ทั้งหน้าร้านและหลังบ้าน
+  js/motion.js        ตัวช่วยแอนิเมชัน (reduced-motion, ตรวจการอยู่ในจอ, ตรวจว่าเครื่องแสดง 3D ได้)
+  js/vendor/          GSAP / three.js ที่ build จาก node_modules แล้ว (`npm run vendor`)
 admin/                หลังบ้าน (SPA แบบ ES modules)
-scripts/              build.js (esbuild), bench.js (load test)
+scripts/              build.js (esbuild + งบขนาด JS), vendor.js (สร้าง public/js/vendor), bench.js (load test)
 tests/                เทสต์ฝั่งเซิร์ฟเวอร์ (node:test)    e2e/   เทสต์เบราว์เซอร์ (Playwright)
 deploy/               Caddyfile, nginx.conf.example
 docs/                 API.md, CHECKLIST.md
@@ -53,6 +56,14 @@ npm run dev                 # http://localhost:3000   (แอดมิน: http:
 - ไม่มี SMTP → ลิงก์ยืนยันอีเมล/รีเซ็ตรหัสผ่านถูกพิมพ์ใน console (บล็อก `[DEV MAIL]`)
 - ไม่มี Stripe → หน้าออเดอร์มีปุ่ม "จำลองชำระสำเร็จ" (**ไม่มีใน production**)
 - ใช้ไฟล์ที่ build แล้ว: `npm run build && npm run start:dist` (production ใช้ `dist/` อัตโนมัติ)
+- `npm run lint` ตรวจโค้ดด้วย ESLint · `npm run vendor` สร้าง `public/js/vendor/` ใหม่หลังอัปเกรด/เพิ่มคลาสจาก GSAP หรือ three.js
+
+### แนวทางหน้าเว็บ (design system และแอนิเมชัน)
+- สี/ระยะ/ฟอนต์/เงา ใช้ token จาก `public/css/tokens.css` เท่านั้น (ธีมมืดอย่างเดียว) — ฟอนต์ Anuphan หนาสุด 700
+- แอนิเมชันทุกตัวต้องเคารพ `prefers-reduced-motion` (ใช้ `motion.js`) และห้ามใช้ `transition: all` (จะไปหน่วงกรอบ focus และค่าที่ GSAP ตั้ง)
+- `npm run build` ล้มเหลวถ้า JS ที่หน้าใดโหลดทันทีเกิน **150 KB gzip** — ของหนัก (เช่น ฉาก 3D) ให้โหลดด้วย `import()`
+- ฉาก 3D หน้าแรกโหลดแบบ lazy เฉพาะเครื่องที่มี WebGL และไม่ได้ขอลดการเคลื่อนไหว/ประหยัดเน็ต และหยุด render เมื่อออกนอกจอ
+- header จองความสูงคงที่ทุกขนาดจอ และข้อความที่รอไฟล์แปลจองที่ 1 บรรทัด (กัน layout shift)
 
 ## ติดตั้งด้วย Docker
 
@@ -155,16 +166,17 @@ npm run reset-mfa -- you@example.com   # Docker: docker compose exec app node se
 ## รันเทสต์
 
 ```bash
-npm test                     # เทสต์ฝั่งเซิร์ฟเวอร์ 109 ข้อ (auth, ตะกร้า/ออเดอร์, ชำระเงิน/webhook, คืนเงินอัตโนมัติ, แอดมิน, ความปลอดภัย, deploy, SEO, สำรอง/กู้คืน)
+npm test                     # เทสต์ฝั่งเซิร์ฟเวอร์ 134 ข้อ (auth, ตะกร้า/ออเดอร์, ชำระเงิน/webhook, คืนเงินอัตโนมัติ, แอดมิน, ความปลอดภัย, deploy, SEO, สำรอง/กู้คืน)
 npm run test:coverage        # + รายงาน coverage
 npm run e2e                  # Playwright (ต้อง `npx playwright install chromium` ก่อนครั้งแรก): เส้นทางซื้อครบวงจร,
-                             #   responsive 375/768/1280, a11y (axe), คีย์บอร์ด, ไทย/อังกฤษ × มืด/สว่าง
+                             #   responsive 375/768/1280, a11y (axe), คีย์บอร์ด, ไทย/อังกฤษ,
+                             #   งบประสิทธิภาพ (CLS < 0.1, LCP < 2.5 วิ บนมือถือจำลอง CPU ช้า 4x) และวงจรชีวิตฉาก 3D
 npm run build && npm run bench   # load test เบา ๆ ด้วย autocannon
 ```
 
 เทสต์ไม่เรียก Stripe/SMTP จริง (ใช้ Stripe ปลอม + webhook ที่เซ็นลายเซ็นเอง) ภาพหน้าจอ responsive อยู่ที่ `e2e/screenshots/`
 
-**CI** (`.github/workflows/ci.yml`): ทุก push เข้า `main` และทุก pull request รัน `npm test` + `npm run build` บน Node 22 และ 24 และตรวจว่าค่าตัวอย่างใน `.env.example` ไม่ผ่านการตรวจ production · e2e (Chromium) ต้องผ่านด้วย
+**CI** (`.github/workflows/ci.yml`): ทุก push เข้า `main` และทุก pull request รัน `npm run lint` + `npm test` + `npm run build` (รวมงบขนาด JS) บน Node 22 และ 24 ตรวจว่า `public/js/vendor` ตรงกับ node_modules และตรวจว่าค่าตัวอย่างใน `.env.example` ไม่ผ่านการตรวจ production · e2e (Chromium) ต้องผ่านด้วย
 
 ## สำรองและกู้คืนข้อมูล
 

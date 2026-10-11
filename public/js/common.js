@@ -204,9 +204,9 @@ document.addEventListener('click', (e) => {
 // ---------- header / footer / ลิ้นชักตะกร้า ----------
 function mountLayout() {
   const authHtml = user
-    ? `<details class="usermenu"><summary><svg class="icon"><use href="/icons.svg#icon-user" /></svg> ${esc(user.name)}</summary>
+    ? `<details class="usermenu"><summary><svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-user" /></svg><span class="user-name">${esc(user.name)}</span></summary>
          <div class="menu"><a href="/profile">${t('header.profile')}</a><button id="logoutBtn" type="button">${t('header.logout')}</button></div></details>`
-    : `<a class="btn" href="/login">${t('header.login')}</a><a class="btn primary" href="/register">${t('header.register')}</a>`;
+    : `<a class="btn login" href="/login"><svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-user" /></svg><span class="btn-label">${t('header.login')}</span></a><a class="btn primary register" href="/register">${t('header.register')}</a>`;
 
   // header/footer มี placeholder อยู่ใน HTML แล้ว (จองที่ว่างกัน layout shift) — เติมเนื้อหาเข้าไป; ถ้าหน้าไหนไม่มีก็สร้างให้
   let header = $('header.topbar');
@@ -220,7 +220,6 @@ function mountLayout() {
     </form>
     <div class="actions">
       <button id="langBtn" class="icon-btn" type="button" title="${t('header.lang')}" aria-label="${lang === 'th' ? 'EN' : 'TH'} - ${t('header.lang')}">${lang === 'th' ? 'EN' : 'TH'}</button>
-      <button id="themeBtn" class="icon-btn" type="button" title="${t('header.theme')}" aria-label="${t('header.theme')}">◐</button>
       ${authHtml}
       <button id="cartBtn" class="cart-btn" type="button"><svg class="icon"><use href="/icons.svg#icon-cart" /></svg> <span class="cart-label">${t('cart.btn')}</span> <span id="cartCount">0</span></button>
     </div>`;
@@ -292,11 +291,6 @@ function mountLayout() {
   $('#checkout').onclick = () => (cart.get().length ? (location.href = '/cart') : toast(t('cart.empty')));
 
   $('#langBtn').onclick = () => setLang(lang === 'th' ? 'en' : 'th');
-  $('#themeBtn').onclick = () => {
-    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-    document.documentElement.dataset.theme = next;
-    try { localStorage.setItem('theme', next); } catch {}
-  };
   $('#logoutBtn')?.addEventListener('click', async () => {
     await api('/auth/logout', { method: 'POST', body: {} }).catch(() => {});
     location.href = '/';

@@ -17,6 +17,7 @@
     "restore": "node server/scripts/restore.js",
     "build": "node scripts/build.js",
     "lint": "eslint .",
+    "vendor": "node scripts/vendor.js",
     "start:dist": "USE_DIST=1 node server/index.js",
     "e2e": "playwright test",
     "test:coverage": "node --experimental-test-coverage --test tests/*.test.js",

@@ -1,84 +1,51 @@
-import { api, cardHtml, remember, $, markReady, genreName, money, esc, applyI18n } from './common.js';
-import { initThreeHero } from './three-hero.js';
-import { gsap, ScrollTrigger } from './vendor.bundle.js';
+import { api, cardHtml, remember, $, markReady, esc, t } from './common.js';
+import { canRender3D, prefersReducedMotion, whenIdle } from './motion.js';
+import { gsap, ScrollTrigger } from './vendor/gsap.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// hero อยู่ใน index.html แล้ว (แสดงผลทันทีไม่ต้องรอ API) — ที่นี่เติมแค่ลิงก์เกมแนะนำ
 const data = await api('/games/home');
-const featuredGame = data.featured[0];
-
-const heroHtml = `
-  <div class="hero-bg" id="heroBg">
-    <!-- 3D Canvas will be injected here -->
-  </div>
-  <div class="hero-content cinematic-content">
-    <div class="hero-info">
-      <div class="tag-group">
-        <span class="tag">NEXUS EXCLUSIVE</span>
-        <span class="tag outline">${esc(featuredGame ? genreName(featuredGame.genre) : 'NEW ARRIVALS')}</span>
-      </div>
-      <h1 class="kinetic-text">
-        <span class="line-1" data-i18n="hero.title">เกมแท้ ราคาโดนใจ</span><br>
-      </h1>
-      <p class="hero-desc">Discover your next obsession. Explore worlds, unlock adventures, and find your next favorite game. ${featuredGame ? `Featured: <strong>${esc(featuredGame.title)}</strong>` : ''}</p>
-      
-      <div class="hero-actions">
-        <a class="btn primary big" href="${featuredGame ? `/game/${esc(featuredGame.slug)}` : '/games.html'}">
-          EXPLORE GAMES
-        </a>
-        <a class="btn big glass" href="/games.html?onSale=1">
-          VIEW DEALS
-        </a>
-      </div>
-      
-      <div class="hero-stats">
-        <div class="stat"><span class="val">2K+</span><span class="lbl">GAMES</span></div>
-        <div class="stat"><span class="val">24/7</span><span class="lbl">SUPPORT</span></div>
-        <div class="stat"><span class="val">INSTANT</span><span class="lbl">DELIVERY</span></div>
-      </div>
-    </div>
-  </div>
-`;
-$('#hero').innerHTML = heroHtml;
-$('#hero').className = 'hero futuristic-hero';
-applyI18n($('#hero'));
-
-// Initialize 3D Hero
-initThreeHero('heroBg');
-
-// GSAP Animations for Hero
-const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-if (!mql.matches) {
-  const tl = gsap.timeline();
-  tl.fromTo('.tag-group', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', delay: 0.2 })
-    .fromTo('.kinetic-text span', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.8, stagger: 0.2, ease: 'power3.out' }, '-=0.4')
-    .fromTo('.hero-desc', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.4')
-    .fromTo('.hero-actions .btn', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out' }, '-=0.4')
-    .fromTo('.hero-stats .stat', { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.4, stagger: 0.1, ease: 'back.out(1.5)' }, '-=0.2');
+const heroGame = data.featured[0];
+if (heroGame) {
+  $('#heroFeatured').innerHTML = `${t('hero.featured')} <a href="/game/${esc(heroGame.slug)}">${esc(heroGame.title)}</a>`; // บรรทัดนี้จองที่ไว้ใน HTML แล้ว
 }
 
 for (const key of ['featured', 'bestsellers', 'newest', 'onSale']) {
   let items = data[key];
-  if (key === 'featured') items = items.slice(1, 5); // skip the hero one; bento grid has 4 slots
+  if (key === 'featured') items = items.slice(1, 5); // เกมแรกอยู่ใน hero แล้ว; bento มี 4 ช่อง
   remember(items);
-  $('#' + key).innerHTML = items.map(cardHtml).join('');
+  const grid = $('#' + key);
+  grid.innerHTML = items.map(cardHtml).join('');
+  grid.removeAttribute('aria-busy');
 }
 markReady();
 
-// GSAP Scroll Animations for Cards
-if (!mql.matches) {
-  document.querySelectorAll('.sec').forEach(sec => {
-    gsap.fromTo(sec, 
-      { opacity: 0, x: -30 },
-      { opacity: 1, x: 0, duration: 0.6, ease: 'power2.out', scrollTrigger: { trigger: sec, start: 'top 85%' } }
-    );
-  });
+if (!prefersReducedMotion()) {
+  // หัวข้อ hero ไม่เริ่มจากโปร่งใส (เป็น LCP element — ถ้าซ่อนไว้ LCP จะช้าตามแอนิเมชัน) ขยับเฉพาะองค์ประกอบรอง
+  // fromTo + ค่าปลายทางชัดเจน + clearProps: ไม่อ่านค่าจาก CSS ระหว่าง transition และคืน style ให้ CSS (hover) เมื่อจบ
+  const done = { opacity: 1, y: 0, clearProps: 'opacity,transform' };
+  gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.6 } })
+    .fromTo('.hero-eyebrow', { y: 12, opacity: 0 }, { ...done })
+    .fromTo('.hero-actions .btn', { y: 16, opacity: 0 }, { ...done, stagger: 0.08 }, '-=0.35')
+    .fromTo('.hero-points li', { y: 12, opacity: 0 }, { ...done, stagger: 0.06 }, '-=0.35');
 
-  document.querySelectorAll('.grid').forEach(grid => {
-    const cards = grid.querySelectorAll('.card');
-    gsap.fromTo(cards,
-      { opacity: 0, y: 40 },
-      { opacity: 1, y: 0, duration: 0.6, stagger: 0.05, ease: 'power2.out', scrollTrigger: { trigger: grid, start: 'top 85%' } }
-    );
+  for (const grid of document.querySelectorAll('.content-wrapper .grid')) {
+    gsap.fromTo(grid.querySelectorAll('.card'), { y: 32, opacity: 0 }, {
+      ...done, duration: 0.6, stagger: 0.05, ease: 'power2.out',
+      scrollTrigger: { trigger: grid, start: 'top 88%', once: true },
+    });
+  }
+}
+
+// ฉาก 3D: โหลดแบบ lazy หลังหน้าแสดงผลแล้ว และเฉพาะเครื่องที่รองรับ — ไม่งั้นใช้พื้นหลังนิ่ง (.hero-fallback) ต่อไป
+if (canRender3D()) {
+  whenIdle(async () => {
+    try {
+      const { mountHeroScene } = await import('./three-hero.js');
+      mountHeroScene($('#heroBg'));
+    } catch (e) {
+      console.warn('ไม่สามารถแสดงฉาก 3D:', e.message); // เช่น WebGL context สร้างไม่ได้ → ยังเห็นพื้นหลังนิ่ง
+    }
   });
 }

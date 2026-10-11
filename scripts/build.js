@@ -32,9 +32,35 @@ async function bundleJs(entries, outdir, urlBase, define = {}) {
   for (const [out, info] of Object.entries(r.metafile.outputs)) {
     if (info.entryPoint) map.set(info.entryPoint.startsWith('public/') ? `/${info.entryPoint.slice('public/'.length)}` : `/${info.entryPoint}`, `${urlBase}${path.basename(out)}`);
   }
+  return r.metafile;
 }
 
-await bundleJs(pubJs.map((n) => `public/js/${n}.js`), path.join(DIST, 'public/js'), '/js/', { __I18N_VERSION__: JSON.stringify(i18nVersion) });
+const pubMeta = await bundleJs(pubJs.map((n) => `public/js/${n}.js`), path.join(DIST, 'public/js'), '/js/', { __I18N_VERSION__: JSON.stringify(i18nVersion) });
+
+// ---------- งบขนาด JS ต่อหน้า (gzip) ----------
+// นับเฉพาะ JS ที่หน้าโหลดทันที (entry + chunk ที่ import แบบ static) — chunk ที่โหลดด้วย import() เช่นฉาก 3D ไม่นับ
+const JS_BUDGET_GZ = 150 * 1024;
+const gz = (file) => zlib.gzipSync(fs.readFileSync(path.join(ROOT, file)), { level: 9 }).length;
+const initialJs = (out, seen = new Set()) => {
+  if (seen.has(out)) return seen;
+  seen.add(out);
+  for (const imp of pubMeta.outputs[out].imports) if (imp.kind === 'import-statement') initialJs(imp.path, seen);
+  return seen;
+};
+const lazyJs = Object.keys(pubMeta.outputs).filter((o) => o.endsWith('.js') && Object.values(pubMeta.outputs).some((x) => x.imports.some((i) => i.path === o && i.kind === 'dynamic-import')));
+const overBudget = [];
+console.log('JS ต่อหน้า (gzip, โหลดทันที):');
+for (const [out, info] of Object.entries(pubMeta.outputs)) {
+  if (!info.entryPoint || lazyJs.includes(out)) continue;
+  const size = [...initialJs(out)].reduce((s, f) => s + gz(f), 0);
+  console.log(`  ${path.basename(info.entryPoint, '.js').padEnd(12)} ${(size / 1024).toFixed(1).padStart(6)} KB`);
+  if (size > JS_BUDGET_GZ) overBudget.push(info.entryPoint);
+}
+for (const f of lazyJs) console.log(`  (lazy) ${path.basename(f).padEnd(24)} ${(gz(f) / 1024).toFixed(1).padStart(6)} KB`);
+if (overBudget.length) {
+  console.error(`✘ เกินงบ JS ${JS_BUDGET_GZ / 1024} KB gzip: ${overBudget.join(', ')} — ย้ายโค้ดหนักไปโหลดแบบ import() หรือลดขนาด`);
+  process.exit(1);
+}
 
 // theme-init.js ต้องรันแบบ sync ใน <head> (ไม่ใช่ module) → bundle แยกเป็น iife
 const themeOut = await build({ entryPoints: [path.join(ROOT, 'public/js/theme-init.js')], outdir: path.join(DIST, 'public/js'), bundle: true, format: 'iife', minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning' });

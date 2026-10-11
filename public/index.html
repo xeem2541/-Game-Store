@@ -8,22 +8,30 @@
   <script src="/js/theme-init.js"></script>
   <!--SEO-->
   <link rel="stylesheet" href="/style.css">
-  <title>NEXUS - Next Level Gaming</title>
 </head>
 <body data-async>
-  <header class="topbar glass-nav">
-    <a href="/" class="logo">NEXUS<span>.</span></a>
-    <div id="search"></div>
-    <div class="nav">
-      <a href="/games.html">ALL GAMES</a>
-      <a href="/games.html?onSale=1">PROMOS</a>
-    </div>
-    <div id="authNav" class="nav"></div>
-    <div class="cart-btn" id="cartToggle"></div>
-  </header>
+  <header class="topbar"></header>
   <main class="full-width">
-    <!-- Hero section injected by JS -->
-    <div id="hero"></div>
+    <section id="hero" class="hero" aria-labelledby="heroTitle">
+      <div class="hero-bg" id="heroBg" aria-hidden="true"><div class="hero-fallback"></div></div>
+      <div class="hero-content">
+        <div class="hero-info">
+          <p class="hero-eyebrow" data-i18n="hero.eyebrow">ร้านโค้ดเกมแท้</p>
+          <h1 id="heroTitle" class="hero-title" data-i18n="hero.title">เกมแท้ ราคาโดนใจ</h1>
+          <p class="hero-desc" data-i18n="hero.sub">เลือกเกม ชำระด้วยบัตรหรือ PromptPay แล้วรับโค้ดได้ทันทีในหน้าคำสั่งซื้อและทางอีเมล</p>
+          <div class="hero-actions">
+            <a class="btn primary big" href="/games.html" data-i18n="hero.browse">ดูเกมทั้งหมด</a>
+            <a class="btn big glass" href="/games.html?onSale=1&amp;sort=discount" data-i18n="hero.cta">ดูโปรโมชัน</a>
+          </div>
+          <ul class="hero-points">
+            <li data-i18n="hero.point1">รับโค้ดทันทีหลังชำระเงิน</li>
+            <li data-i18n="hero.point2">บัตรเครดิต/เดบิต และ PromptPay</li>
+            <li data-i18n="hero.point3">มีใบเสร็จ/ใบกำกับภาษีทุกออเดอร์</li>
+          </ul>
+          <p class="hero-featured" id="heroFeatured">&nbsp;</p>
+        </div>
+      </div>
+    </section>
 
     <div class="content-wrapper">
       <section><h2 class="sec"><span data-i18n="home.featured">FEATURED TITLES</span></h2><div id="featured" class="grid bento" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
@@ -35,9 +43,7 @@
       <section><h2 class="sec"><span data-i18n="home.sale">SPECIAL OFFERS</span> <a href="/games.html?onSale=1&sort=discount" data-i18n="home.all">VIEW ALL</a></h2><div id="onSale" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
     </div>
   </main>
-  <footer>
-    <div>NEXUS GAME STORE &copy; 2026. CREATING DIGITAL WORLDS.</div>
-  </footer>
+  <footer></footer>
   <script type="module" src="/js/home.js"></script>
 </body>
 </html>

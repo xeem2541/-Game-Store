@@ -1,72 +1,104 @@
 @import url('./font-faces.css');
 
+/* ==========================================================================
+   Design tokens — แหล่งเดียวของสี ฟอนต์ ระยะ มุมโค้ง เงา กระจก และการเคลื่อนไหว
+   ทั้งหน้าร้านและหลังบ้าน (admin.css) ใช้ไฟล์นี้ — ห้ามใส่ค่าสี/ระยะตรง ๆ ใน CSS อื่น ให้เพิ่ม token ที่นี่
+   ธีม: มืดอย่างเดียว (ดีไซน์ออกแบบบนพื้นมืด)
+   ========================================================================== */
 :root {
-  /* ---- NEXUS GAME STORE (Futuristic Dark UI) ---- */
-  --c-bg: #080A0F;
-  --c-surface: #10141D;
+  color-scheme: dark;
+
+  /* ---- สีแบบช่อง RGB (ใช้คู่กับความโปร่งใส: rgb(var(--rgb-accent) / 0.2)) ---- */
+  --rgb-bg: 8 10 15;
+  --rgb-surface: 16 20 29;
+  --rgb-white: 255 255 255;
+  --rgb-black: 0 0 0;
+  --rgb-accent: 255 90 31;
+  --rgb-ok: 163 255 95;
+  --rgb-err: 255 77 109;
+  --rgb-warn: 255 194 75;
+  --rgb-focus: 139 92 246;
+
+  /* ---- สีหลัก (contrast บนพื้น --c-bg ผ่าน WCAG AA: text 17.9:1, text-2 7.9:1, accent 6.4:1) ---- */
+  --c-bg: rgb(var(--rgb-bg));
+  --c-surface: rgb(var(--rgb-surface));
   --c-surface-2: #151B26;
-  --c-border: rgba(255, 255, 255, 0.10);
+  --c-border: rgb(var(--rgb-white) / 0.10);
+  --c-border-strong: rgb(var(--rgb-white) / 0.18);
   --c-text: #F5F7FA;
   --c-text-2: #A0A7B4;
-  --c-accent: #FF5A1F;
-  --c-accent-hover: #ff7645;
+  --c-accent: rgb(var(--rgb-accent));
+  --c-accent-hover: #FF7645;
   --c-on-accent: #080A0F;
-  --c-sale: #A3FF5F;
-  --c-ok: #A3FF5F;
-  --c-err: #ff4d6d;
-  --c-focus: #8B5CF6;
+  --c-sale: rgb(var(--rgb-ok));
+  --c-ok: rgb(var(--rgb-ok));
+  --c-err: rgb(var(--rgb-err));
+  --c-warn: rgb(var(--rgb-warn));
+  --c-focus: rgb(var(--rgb-focus));
+  --c-star: #FFC531;
 
-  /* ---- TOKENS ---- */
-  --border-thick: 1px solid rgba(255, 255, 255, 0.15);
+  /* ---- พื้นผิว / กระจก (glassmorphism) ---- */
+  --surface-1: rgb(var(--rgb-surface) / 0.6);   /* การ์ด แผง */
+  --surface-2: rgb(var(--rgb-surface) / 0.85);  /* เมนู drawer ที่ลอยเหนือเนื้อหา */
+  --surface-3: rgb(var(--rgb-surface) / 0.95);  /* dropdown ที่ต้องอ่านง่ายที่สุด */
+  --surface-tint: rgb(var(--rgb-white) / 0.04); /* ปุ่ม/ชิปแบบโปร่ง */
+  --surface-hover: rgb(var(--rgb-white) / 0.08);
+  --glass-blur: 12px;
+  --glass-blur-strong: 20px;
+  --scrim: rgb(var(--rgb-black) / 0.6);
+
+  /* ---- เส้นขอบ ---- */
   --border-thin: 1px solid var(--c-border);
-  --shadow-brutal: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-  --shadow-brutal-sm: 0 4px 16px 0 rgba(0, 0, 0, 0.3);
-  --shadow-brutal-hover: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
-  --shadow-brutal-active: 0 2px 8px 0 rgba(0, 0, 0, 0.6);
+  --border-thick: 1px solid var(--c-border-strong);
 
-  /* ---- NEUMORPHISM TOKENS -> GLASSMORPHISM TOKENS ---- */
-  --neu-bg: rgba(21, 27, 38, 0.6);
-  --neu-shadow: 0 4px 24px rgba(0,0,0,0.5);
-  --neu-shadow-sm: 0 2px 12px rgba(0,0,0,0.3);
-  --neu-shadow-inset: inset 0 1px 0 rgba(255,255,255,0.05);
+  /* ---- เงา (elevation) ---- */
+  --shadow-1: 0 4px 16px rgb(var(--rgb-black) / 0.3);
+  --shadow-2: 0 8px 32px rgb(var(--rgb-black) / 0.4);
+  --shadow-3: 0 16px 48px rgb(var(--rgb-black) / 0.6);
+  --glow-accent: 0 0 16px rgb(var(--rgb-accent) / 0.35);
 
-  /* ---- SPATIAL UI ---- */
-  --z-bg: -10;
-  --z-base: 1;
-  --z-mid: 10;
-  --z-float: 20;
-  --z-nav: 50;
-  --z-overlay: 100;
-  --spatial-perspective: 1000px;
-  --spatial-hover: translateZ(20px) scale(1.02);
-
-  /* ---- SPACING & RADIUS ---- */
+  /* ---- ระยะห่าง (4px grid) และมุมโค้ง ---- */
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
   --r-sm: 4px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px; --r-pill: 999px;
-  --r-brutal: 12px; /* Smoother corners for futuristic look */
+  --r-brutal: var(--r-lg);
+  --tap: 48px; /* ขนาดพื้นที่กดขั้นต่ำ */
+  --container: 1200px;
 
-  /* ---- TYPOGRAPHY ---- */
+  /* ---- ตัวอักษร (Anuphan รองรับไทย หนาสุด 700 — ห้ามใช้ 800/900 เพราะเบราว์เซอร์จะทำตัวหนาปลอม) ---- */
   --font: "Anuphan", system-ui, sans-serif;
-  --fs-xs: clamp(.75rem, .72rem + .15vw, .8125rem);  
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
+  --fs-xs: clamp(.75rem, .72rem + .15vw, .8125rem);
   --fs-sm: clamp(.875rem, .85rem + .1vw, .9375rem);
-  --fs-md: clamp(1rem, .97rem + .15vw, 1.0625rem);   
+  --fs-md: clamp(1rem, .97rem + .15vw, 1.0625rem);
   --fs-lg: clamp(1.125rem, 1.05rem + .35vw, 1.3125rem);
-  --fs-xl: clamp(1.375rem, 1.2rem + .8vw, 1.75rem);  
+  --fs-xl: clamp(1.375rem, 1.2rem + .8vw, 1.75rem);
   --fs-2xl: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);
-  --fs-hero: clamp(3rem, 2.5rem + 5vw, 6rem);
-  --lh-body: 1.6; 
-  --lh-head: 1.1;
+  --fs-hero: clamp(2.5rem, 1.6rem + 4.5vw, 5.5rem);
+  --lh-body: 1.6;
+  --lh-head: 1.15; /* ภาษาไทยมีสระบน/ล่าง ต่ำกว่านี้จะชนกัน */
 
-  /* ---- TRANSITIONS ---- */
+  /* ---- การเคลื่อนไหว ---- */
   --dur-1: 150ms; --dur-2: 250ms; --dur-3: 400ms; --dur-4: 600ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  
-  --tap: 48px;
 
-  color-scheme: dark;
+  /* ---- ลำดับชั้น ---- */
+  --z-bg: -10; --z-base: 1; --z-mid: 10; --z-high: 15; --z-float: 20; --z-nav: 50; --z-overlay: 100;
+
+  /* ---- ชื่อเดิมที่ admin.css ยังอ้างถึง (หลังบ้านใช้ไฟล์ token นี้ร่วมกัน) ---- */
+  --bg: var(--c-bg);
+  --card: var(--c-surface);
+  --text: var(--c-text);
+  --muted: var(--c-text-2);
+  --accent: var(--c-accent);
+  --accent2: var(--c-focus);
+  --border: var(--c-border);
+  --hover: var(--c-surface-2);
+  --danger: var(--c-err);
+  --neu-bg: rgb(var(--rgb-surface) / 0.6);
 }
 
-@media (prefers-reduced-motion: reduce) { 
-  :root { --dur-1: 0ms; --dur-2: 0ms; --dur-3: 0ms; --dur-4: 0ms; } 
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-1: 0ms; --dur-2: 0ms; --dur-3: 0ms; --dur-4: 0ms; }
 }
