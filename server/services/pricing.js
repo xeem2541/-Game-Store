@@ -9,6 +9,10 @@ export const finalPrice = (game) => Math.round((game.price * (100 - game.discoun
 // CAST ตัดเศษให้แน่นอนแม้ค่าที่ได้มาเป็น REAL (เช่น พารามิเตอร์จาก JS) ไม่พึ่งการหารจำนวนเต็มของ SQLite
 export const FINAL_PRICE_SQL = 'CAST((price * (100 - discount) + 50) / 100 AS INTEGER)';
 
+// "฿903" / "฿903.50" — ใช้ในอีเมล ข้อความแจ้งเตือน และรูป OG (ใบเสร็จ PDF ใช้รูปแบบทศนิยม 2 ตำแหน่งของตัวเอง)
+export const formatBaht = (satang, locale = 'en-US') =>
+  '฿' + (satang / 100).toLocaleString(locale, { minimumFractionDigits: satang % 100 ? 2 : 0, maximumFractionDigits: 2 });
+
 export function priceItem(game) {
   return { list: game.price, unit: finalPrice(game) };
 }

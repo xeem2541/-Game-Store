@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { db } from './index.js';
 import { addKeys, availableCount } from '../services/keys.js';
+import { slugify } from '../services/text.js';
 
 // [title, genre, platform, price, discount, rating, release, sales, desc]
 const rows = [
@@ -78,7 +79,6 @@ const palette = [
   ['#11998e', '#38ef7d'], ['#cb2d3e', '#ef473a'], ['#2193b0', '#6dd5ed'], ['#fc4a1a', '#f7b733'],
 ];
 
-const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 // upsert ตาม slug เพื่อไม่ลบรีวิว/รายการโปรดที่อ้างอิงเกมอยู่
 export function seedGames() {

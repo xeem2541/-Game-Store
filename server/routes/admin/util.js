@@ -15,8 +15,7 @@ export const pageInfo = (total, page, limit) => ({ total, page, pages: Math.max(
 export const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'วันที่ต้องเป็นรูปแบบ YYYY-MM-DD');
 export const dateRange = z.object({ from: dateStr.optional(), to: dateStr.optional() });
 
-// ค้นหาแบบ LIKE โดย escape ตัวอักษรพิเศษของ LIKE (% _ \)
-export const likeArg = (q) => `%${String(q).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+export { likeArg } from '../../services/text.js';
 
 // วันที่ในคอลัมน์ TIMESTAMP (UTC) แปลงเป็นเวลาไทยก่อนเทียบ/จัดกลุ่ม
 export const BKK_DATE = (col) => `date(${col}, '+7 hours')`;

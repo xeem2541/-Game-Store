@@ -5,6 +5,7 @@ import path from 'node:path';
 import { db } from '../db/index.js';
 import { UPLOAD_DIR } from '../services/images.js';
 import { FINAL_PRICE_SQL, finalPrice } from '../services/pricing.js';
+import { escHtml, likeArg } from '../services/text.js';
 
 export const gamesRouter = Router();
 
@@ -42,7 +43,8 @@ gamesRouter.get('/', (req, res) => {
   const p = listQuery.parse(req.query);
   const where = ['active = 1'];
   const args = [];
-  if (p.q) { where.push('(title LIKE ? OR description LIKE ?)'); args.push(`%${p.q}%`, `%${p.q}%`); }
+  // LIKE สแกนทั้งตาราง — พอสำหรับร้านขนาดหลักร้อย-พันเกม (FTS5 unicode61 ตัดคำภาษาไทยไม่ได้ จึงยังไม่เปลี่ยน)
+  if (p.q) { where.push("(title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')"); args.push(likeArg(p.q), likeArg(p.q)); }
   if (p.genre) { where.push('genre = ?'); args.push(p.genre); }
   if (p.platform) { where.push('platform = ?'); args.push(p.platform); }
   if (p.minPrice !== undefined) { where.push(`${FINAL_PRICE_SQL} >= ?`); args.push(p.minPrice); }
@@ -61,8 +63,8 @@ gamesRouter.get('/', (req, res) => {
 gamesRouter.get('/suggest', (req, res) => {
   const q = String(req.query.q ?? '').trim().slice(0, 50);
   if (!q) return res.json([]);
-  const rows = db.prepare('SELECT slug, title, genre FROM games_v WHERE active = 1 AND title LIKE ? ORDER BY sales DESC LIMIT 6')
-    .all(`%${q}%`);
+  const rows = db.prepare("SELECT slug, title, genre FROM games_v WHERE active = 1 AND title LIKE ? ESCAPE '\\' ORDER BY sales DESC LIMIT 6")
+    .all(likeArg(q));
   res.json(rows);
 });
 
@@ -95,7 +97,6 @@ gamesRouter.get('/:slug/cover.svg', (req, res) => {
     const useThumb = req.query.size === 'sm' && fs.existsSync(path.join(UPLOAD_DIR, thumb));
     return res.set('Cache-Control', 'public, max-age=300').redirect(302, `/uploads/games/${useThumb ? thumb : g.cover_image}`);
   }
-  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const words = g.title.split(' ');
   const lines = [];
   let cur = '';
@@ -103,7 +104,7 @@ gamesRouter.get('/:slug/cover.svg', (req, res) => {
     if ((cur + ' ' + w).trim().length > 14 && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim();
   }
   lines.push(cur);
-  const text = lines.map((l, i) => `<text x="24" y="${290 - (lines.length - 1 - i) * 36}" font-size="32" font-weight="800" fill="#fff" font-family="Segoe UI,Tahoma,sans-serif">${esc(l)}</text>`).join('');
+  const text = lines.map((l, i) => `<text x="24" y="${290 - (lines.length - 1 - i) * 36}" font-size="32" font-weight="800" fill="#fff" font-family="Segoe UI,Tahoma,sans-serif">${escHtml(l)}</text>`).join('');
   res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g.color1}"/><stop offset="1" stop-color="${g.color2}"/></linearGradient></defs><rect width="400" height="300" fill="url(#g)"/><circle cx="330" cy="70" r="90" fill="#fff" opacity=".12"/><circle cx="60" cy="40" r="40" fill="#000" opacity=".1"/>${text}</svg>`,
   );

@@ -73,15 +73,21 @@ meRouter.post('/password', async (req, res) => {
 
 // ประวัติคำสั่งซื้อ (แบ่งหน้า ใหม่สุดก่อน)
 meRouter.get('/orders', (req, res) => {
-  expirePending();
+  expirePending(Date.now(), { userId: req.user.id });
   const page = z.coerce.number().int().min(1).default(1).parse(req.query.page);
   const limit = 10;
   const total = db.prepare('SELECT COUNT(*) AS n FROM orders WHERE user_id = ?').get(req.user.id).n;
-  const items = db.prepare('SELECT * FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?')
-    .all(req.user.id, limit, (page - 1) * limit).map((o) => ({
-      id: o.id, status: o.status, total: o.total, createdAt: o.created_at, expiresAt: o.expires_at,
-      titles: db.prepare('SELECT title FROM order_items WHERE order_id = ? ORDER BY id').all(o.id).map((r) => r.title),
-    }));
+  const orders = db.prepare('SELECT * FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?')
+    .all(req.user.id, limit, (page - 1) * limit);
+  // ชื่อเกมของทุกออเดอร์ในหน้านี้ด้วย query เดียว (ไม่ query ทีละออเดอร์)
+  const titles = new Map(orders.map((o) => [o.id, []]));
+  if (orders.length) {
+    db.prepare(`SELECT order_id, title FROM order_items WHERE order_id IN (${orders.map(() => '?').join(',')}) ORDER BY id`)
+      .all(...orders.map((o) => o.id)).forEach((r) => titles.get(r.order_id).push(r.title));
+  }
+  const items = orders.map((o) => ({
+    id: o.id, status: o.status, total: o.total, createdAt: o.created_at, expiresAt: o.expires_at, titles: titles.get(o.id),
+  }));
   res.json({ items, total, page, pages: Math.max(1, Math.ceil(total / limit)) });
 });
 
@@ -93,10 +99,11 @@ meRouter.get('/library', (req, res) => {
   const keyRows = db.prepare(`SELECT oi.game_id, o.id AS order_id, k.key_enc FROM game_keys k
     JOIN order_items oi ON oi.id = k.order_item_id JOIN orders o ON o.id = oi.order_id
     WHERE o.user_id = ? AND o.status = 'paid' AND k.status = 'sold' ORDER BY k.id`).all(req.user.id);
+  const keysByGame = Map.groupBy(keyRows, (k) => k.game_id);
   const items = games.map((g) => ({
     ...withFinal(g),
     purchasedAt: g.purchased_at,
-    keys: keyRows.filter((k) => k.game_id === g.id).map((k) => ({ orderId: k.order_id, code: decrypt(k.key_enc) })),
+    keys: (keysByGame.get(g.id) ?? []).map((k) => ({ orderId: k.order_id, code: decrypt(k.key_enc) })),
   }));
   if (keyRows.length) audit(req, 'key.view', 'library', req.user.id, { count: keyRows.length });
   res.json({ items });

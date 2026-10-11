@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { couponDiscountFor } from './pricing.js';
+import { couponDiscountFor, formatBaht } from './pricing.js';
 
 const fail = (code, message, params) => ({ ok: false, code, message, params });
 
@@ -10,7 +10,7 @@ export function evaluateCoupon(code, userId, amount) {
   if (!coupon) return fail('COUPON_INVALID', 'โค้ดส่วนลดไม่ถูกต้อง');
   if (coupon.expires_at !== null && coupon.expires_at < Date.now()) return fail('COUPON_EXPIRED', 'โค้ดส่วนลดหมดอายุแล้ว');
   if (amount < coupon.min_subtotal) {
-    return fail('COUPON_MIN', `ยอดสั่งซื้อไม่ถึงขั้นต่ำของโค้ดนี้ (ขั้นต่ำ ฿${(coupon.min_subtotal / 100).toLocaleString('th-TH')})`, { min: (coupon.min_subtotal / 100).toLocaleString('en-US') });
+    return fail('COUPON_MIN', `ยอดสั่งซื้อไม่ถึงขั้นต่ำของโค้ดนี้ (ขั้นต่ำ ${formatBaht(coupon.min_subtotal, 'th-TH')})`, { min: (coupon.min_subtotal / 100).toLocaleString('en-US') });
   }
   if (coupon.max_uses !== null) {
     const used = db.prepare('SELECT COUNT(*) AS n FROM coupon_usages WHERE coupon_id = ?').get(coupon.id).n;

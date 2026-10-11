@@ -4,10 +4,10 @@ import sharp from 'sharp';
 import { config } from './config.js';
 import { db } from './db/index.js';
 import { UPLOAD_DIR } from './services/images.js';
-import { finalPrice } from './services/pricing.js';
+import { finalPrice, formatBaht } from './services/pricing.js';
+import { escHtml as esc } from './services/text.js';
 
 // หน้า HTML ที่ต้องมี meta SEO จริง (เซิร์ฟเวอร์ใส่แทน <!--SEO--> ในเทมเพลต) — อ่านเทมเพลตจากโฟลเดอร์ที่ใช้งานอยู่ (public หรือ dist/public)
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const SITE = 'Game Store';
 const DEFAULT_DESC = 'Game Store ร้านขายเกมออนไลน์ PC, PS5, Switch รับโค้ดเกมทันทีหลังชำระเงิน ราคาโดนใจ ลดสูงสุด 50%';
 
@@ -117,15 +117,14 @@ function wrap(text, maxChars) {
   if (lines.length > 3) { lines.length = 3; lines[2] = lines[2].replace(/.{1}$/, '…'); }
   return lines;
 }
-const xmlEsc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 async function buildOg({ title, subtitle, color1, color2, coverFile }) {
   const lines = wrap(title, 16);
-  const text = lines.map((l, i) => `<text x="70" y="${330 - (lines.length - 1) * 40 + i * 92}" font-size="84" font-weight="800" fill="#fff" font-family="${FONT}">${xmlEsc(l)}</text>`).join('');
+  const text = lines.map((l, i) => `<text x="70" y="${330 - (lines.length - 1) * 40 + i * 92}" font-size="84" font-weight="800" fill="#fff" font-family="${FONT}">${esc(l)}</text>`).join('');
   const overlay = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
     <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".15"/><stop offset="1" stop-color="#000" stop-opacity=".78"/></linearGradient></defs>
     <rect width="1200" height="630" fill="url(#g)"/>${text}
-    <text x="70" y="520" font-size="40" fill="#fff" fill-opacity=".92" font-family="${FONT}">${xmlEsc(subtitle)}</text>
+    <text x="70" y="520" font-size="40" fill="#fff" fill-opacity=".92" font-family="${FONT}">${esc(subtitle)}</text>
     <text x="70" y="585" font-size="34" font-weight="700" fill="#00d4ff" font-family="${FONT}">🎮 Game Store</text></svg>`;
   const bg = coverFile
     ? sharp(coverFile).resize(1200, 630, { fit: 'cover' })
@@ -140,7 +139,7 @@ export async function ogImage(slug) {
     const g = db.prepare('SELECT title, genre, platform, price, discount, color1, color2, cover_image FROM games WHERE slug = ? AND active = 1').get(slug);
     if (!g) return null;
     const p = finalPrice(g);
-    spec = { title: g.title, subtitle: `${g.platform} • ${g.genre} • ${p === 0 ? 'ฟรี' : `฿${(p / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}`, color1: g.color1, color2: g.color2, coverFile: g.cover_image ? path.join(UPLOAD_DIR, g.cover_image) : null };
+    spec = { title: g.title, subtitle: `${g.platform} • ${g.genre} • ${p === 0 ? 'ฟรี' : formatBaht(p)}`, color1: g.color1, color2: g.color2, coverFile: g.cover_image ? path.join(UPLOAD_DIR, g.cover_image) : null };
   }
   const key = JSON.stringify(spec);
   if (!og.has(key)) {
