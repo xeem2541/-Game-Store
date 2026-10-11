@@ -7,7 +7,14 @@ const segmenters = new Map();
 function segmentWords(text, locale) {
   if (typeof Intl.Segmenter !== 'function') return text.split(/(\s+)/).filter(Boolean);
   if (!segmenters.has(locale)) segmenters.set(locale, new Intl.Segmenter(locale, { granularity: 'word' }));
-  return Array.from(segmenters.get(locale).segment(text), (s) => s.segment);
+  // เครื่องหมายวรรคตอนติดกับคำข้างหน้า (ไม่งั้น "games" กับ "," เป็นคนละก้อน และ "," อาจไปขึ้นต้นบรรทัดใหม่)
+  const out = [];
+  for (const { segment, isWordLike } of segmenters.get(locale).segment(text)) {
+    const prev = out.length - 1;
+    if (!isWordLike && !/^\s+$/.test(segment) && prev >= 0 && !/^\s+$/.test(out[prev])) out[prev] += segment;
+    else out.push(segment);
+  }
+  return out;
 }
 
 // แยกข้อความใน el เป็น <span class="kt-word"> คืนรายการคำที่แยกได้ (ไม่รวมช่องว่าง)

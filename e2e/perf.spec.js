@@ -82,3 +82,18 @@ test('ฉาก 3D หน้าแรก: โหลดแบบ lazy, หยุ�
   expect(scripts3.some((u) => /three/.test(u)), 'มือถือไม่ควรดาวน์โหลดไฟล์ 3D').toBe(false);
   await mobile.close();
 });
+
+test('หน้าแรกบนมือถือ: แถวเกมเป็นแถวปัดแนวนอน (หน้าไม่ยาวเกินจำเป็น) และทั้งหน้าไม่เลื่อนแนวนอน', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.goto('/');
+  await page.waitForSelector('body.ready', { state: 'attached' });
+  const r = await page.evaluate(() => {
+    const row = document.querySelector('#bestsellers');
+    return { pageOverflow: document.documentElement.scrollWidth - innerWidth, rowScrolls: row.scrollWidth > row.clientWidth, height: document.documentElement.scrollHeight };
+  });
+  expect(r.pageOverflow).toBe(0);
+  expect(r.rowScrolls).toBe(true);
+  expect(r.height, 'เดิมยาว 16,000px เพราะการ์ดเรียงลงทีละใบ').toBeLessThan(8000);
+  await ctx.close();
+});

@@ -129,3 +129,17 @@ a.bento-card:hover .bento-hint { color: var(--c-accent); }
 .stat-tile.warn .stat-val { color: var(--c-warn); font-size: var(--fs-lg); }
 .stat-tile.ok .stat-val { color: var(--c-ok); font-size: var(--fs-lg); }
 @media (max-width: 760px) { .profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); } .profile-stats > * { height: 124px; } .stat-tile { padding: var(--sp-4); } }
+
+/* ==========================================================================
+   หน้าแรก: แถวเกมขายดี / มาใหม่ / ลดราคา บนมือถือเป็นแถวปัดซ้าย-ขวา
+   (เดิมเรียงลงทีละใบ 8 ใบ × 3 แถว ทำให้หน้ายาวกว่า 16,000px) — ปุ่ม "ดูทั้งหมด" อยู่ที่หัวข้อเหมือนเดิม
+   ========================================================================== */
+@media (max-width: 560px) {
+  .grid.row-scroll {
+    display: grid; grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: 78%; gap: var(--sp-3);
+    overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: var(--sp-4);
+    margin-inline: calc(-1 * var(--sp-4)); padding: var(--sp-2) var(--sp-4) var(--sp-4); scrollbar-width: none;
+  }
+  .grid.row-scroll::-webkit-scrollbar { display: none; }
+  .grid.row-scroll > * { scroll-snap-align: start; }
+}
