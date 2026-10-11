@@ -86,7 +86,10 @@ const pickStep = () => {
   if (best.dataset.step !== visual.dataset.step) setStep(best);
 };
 setStep(steps[0]);
-addEventListener('scroll', () => { stepFrame ||= requestAnimationFrame(pickStep); }, { passive: true });
+const queueStep = () => { stepFrame ||= requestAnimationFrame(pickStep); };
+addEventListener('scroll', queueStep, { passive: true });
+// เนื้อหาด้านบนโหลดทีหลังแล้วดันส่วนนี้ลง (Safari ไม่มี scroll anchoring → ไม่มี scroll event) ให้เลือกขั้นใหม่ด้วย
+new ResizeObserver(queueStep).observe(document.body);
 pickStep();
 
 if (!prefersReducedMotion()) {

@@ -88,8 +88,11 @@ test('ซื้อยังไง 3 ขั้น: ภาพประกอบเ
   await page.waitForSelector('body.ready', { state: 'attached' });
   const visual = page.locator('.howto-visual');
   for (const n of ['1', '2', '3']) {
-    await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' }));
-    await expect(visual).toHaveAttribute('data-step', n);
+    // เลื่อนซ้ำจนกว่าจะตรง: รายการเกมด้านบนอาจโหลดเสร็จทีหลังแล้วดันตำแหน่งลง (Safari ไม่ยึดตำแหน่งการเลื่อนไว้)
+    await expect(async () => {
+      await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' }));
+      await expect(visual).toHaveAttribute('data-step', n, { timeout: 1000 });
+    }).toPass({ timeout: 10000 });
     await expect(page.locator(`.howto-step[data-step="${n}"]`)).toHaveClass(/is-active/);
   }
   await expect(page.getByRole('link', { name: 'เริ่มเลือกเกม' })).toBeVisible();
