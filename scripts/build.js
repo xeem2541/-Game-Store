@@ -73,7 +73,9 @@ for (const out of Object.keys(cssOut.metafile.outputs)) map.set('/style.css', `/
 await bundleJs(['admin/js/main.js'], path.join(DIST, 'admin/js'), '/admin/js/');
 const adminLogin = await build({ entryPoints: [path.join(ROOT, 'admin/login.js')], outdir: path.join(DIST, 'admin'), bundle: true, format: 'iife', minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning' });
 for (const out of Object.keys(adminLogin.metafile.outputs)) map.set('/admin/login.js', `/admin/${path.basename(out)}`);
-const adminCss = await build({ entryPoints: [path.join(ROOT, 'admin/admin.css')], outdir: path.join(DIST, 'admin'), bundle: true, minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning', external: ['/fonts/*'] });
+// admin.css import token ของหน้าร้านด้วย URL '/css/tokens.css' (ตอนพัฒนาเบราว์เซอร์โหลดจาก public/ ตรง ๆ) → ตอน build ชี้ไปไฟล์ใน public/
+const publicCss = { name: 'public-css', setup(b) { b.onResolve({ filter: /^\/css\// }, (a) => ({ path: path.join(ROOT, 'public', a.path) })); } };
+const adminCss = await build({ entryPoints: [path.join(ROOT, 'admin/admin.css')], outdir: path.join(DIST, 'admin'), bundle: true, minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning', external: ['/fonts/*'], plugins: [publicCss] });
 for (const out of Object.keys(adminCss.metafile.outputs)) map.set('/admin/admin.css', `/admin/${path.basename(out)}`);
 // Chart.js: ใช้ไฟล์ minified ที่โฮสต์เอง (ไม่โหลดจาก CDN)
 const chart = fs.readFileSync(path.join(ROOT, 'node_modules/chart.js/dist/chart.umd.min.js'));

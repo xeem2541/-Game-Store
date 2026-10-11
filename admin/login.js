@@ -6,6 +6,9 @@ const mfaForm = document.getElementById('mfaForm');
 const mfaMsg = document.getElementById('mfaMsg');
 const csrf = () => (document.cookie.split('; ').find((c) => c.startsWith('csrf=')) || '').slice(5);
 
+// ปุ่มแสดงวงหมุนระหว่างรอ (admin.css: .btn[aria-busy])
+const setBusy = (btn, on) => { btn.disabled = on; if (on) btn.setAttribute('aria-busy', 'true'); else btn.removeAttribute('aria-busy'); };
+
 async function ensureCsrf() { if (!csrf()) await fetch('/api/health'); }
 
 async function post(path, body) {
@@ -30,14 +33,14 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
   msg.textContent = '';
   const btn = form.querySelector('button');
-  btn.disabled = true;
+  setBusy(btn, true);
   try {
     const data = await post('/api/admin/auth/login', { email: form.email.value, password: form.password.value });
-    if (data.mfaRequired) { form.password.value = ''; btn.disabled = false; showStep(true); return; }
+    if (data.mfaRequired) { form.password.value = ''; setBusy(btn, false); showStep(true); return; }
     location.href = '/admin/'; // ยังไม่ได้ตั้ง 2FA → หน้าแอดมินจะพาไปตั้งค่า
   } catch (err) {
     msg.textContent = err.message;
-    btn.disabled = false;
+    setBusy(btn, false);
   }
 });
 
@@ -45,7 +48,7 @@ mfaForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   mfaMsg.textContent = '';
   const btn = mfaForm.querySelector('button[type=submit]');
-  btn.disabled = true;
+  setBusy(btn, true);
   try {
     const data = await post('/api/admin/auth/mfa/verify', { code: mfaForm.code.value });
     if (data.recoveryCodesLeft <= 2) {
@@ -55,7 +58,7 @@ mfaForm.addEventListener('submit', async (e) => {
   } catch (err) {
     mfaMsg.textContent = err.message;
     mfaForm.code.select();
-    btn.disabled = false;
+    setBusy(btn, false);
     if (err.code === 'MFA_SESSION_EXPIRED') showStep(false);
   }
 });

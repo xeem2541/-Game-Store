@@ -81,7 +81,7 @@ export async function adminLogin(page, { email, password: pw }) {
   // บัญชีที่ยังไม่ตั้ง 2FA → หน้าแอดมินแสดงหน้าตั้งค่าแทนเมนู
   const setup = await Promise.race([
     page.waitForSelector('#mfaStart').then(() => true),
-    page.waitForSelector('#nav a').then(() => false),
+    page.waitForSelector('#nav a', { state: 'attached' }).then(() => false), // จอเล็กเมนูซ่อนใน drawer (visibility: hidden) จนกว่าจะกดเปิด
   ]);
   if (setup) {
     await page.click('#mfaStart');
@@ -92,6 +92,6 @@ export async function adminLogin(page, { email, password: pw }) {
     recoveryCodes.set(email, (await page.locator('#recoveryCodes code').allTextContents()).map((c) => c.trim()));
     await page.check('#savedCodes');
     await page.click('#mfaDone');
-    await page.waitForSelector('#nav a');
+    await page.waitForSelector('#nav a', { state: 'attached' });
   }
 }

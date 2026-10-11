@@ -24,14 +24,29 @@ const ROUTES = [
 ];
 
 const view = $('#view');
+
+// เมนูบนจอเล็ก (drawer): ปุ่มบอกสถานะเปิด/ปิด, กดพื้นหลังหรือ Esc เพื่อปิด แล้วคืนโฟกัสให้ปุ่มเมนู
+function setMenu(open) {
+  const sb = $('#sidebar');
+  if (sb.classList.contains('open') === open) return;
+  sb.classList.toggle('open', open);
+  $('#menuBtn').setAttribute('aria-expanded', String(open));
+  $('#menuBtn').setAttribute('aria-label', open ? 'ปิดเมนู' : 'เปิดเมนู');
+  if (open) $('#nav a')?.focus();
+  else if (sb.contains(document.activeElement)) $('#menuBtn').focus();
+}
 let token = 0; // กันผลลัพธ์ของหน้าเก่ามาเขียนทับหน้าใหม่ที่เปิดทีหลัง
 
 async function route() {
   const [path] = location.hash.replace(/^#\/?/, '').split('?');
   const [key, ...rest] = path.split('/');
   const r = ROUTES.find((x) => x.key === (key || 'dashboard'));
-  $$('#nav a').forEach((a) => a.classList.toggle('active', a.dataset.key === r?.key));
-  $('#sidebar').classList.remove('open');
+  $$('#nav a').forEach((a) => {
+    const on = a.dataset.key === r?.key;
+    a.classList.toggle('active', on);
+    if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+  setMenu(false);
   if (!r || !r.roles.includes(state.me.role) || (r.perm && !hasPerm(r.perm))) {
     view.innerHTML = '<div class="state error">ไม่พบหน้านี้ หรือคุณไม่มีสิทธิ์เข้าถึง</div>';
     return;
@@ -45,7 +60,7 @@ async function route() {
   }
 }
 
-const whoHtml = () => `<div><strong>${esc(state.me.name)}</strong></div><div>${esc(state.me.email)}</div>
+const whoHtml = () => `<strong>${esc(state.me.name)}</strong><div>${esc(state.me.email)}</div>
     <div><span class="badge ${esc(state.me.role)}">${state.me.role === 'admin' ? 'admin' : 'staff'}</span></div>
     <p><a href="/" target="_blank" rel="noopener">เปิดหน้าร้าน ↗</a></p><button class="btn sm" id="logout" type="button">ออกจากระบบ</button>`;
 const bindLogout = () => { $('#logout').onclick = async () => { await api('/auth/logout', { method: 'POST', body: {} }).catch(() => {}); location.href = '/admin/login'; }; };
@@ -72,7 +87,9 @@ async function start() {
   $('#nav').innerHTML = ROUTES.filter((r) => r.roles.includes(state.me.role) && (!r.perm || hasPerm(r.perm))).map((r) => `<a href="#/${r.key}" data-key="${r.key}">${r.label}</a>`).join('');
   $('#who').innerHTML = whoHtml();
   bindLogout();
-  $('#menuBtn').onclick = () => $('#sidebar').classList.toggle('open');
+  $('#menuBtn').onclick = () => setMenu(!$('#sidebar').classList.contains('open'));
+  $('#navScrim').onclick = () => setMenu(false);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
   window.addEventListener('hashchange', route);
   if (!location.hash) location.hash = '#/dashboard'; else route();
 }

@@ -173,11 +173,12 @@ npm run reset-mfa -- you@example.com   # Docker: docker compose exec app node se
 ## รันเทสต์
 
 ```bash
-npm test                     # เทสต์ฝั่งเซิร์ฟเวอร์ 134 ข้อ (auth, ตะกร้า/ออเดอร์, ชำระเงิน/webhook, คืนเงินอัตโนมัติ, แอดมิน, ความปลอดภัย, deploy, SEO, สำรอง/กู้คืน)
+npm test                     # เทสต์ฝั่งเซิร์ฟเวอร์ 135 ข้อ (auth, ตะกร้า/ออเดอร์, ชำระเงิน/webhook, คืนเงินอัตโนมัติ, แอดมิน, ความปลอดภัย, deploy, SEO, สำรอง/กู้คืน)
 npm run test:coverage        # + รายงาน coverage
 npm run e2e                  # Playwright (ต้อง `npx playwright install chromium` ก่อนครั้งแรก): เส้นทางซื้อครบวงจร,
                              #   responsive 375/768/1280, a11y (axe), คีย์บอร์ด, ไทย/อังกฤษ,
-                             #   งบประสิทธิภาพ (CLS < 0.1, LCP < 2.5 วิ บนมือถือจำลอง CPU ช้า 4x) และวงจรชีวิตฉาก 3D
+                             #   งบประสิทธิภาพ (CLS < 0.1, LCP < 2.5 วิ บนมือถือจำลอง CPU ช้า 4x), วงจรชีวิตฉาก 3D
+                             #   และหลังบ้าน (axe ทุกหน้า, เมนู drawer, กล่องโต้ตอบ, toast)
 npm run build && npm run bench   # load test เบา ๆ ด้วย autocannon
 ```
 

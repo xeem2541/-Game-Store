@@ -1,4 +1,4 @@
-import { $, api, esc, toast } from './core.js';
+import { $, api, busy, esc, toast } from './core.js';
 
 // ตั้งค่า 2FA ครั้งแรก (บังคับก่อนใช้หลังบ้าน): สแกน QR → กรอกรหัสยืนยัน → เก็บรหัสกู้คืน
 export function renderSetup(el) {
@@ -33,16 +33,15 @@ async function start(el) {
   $('#mfaEnable').code.focus();
   $('#mfaEnable').onsubmit = async (e) => {
     e.preventDefault();
-    const btn = e.target.querySelector('button');
-    btn.disabled = true;
+    let recoveryCodes;
     try {
-      const { recoveryCodes } = await api('/auth/mfa/enable', { method: 'POST', body: { code: e.target.code.value } });
-      showRecoveryCodes(el, recoveryCodes);
+      ({ recoveryCodes } = await busy(e.target.querySelector('button'), () => api('/auth/mfa/enable', { method: 'POST', body: { code: e.target.code.value } })));
     } catch (err) {
       toast(err.message, true);
-      btn.disabled = false;
       e.target.code.select();
+      return;
     }
+    showRecoveryCodes(el, recoveryCodes);
   };
 }
 

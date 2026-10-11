@@ -7,7 +7,7 @@ const ALERT_TH = {
 const BAD = new Set(['REFUND_FAILED', 'AMOUNT_MISMATCH', 'OUT_OF_STOCK_AFTER_PAYMENT', 'LATE_PAYMENT', 'PAYMENT_UNKNOWN_ORDER']);
 let chart;
 
-const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#7c5cff';
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#A0A7B4';
 const today = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
 const daysAgo = (n) => new Date(Date.now() + 7 * 3600_000 - n * 86400_000).toISOString().slice(0, 10);
 
@@ -15,19 +15,20 @@ export async function render(el, _rest, alive) {
   const d = await api('/dashboard');
   if (!alive()) return;
   const s = d.summary;
-  const stat = (label, value, sub = '') => `<div class="card stat"><div class="label">${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;
+  const kpi = (cls, label, value, sub = '') => `<div class="card kpi ${cls}"><div class="label">${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;
+  const n = (v) => v.toLocaleString('th-TH');
 
   el.innerHTML = `
     <h1>Dashboard</h1>
-    <div class="cards">
-      ${stat('ยอดขายวันนี้', money(s.todayRevenue), `${s.todayOrders} ออเดอร์`)}
-      ${stat('ยอดขาย 7 วันล่าสุด', money(s.weekRevenue), `${s.weekOrders} ออเดอร์`)}
-      ${stat('ยอดขายเดือนนี้', money(s.monthRevenue), `${s.monthOrders} ออเดอร์`)}
-      ${stat('ผู้ใช้ใหม่', s.newUsers.today, `7 วัน: ${s.newUsers.week} • 30 วัน: ${s.newUsers.month}`)}
-      ${stat('โค้ดเกมคงเหลือ', s.keys.available.toLocaleString('th-TH'), `จอง ${s.keys.reserved} • ขายแล้ว ${s.keys.sold} • เพิกถอน ${s.keys.revoked}`)}
+    <div class="kpis">
+      ${kpi('kpi-today', 'ยอดขายวันนี้', money(s.todayRevenue), `${n(s.todayOrders)} ออเดอร์ • เฉลี่ย 7 วัน ${money(Math.round(s.weekRevenue / 7))} ต่อวัน`)}
+      ${kpi('kpi-week', 'ยอดขาย 7 วันล่าสุด', money(s.weekRevenue), `${n(s.weekOrders)} ออเดอร์`)}
+      ${kpi('kpi-month', 'ยอดขายเดือนนี้', money(s.monthRevenue), `${n(s.monthOrders)} ออเดอร์`)}
+      ${kpi('kpi-users', 'ผู้ใช้ใหม่วันนี้', n(s.newUsers.today), `7 วัน: ${n(s.newUsers.week)} • 30 วัน: ${n(s.newUsers.month)}`)}
+      ${kpi('kpi-keys', 'โค้ดเกมคงเหลือ', n(s.keys.available), `จอง ${n(s.keys.reserved)} • ขายแล้ว ${n(s.keys.sold)} • เพิกถอน ${n(s.keys.revoked)}`)}
     </div>
-    <div class="cards">
-      ${['pending', 'paid', 'cancelled', 'refunded'].map((k) => `<a class="card stat plain-link" href="#/orders?status=${k}"><div class="label">ออเดอร์ ${badge(k)}</div><div class="value">${s.byStatus[k].toLocaleString('th-TH')}</div></a>`).join('')}
+    <div class="status-tiles">
+      ${['pending', 'paid', 'cancelled', 'refunded'].map((k) => `<a class="card kpi" href="#/orders?status=${k}"><div class="label">ออเดอร์ ${badge(k)}</div><div class="value">${n(s.byStatus[k])}</div><div class="sub">ดูรายการ</div></a>`).join('')}
     </div>
 
     <h2>การแจ้งเตือน</h2>
@@ -105,22 +106,24 @@ function renderAlerts(a) {
 
 function drawChart(r) {
   if (chart) chart.destroy();
-  const text = css('--muted');
-  const grid = css('--border');
+  const text = css('--c-text-2');
+  const grid = css('--c-border');
+  Chart.defaults.font.family = css('--font');
   $('#salesNote').textContent = `รวม ${money(r.rows.reduce((s, x) => s + x.revenue, 0))} จาก ${r.rows.reduce((s, x) => s + x.orders, 0)} ออเดอร์ (${r.from} ถึง ${r.to}) • ยอดคืนเงินรวม ${money(r.rows.reduce((s, x) => s + x.refunded, 0))}`;
   chart = new Chart($('#salesChart'), {
     data: {
       labels: r.rows.map((x) => x.period),
       datasets: [
-        { type: 'bar', label: 'ยอดขาย (บาท)', data: r.rows.map((x) => x.revenue / 100), backgroundColor: css('--accent'), yAxisID: 'y', order: 2 },
-        { type: 'line', label: 'จำนวนออเดอร์', data: r.rows.map((x) => x.orders), borderColor: css('--accent2'), backgroundColor: css('--accent2'), yAxisID: 'y1', tension: 0.25, pointRadius: 2, order: 1 },
+        { type: 'bar', label: 'ยอดขาย (บาท)', data: r.rows.map((x) => x.revenue / 100), backgroundColor: css('--c-accent'), borderRadius: 4, maxBarThickness: 28, yAxisID: 'y', order: 2 },
+        { type: 'line', label: 'จำนวนออเดอร์', data: r.rows.map((x) => x.orders), borderColor: '#B9A6FF', backgroundColor: '#B9A6FF', borderWidth: 2, yAxisID: 'y1', tension: 0.3, pointRadius: 0, pointHoverRadius: 4, order: 1 },
       ],
     },
     options: {
       responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { labels: { color: text } } },
+      animation: matchMedia('(prefers-reduced-motion: reduce)').matches ? false : { duration: 500 },
+      plugins: { legend: { labels: { color: text, usePointStyle: true, boxWidth: 8 } } },
       scales: {
-        x: { ticks: { color: text, maxRotation: 60, autoSkip: true }, grid: { color: grid } },
+        x: { ticks: { color: text, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
         y: { beginAtZero: true, ticks: { color: text }, grid: { color: grid }, title: { display: true, text: 'บาท', color: text } },
         y1: { beginAtZero: true, position: 'right', ticks: { color: text, precision: 0 }, grid: { display: false }, title: { display: true, text: 'ออเดอร์', color: text } },
       },

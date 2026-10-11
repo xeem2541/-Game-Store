@@ -4,21 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <script src="/js/theme-init.js"></script>
   <title>หลังบ้าน – Game Store</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="preload" href="/fonts/anuphan-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/admin/admin.css">
 </head>
 <body>
-  <div class="topbar-m"><button class="btn sm" id="menuBtn" type="button" aria-label="เมนู">☰</button><strong>Game Store — หลังบ้าน</strong></div>
+  <header class="topbar-m"><button class="btn" id="menuBtn" type="button" aria-label="เปิดเมนู" aria-expanded="false" aria-controls="sidebar">☰</button><strong>Game Store — หลังบ้าน</strong></header>
   <div class="layout">
-    <aside class="sidebar" id="sidebar">
-      <div class="brand">🎮 Game <span>Admin</span></div>
-      <nav id="nav"></nav>
+    <aside class="sidebar" id="sidebar" aria-label="เมนูหลังบ้าน">
+      <div class="brand">🎮 Game<span>Admin</span></div>
+      <nav id="nav" aria-label="เมนูหลัก"></nav>
       <div class="who" id="who"></div>
     </aside>
+    <div class="nav-scrim" id="navScrim"></div>
     <main class="main" id="view"><div class="state"><div class="spinner"></div>กำลังโหลด...</div></main>
   </div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
   <script src="/admin/vendor/chart.umd.js"></script>
   <script type="module" src="/admin/js/main.js"></script>
 </body>
