@@ -84,18 +84,23 @@ test('Kinetic typography: screen reader อ่านหัวข้อเต็�
 test('ซื้อยังไง 3 ขั้น: ภาพประกอบเปลี่ยนตามขั้นที่เลื่อนถึง (desktop) และทำงานเมื่อขอลดการเคลื่อนไหว', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1280, height: 800 });
+  // บันทึกไว้ช่วยวิเคราะห์เมื่อเทสต์ล้ม: จำนวน scroll event ที่หน้าได้รับ และประวัติค่า data-step ของภาพประกอบ
+  await page.addInitScript(() => {
+    window.__scrolls = 0;
+    window.__steps = [];
+    addEventListener('scroll', () => { window.__scrolls += 1; }, { passive: true });
+    new MutationObserver((ms) => { for (const m of ms) window.__steps.push(m.target.dataset.step); })
+      .observe(document, { subtree: true, attributes: true, attributeFilter: ['data-step'] });
+  });
   await page.goto('/');
   await page.waitForSelector('body.ready', { state: 'attached' });
   const visual = page.locator('.howto-visual');
   for (const n of ['1', '2', '3']) {
     // เลื่อนซ้ำจนกว่าจะตรง: รายการเกมด้านบนอาจโหลดเสร็จทีหลังแล้วดันตำแหน่งลง (Safari ไม่ยึดตำแหน่งการเลื่อนไว้)
     await expect(async () => {
-      // เลื่อนด้วยลูกกลิ้งเมาส์เหมือนผู้ใช้จริง: WebKit แบบ headless ไม่ส่ง scroll event/IntersectionObserver หลัง scrollTo จากสคริปต์
-      // จนกว่าจะมีการวาดหน้าจอรอบถัดไป (ซึ่งอาจไม่เกิดเลยเมื่อหน้านิ่ง) — ส่วน wheel ผ่านลำดับเหตุการณ์ปกติของเบราว์เซอร์
-      const delta = await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => { const r = el.getBoundingClientRect(); return Math.round(r.top + r.height / 2 - innerHeight / 2); });
-      await page.mouse.move(640, 400);
-      await page.mouse.wheel(0, delta || 1);
-      const state = await page.evaluate(() => JSON.stringify({ y: scrollY, ih: innerHeight, H: document.documentElement.scrollHeight,
+      await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' }));
+      await page.waitForTimeout(150);
+      const state = await page.evaluate(() => JSON.stringify({ y: scrollY, scrolls: window.__scrolls, history: window.__steps,
         steps: [...document.querySelectorAll('.howto-step')].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }) }));
       await expect(visual, `ขั้น ${n}: ${state}`).toHaveAttribute('data-step', n, { timeout: 1000 });
     }).toPass({ timeout: 10000 });
