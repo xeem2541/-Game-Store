@@ -38,10 +38,13 @@ function render(o) {
         ${summaryHtml({ ...o, coupon: { code: o.couponCode } })}
         ${pending ? `
           <p class="meta" id="countdown"></p>
-          ${config.payments?.stripe
-            ? `<button class="btn primary big block" id="payBtn" type="button">${t('order.pay')}</button><small class="meta">${t('order.payMethods')}</small>`
-            : `<div class="payment-box">${t('order.payNotConfigured')}${config.devPay ? `<br><small>${t('order.payNotConfiguredDev')}</small>` : ''}</div>`}
-          ${config.devPay ? `<button class="btn block" id="devPay" type="button">${t('order.devPay')}</button><small class="meta">${t('order.devNote')}</small>` : ''}
+          ${config.demo
+            // เว็บตัวอย่าง (DEMO_MODE): จ่ายแบบจำลองเป็นปุ่มหลัก พร้อมบอกชัดว่าไม่เก็บเงินจริง
+            ? `<div class="payment-box">${t('order.demoNote')}</div><button class="btn primary big block" id="devPay" type="button">${t('order.demoPay')}</button>`
+            : `${config.payments?.stripe
+              ? `<button class="btn primary big block" id="payBtn" type="button">${t('order.pay')}</button><small class="meta">${t('order.payMethods')}</small>`
+              : `<div class="payment-box">${t('order.payNotConfigured')}${config.devPay ? `<br><small>${t('order.payNotConfiguredDev')}</small>` : ''}</div>`}
+            ${config.devPay ? `<button class="btn block" id="devPay" type="button">${t('order.devPay')}</button><small class="meta">${t('order.devNote')}</small>` : ''}`}
           <button class="btn danger block" id="cancelBtn" type="button">${t('order.cancel')}</button>` : ''}
         ${o.status === 'paid' ? `
           <p class="msg ok">${t('order.paidNote')}</p>

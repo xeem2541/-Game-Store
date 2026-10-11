@@ -206,6 +206,8 @@ document.addEventListener('click', (e) => {
 });
 
 // ---------- header / footer / ลิ้นชักตะกร้า ----------
+// เว็บตัวอย่าง (เซิร์ฟเวอร์ DEMO_MODE=1 ตั้งคุกกี้ demo=1): ป้าย DEMO ข้างโลโก้ + คำอธิบายใน footer
+export const isDemo = /(?:^|;\s*)demo=1(?:;|$)/.test(document.cookie);
 function mountLayout() {
   const authHtml = user
     ? `<details class="usermenu"><summary><svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-user" /></svg><span class="user-name">${esc(user.name)}</span></summary>
@@ -216,7 +218,7 @@ function mountLayout() {
   let header = $('header.topbar');
   if (!header) { header = document.createElement('header'); header.className = 'topbar'; document.body.prepend(header); }
   header.innerHTML = `
-    <a class="logo" href="/"><svg class="icon"><use href="/icons.svg#icon-gamepad" /></svg> Game <span>Store</span></a>
+    <a class="logo" href="/"><svg class="icon"><use href="/icons.svg#icon-gamepad" /></svg> Game <span>Store</span>${isDemo ? `<span class="demo-badge" title="${t('footer.demo')}">Demo</span>` : ''}</a>
     <nav class="nav" aria-label="main"><a href="/games.html">${t('nav.games')}</a><a href="/games.html?onSale=1">${t('nav.promo')}</a></nav>
     <form class="search" action="/games.html" autocomplete="off" role="search">
       <input id="search" name="q" type="search" placeholder="${t('search.placeholder')}" aria-label="${t('search.placeholder')}">
@@ -229,7 +231,7 @@ function mountLayout() {
     </div>`;
   let footer = $('body > footer');
   if (!footer) { footer = document.createElement('footer'); document.body.append(footer); }
-  footer.innerHTML = `<nav class="foot-links" aria-label="legal"><a href="/privacy">${t('footer.privacy')}</a><a href="/terms">${t('footer.terms')}</a><a href="/refund-policy">${t('footer.refund')}</a></nav><div>${t('footer.text')}</div>`;
+  footer.innerHTML = `<nav class="foot-links" aria-label="legal"><a href="/privacy">${t('footer.privacy')}</a><a href="/terms">${t('footer.terms')}</a><a href="/refund-policy">${t('footer.refund')}</a></nav><div>${t('footer.text')}</div>${isDemo ? `<p class="demo-note">${t('footer.demo')}</p>` : ''}`;
   document.body.insertAdjacentHTML('beforeend', `
   <div id="cartScrim" class="scrim" hidden></div>
   <aside id="cart" class="cart" hidden aria-label="${t('cart.title')}">

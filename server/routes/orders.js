@@ -87,7 +87,7 @@ ordersRouter.post('/:id/resend-email', resendLimiter, (req, res) => {
   res.json({ ok: true });
 });
 
-// จำลองการชำระเงินสำเร็จ — ไม่ถูก mount เมื่อ NODE_ENV=production
+// จำลองการชำระเงินสำเร็จ — ไม่ถูก mount เมื่อ NODE_ENV=production (ยกเว้นเว็บตัวอย่าง DEMO_MODE=1 ซึ่งไม่ต่อ Stripe)
 if (config.devPay) {
   ordersRouter.post('/:id/dev-pay', (req, res) => {
     const order = getOwnOrder(req.user.id, idParam.parse(req.params.id));

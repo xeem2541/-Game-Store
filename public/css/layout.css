@@ -27,6 +27,10 @@ button, select, input { font: inherit; }
 .topbar.scrolled { transform: translateY(calc(-1 * var(--sp-2))); box-shadow: var(--shadow-2), 0 0 10px rgb(var(--rgb-accent) / 0.1); background: var(--surface-2); }
 .topbar .logo { grid-area: logo; display: inline-flex; align-items: center; gap: var(--sp-2); font-size: 24px; font-weight: var(--fw-bold); color: var(--c-text); text-decoration: none; text-transform: uppercase; letter-spacing: -0.03em; white-space: nowrap; }
 .logo span { color: var(--c-accent); text-shadow: 0 0 10px rgb(var(--rgb-accent) / 0.5); }
+.logo .demo-badge { margin-left: 2px; padding: 2px 8px; border: 1px solid rgb(var(--rgb-accent) / 0.5); border-radius: var(--r-pill); color: var(--c-text); font-size: 11px; letter-spacing: 0.08em; text-shadow: none; }
+.demo-note { margin: var(--sp-2) 0 0; color: var(--c-text-2); font-size: var(--fs-sm); }
+/* จอแคบ: header ไม่มีที่พอ (ปุ่มตะกร้าล้นจอ) — ยังบอกว่าเป็นเว็บตัวอย่างใน footer หน้ายืนยันสั่งซื้อ และหน้าคำสั่งซื้อ */
+@media (max-width: 480px) { .logo .demo-badge { display: none; } }
 .topbar .nav { grid-area: nav; display: flex; gap: var(--sp-5); }
 .nav a { color: var(--c-text); text-decoration: none; font-weight: var(--fw-bold); white-space: nowrap; transition: color var(--dur-2); }
 .nav a:hover { color: var(--c-accent); }

@@ -74,6 +74,14 @@ export function createApp() {
     res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
     next();
   });
+  // โหมดตัวอย่าง: ไม่ให้ search engine เก็บร้านปลอม + คุกกี้ demo=1 ให้หน้าเว็บแสดงป้าย DEMO โดยไม่ต้องเรียก API เพิ่ม
+  if (config.demoMode) {
+    app.use((req, res, next) => {
+      res.set('X-Robots-Tag', 'noindex, nofollow');
+      if (!/(?:^|;\s*)demo=1(?:;|$)/.test(req.headers.cookie ?? '')) res.cookie('demo', '1', { sameSite: 'lax', secure: config.isProd, httpOnly: false, path: '/' });
+      next();
+    });
+  }
 
   // CORS: อนุญาตเฉพาะ origin ที่ตั้งไว้ใน APP_URL / CORS_ORIGINS (คำขอจาก origin เดียวกันไม่ต้องใช้ CORS อยู่แล้ว)
   app.use(cors({
@@ -92,6 +100,7 @@ export function createApp() {
   app.use('/api/auth', authRouter);
   app.get('/api/config', (_req, res) => res.json({
     devPay: config.devPay,
+    demo: config.demoMode,
     payments: { stripe: stripeConfigured(), webhook: webhookConfigured(), methods: ['card', 'promptpay'] },
   }));
   app.use('/api/me', meRouter);

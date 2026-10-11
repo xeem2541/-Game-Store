@@ -45,8 +45,10 @@ authRouter.post('/register', limiter, async (req, res) => {
     if (isUniqueViolation(e)) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้งานแล้ว' });
     throw e;
   }
+  // โหมดตัวอย่างที่ไม่มี SMTP: ส่งลิงก์ยืนยันไม่ได้ → ยืนยันให้ทันที ให้ทดลองสั่งซื้อได้ครบวงจร
+  if (config.demoMode && !config.smtp.host) db.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').run(lastInsertRowid);
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(lastInsertRowid);
-  await sendVerificationMail(user);
+  if (!user.email_verified) await sendVerificationMail(user);
   setAuthCookie(res, user);
   res.status(201).json({ user: publicUser(user) });
 });

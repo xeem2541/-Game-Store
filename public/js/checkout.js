@@ -1,4 +1,4 @@
-import { markReady, api, cart, user, loginUrl, money, summaryHtml, unavailableHtml, bindRemoveUnavailable, esc, $, t, toast } from './common.js';
+import { markReady, api, cart, user, loginUrl, money, summaryHtml, unavailableHtml, bindRemoveUnavailable, esc, $, t, toast, isDemo } from './common.js';
 
 if (!user) { location.replace(loginUrl()); throw new Error('redirect'); }
 
@@ -43,7 +43,7 @@ async function load() {
             <strong>${i.discountPercent ? `<span class="old">${money(i.listPrice)}</span>` : ''}${money(i.unitPrice)}</strong>
           </div>`).join('')}</div>
         <h2 class="sec">${t('checkout.paymentTitle')}</h2>
-        <div class="payment-box">${t('checkout.paymentNote')}</div>
+        <div class="payment-box">${t(isDemo ? 'checkout.paymentNoteDemo' : 'checkout.paymentNote')}</div>
       </div>
       <aside class="side">
         ${summaryHtml(s)}
