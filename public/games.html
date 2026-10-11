@@ -13,13 +13,22 @@
 </head>
 <body data-async>
   <header class="topbar glass-nav"></header>
-  <main class="full-width">
-    <h1 class="sec"><span data-i18n="catalog.title">เกมทั้งหมด</span> <small id="count"></small></h1>
-    <form id="filters" class="filters">
+  <main class="full-width catalog">
+    <div class="catalog-glow" aria-hidden="true"></div>
+    <div class="catalog-head">
+      <h1 class="sec" id="catalogTitle"><span data-i18n="catalog.title">เกมทั้งหมด</span> <small id="count" aria-live="polite"></small></h1>
+      <p class="catalog-sub" data-i18n="catalog.sub">เกมแท้ทุกเกม รับโค้ดทันทีหลังชำระเงิน — เลือกแนวที่ชอบ หรือกรองตามแพลตฟอร์มและราคา</p>
+    </div>
+    <!-- ช่องแนวเกมแบบ bento (JS เติมจาก /api/games/facets) — CSS จองความสูงไว้ก่อน ไม่ดันเนื้อหาตอนเติม -->
+    <nav id="genreBento" class="genre-bento" data-i18n-label="catalog.genres"></nav>
+    <button id="filtersToggle" class="btn filters-toggle" type="button" aria-expanded="false" aria-controls="filters"><span data-i18n="filter.toggle">ตัวกรองและการเรียง</span> <span id="filtersCount" class="filters-count"></span></button>
+    <form id="filters" class="filters filter-bar">
       <select name="genre" id="genre" aria-label="genre"><option value="" data-i18n="filter.allGenres"></option></select>
       <select name="platform" id="platform" aria-label="platform"><option value="" data-i18n="filter.allPlatforms"></option></select>
-      <input name="minPrice" type="number" min="0" data-i18n-placeholder="filter.minPrice" data-i18n-label="filter.minPrice">
-      <input name="maxPrice" type="number" min="0" data-i18n-placeholder="filter.maxPrice" data-i18n-label="filter.maxPrice">
+      <div class="price-pair">
+        <input name="minPrice" type="number" min="0" inputmode="numeric" data-i18n-placeholder="filter.minPrice" data-i18n-label="filter.minPrice">
+        <input name="maxPrice" type="number" min="0" inputmode="numeric" data-i18n-placeholder="filter.maxPrice" data-i18n-label="filter.maxPrice">
+      </div>
       <label class="check"><input type="checkbox" name="onSale" value="1"> <span data-i18n="filter.onSale"></span></label>
       <select name="sort" aria-label="sort">
         <option value="default" data-i18n="sort.default"></option>
@@ -30,8 +39,9 @@
         <option value="rating" data-i18n="sort.rating"></option>
         <option value="discount" data-i18n="sort.discount"></option>
       </select>
-      <button class="btn" type="reset" data-i18n="filter.reset"></button>
+      <button class="btn reset-btn" type="reset" data-i18n="filter.reset"></button>
     </form>
+    <div id="activeFilters" class="active-filters" data-i18n-label="filter.active" role="group" hidden></div>
     <div id="grid" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div>
     <div id="empty" class="empty" hidden></div>
     <nav id="pager" class="pager"></nav>

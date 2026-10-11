@@ -6,7 +6,7 @@ import { db } from '../db/index.js';
 import { UPLOAD_DIR } from '../services/images.js';
 import { FINAL_PRICE_SQL, finalPrice } from '../services/pricing.js';
 import { likeArg } from '../services/text.js';
-import { coverSvg } from '../services/coverArt.js';
+import { coverSvg, sceneSvg } from '../services/coverArt.js';
 import { BM25_WEIGHTS, ftsMatch, parseQuery, segmentThai, shortTermSql } from '../services/search.js';
 
 export const gamesRouter = Router();
@@ -112,6 +112,10 @@ gamesRouter.get('/facets', (_req, res) => {
   res.json({
     genres: db.prepare('SELECT DISTINCT genre FROM games_v WHERE active = 1 ORDER BY genre').all().map((r) => r.genre),
     platforms: db.prepare('SELECT DISTINCT platform FROM games_v WHERE active = 1 ORDER BY platform').all().map((r) => r.platform),
+    // ช่องแนวเกมแบบ bento หน้ารวมเกม: จำนวนเกม + เกมขายดีสุดของแนว (ใช้ฉากของเกมนั้นเป็นพื้นหลังช่อง)
+    genreStats: db.prepare(`SELECT genre, COUNT(*) AS count,
+        (SELECT slug FROM games_v t WHERE t.active = 1 AND t.genre = g.genre ORDER BY sales DESC, id LIMIT 1) AS slug
+      FROM games_v g WHERE active = 1 GROUP BY genre ORDER BY count DESC, genre`).all(),
   });
 });
 
@@ -137,6 +141,13 @@ gamesRouter.get('/:slug/cover.svg', (req, res) => {
     return res.set('Cache-Control', 'public, max-age=300').redirect(302, `/uploads/games/${useThumb ? thumb : g.cover_image}`);
   }
   res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(coverSvg(g));
+});
+
+// ฉากของเกมแบบไม่มีชื่อเกม (พื้นหลังช่องแนวเกมหน้ารวมเกม) — สร้างจากสี/แนวเกมเสมอ ไม่ใช้รูปที่อัปโหลด
+gamesRouter.get('/:slug/scene.svg', (req, res) => {
+  const g = db.prepare('SELECT slug, genre, color1, color2 FROM games WHERE slug = ?').get(req.params.slug);
+  if (!g) return res.status(404).end();
+  res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(sceneSvg(g));
 });
 
 // รายละเอียดเกม + เกมที่เกี่ยวข้อง

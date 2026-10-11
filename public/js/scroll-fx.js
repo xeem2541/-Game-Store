@@ -8,7 +8,7 @@ export const supportsScrollTimeline = () => typeof CSS !== 'undefined' && CSS.su
 const PARALLAX = [
   { sel: '.hero-bg', range: 1, move: (el, p) => p * 0.28 * el.offsetHeight },
   { sel: '.game-backdrop', range: 1, move: (el, p) => p * 0.28 * el.offsetHeight },
-  { sel: '.game-glow', range: 1, move: (el, p) => p * 0.14 * el.offsetHeight },
+  { sel: '.game-glow, .catalog-glow', range: 1, move: (el, p) => p * 0.14 * el.offsetHeight },
   { sel: '.detail-cover-wrap', range: 0.8, move: (_el, p) => -56 * p },
 ];
 

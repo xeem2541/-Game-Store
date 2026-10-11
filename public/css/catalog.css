@@ -1,0 +1,120 @@
+/* ==========================================================================
+   หน้ารวมเกม — หัวข้อ kinetic + ช่องแนวเกมแบบ bento + แถบตัวกรองกระจก + ป้ายตัวกรอง + การ์ดเลื่อนตำแหน่ง
+   - parallax ของแสงพื้นหลังอยู่ใน story.css (CSS scroll-driven) + สำรองใน scroll-fx.js
+   - ไม่ใช้ backdrop-filter ต่อช่อง/ต่อการ์ด (WebKit กินหน่วยความจำเป็น GB เมื่อมีหลายชั้น — ดู CHANGELOG เฟส 14)
+   ========================================================================== */
+
+.catalog { position: relative; }
+.catalog-glow {
+  position: absolute; top: -64px; left: 0; right: 0; height: 560px; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(40% 60% at 20% 30%, rgb(var(--rgb-accent) / 0.16), transparent 70%),
+    radial-gradient(35% 55% at 80% 18%, rgb(124 92 255 / 0.14), transparent 70%);
+}
+
+/* ---- หัวข้อ ---- */
+.catalog-head .sec { margin: var(--sp-5) 0 var(--sp-2); padding: 0; border: 0; font-size: clamp(32px, 5vw, 56px); line-height: 1.1; flex-wrap: wrap; text-wrap: balance; }
+.catalog-head .sec small { min-height: 1.4em; font-size: var(--fs-md); color: var(--c-text-2); font-weight: 700; letter-spacing: normal; } /* จองที่ก่อนจำนวนเกมมา */
+@media (max-width: 640px) { .catalog-head .sec small { flex-basis: 100%; } } /* จอแคบ: จำนวนเกมอยู่บรรทัดของตัวเองเสมอ (ไม่ตัดบรรทัดทีหลังแล้วดันเนื้อหาลง) */
+.catalog-head .sec.is-search { font-size: clamp(26px, 3.6vw, 40px); }
+.catalog-head .sec.kt-in .kt-word { animation: kt-rise 0.7s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 70ms + 80ms); }
+.catalog-sub { max-width: 46em; margin: 0 0 var(--sp-6); color: var(--c-text-2); font-size: var(--fs-md); line-height: var(--lh-body); }
+body.is-search .catalog-sub { display: none; }
+
+/* ---- ช่องแนวเกมแบบ bento (desktop 6 คอลัมน์ × 2 แถว: แนวใหญ่สุด 2×2 + ที่เหลือ 1×1) ---- */
+.genre-bento {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 92px; gap: var(--sp-3);
+  min-height: calc(2 * 92px + var(--sp-3)); /* จองที่ก่อน JS เติม — ไม่ดันตัวกรอง/การ์ดลงทีหลัง */
+  margin-bottom: var(--sp-5);
+}
+.genre-bento:empty { border-radius: var(--r-lg); background: var(--surface-1); }
+body.is-search .genre-bento { display: none; }
+.genre-tile {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 2px;
+  padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); border: 1px solid var(--glass-border);
+  background: var(--surface-1); color: var(--c-text); font: inherit; text-align: left; cursor: pointer;
+  transition: transform var(--dur-3) var(--ease-out), border-color var(--dur-2), box-shadow var(--dur-3);
+}
+.genre-tile img {
+  position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0.7; transition: transform 0.6s var(--ease-out), opacity var(--dur-3);
+}
+.genre-tile::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 15%, rgb(var(--rgb-black) / 0.78)); }
+.genre-tile.is-big { grid-column: span 2; grid-row: span 2; padding: var(--sp-5); }
+.genre-tile.is-all { background: linear-gradient(135deg, rgb(var(--rgb-accent) / 0.22), rgb(var(--rgb-surface) / 0.85)); }
+.gt-name { font-size: var(--fs-md); font-weight: var(--fw-bold); line-height: 1.2; }
+.genre-tile.is-big .gt-name { font-size: clamp(22px, 2.4vw, 32px); }
+.gt-count { font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0.04em; color: var(--c-text-2); }
+.genre-tile:hover { transform: translateY(-3px); border-color: rgb(var(--rgb-accent) / 0.5); box-shadow: var(--shadow-2); }
+.genre-tile:hover img { transform: scale(1.08); opacity: 0.9; }
+.genre-tile:active { transform: translateY(0) scale(0.98); }
+.genre-tile[aria-pressed="true"] { border-color: var(--c-accent); box-shadow: inset 0 0 0 1px var(--c-accent), 0 0 18px rgb(var(--rgb-accent) / 0.35); }
+.genre-tile[aria-pressed="true"] .gt-name::before { content: '✓ '; color: var(--c-accent); }
+
+/* ---- แถบตัวกรองกระจก: แถวเดียวบน desktop และติดใต้ header ตอนเลื่อน ---- */
+.filters.filter-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3);
+  margin-bottom: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg);
+  background: var(--glass-bg-strong); border: 1px solid var(--glass-border); /* ทึบพอที่การ์ดที่เลื่อนผ่านข้างใต้ไม่รบกวนตัวอักษร */
+}
+.filter-bar > select { flex: 1 1 150px; width: auto; min-width: 0; }
+.filter-bar .price-pair { display: flex; flex: 1 1 220px; gap: var(--sp-2); }
+.filter-bar .price-pair input { width: 100%; min-width: 0; }
+.filter-bar .check { flex: 0 0 auto; white-space: nowrap; }
+.filter-bar .reset-btn { flex: 0 0 auto; }
+@media (min-width: 901px) {
+  /* ใต้ header: top ของ header (16) + สูง (44 + 32 + 2) + ช่องว่าง 12 */
+  .filters.filter-bar { position: sticky; top: 106px; z-index: calc(var(--z-nav) - 1); box-shadow: var(--shadow-2); }
+}
+.filters-toggle { display: none; }
+@media (max-width: 640px) {
+  .filters.filter-bar { display: none; grid-template-columns: 1fr 1fr; }
+  .filters.filter-bar.is-open { display: grid; animation: chip-in 0.2s var(--ease-out) both; }
+  .filter-bar .price-pair, .filter-bar .reset-btn { grid-column: 1 / -1; }
+  .filters-toggle { display: inline-flex; align-items: center; gap: var(--sp-2); width: 100%; justify-content: center; margin-bottom: var(--sp-3); }
+  .filters-toggle::after { content: '▾'; transition: transform var(--dur-2) var(--ease-out); }
+  .filters-toggle[aria-expanded="true"]::after { transform: rotate(180deg); }
+  .filters-count:not(:empty) { min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--r-pill); background: var(--c-accent); color: var(--c-on-accent); font-size: var(--fs-xs); display: inline-grid; place-items: center; }
+}
+
+/* ---- ป้ายตัวกรองที่ใช้อยู่ ---- */
+.active-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0 0 var(--sp-5); }
+.active-filters[hidden] { display: none; }
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px 0 14px;
+  border-radius: var(--r-pill); border: 1px solid rgb(var(--rgb-accent) / 0.45); background: rgb(var(--rgb-accent) / 0.1);
+  color: var(--c-text); font: inherit; font-size: var(--fs-sm); font-weight: 700; cursor: pointer;
+  animation: chip-in 0.25s var(--ease-out) both;
+  transition: background-color var(--dur-2), border-color var(--dur-2), transform var(--dur-2);
+}
+.filter-chip .icon { width: 12px; height: 12px; opacity: 0.7; transition: transform var(--dur-2) var(--ease-out), opacity var(--dur-2); }
+.filter-chip:hover { background: rgb(var(--rgb-accent) / 0.2); }
+.filter-chip:hover .icon { opacity: 1; transform: rotate(90deg); }
+.filter-chip:active { transform: scale(0.95); }
+.filter-chip.is-clear { padding: 0 14px; border-color: var(--glass-border); background: none; color: var(--c-text-2); }
+@keyframes chip-in { from { opacity: 0; transform: scale(0.85); } }
+
+/* ---- ผลลัพธ์ ---- */
+#grid.is-loading { opacity: 0.55; transition: opacity var(--dur-2); }
+/* เปลี่ยนตัวกรอง/เรียงลำดับ: การ์ดเกมเดียวกันเลื่อนไปตำแหน่งใหม่ (View Transitions — เบราว์เซอร์ที่ไม่รองรับเปลี่ยนทันที) */
+::view-transition-group(*) { animation-duration: 0.45s; }
+
+@media (max-width: 900px) {
+  /* มือถือ/แท็บเล็ต: ช่องแนวเกมเป็นแถวปัดแนวนอน (ไม่กินความสูงจอ) */
+  .genre-bento {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 148px; grid-auto-rows: 88px; min-height: 88px;
+    overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+    margin-inline: -16px; padding-inline: 16px; scroll-padding-inline: 16px;
+  }
+  .genre-bento::-webkit-scrollbar { display: none; }
+  .genre-tile { scroll-snap-align: start; }
+  .genre-tile.is-big { grid-column: auto; grid-row: auto; padding: var(--sp-3) var(--sp-4); }
+  .genre-tile.is-big .gt-name { font-size: var(--fs-md); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-chip { animation: none; }
+  .genre-tile, .genre-tile img { transition: none; }
+  .genre-tile:hover, .genre-tile:hover img { transform: none; }
+}

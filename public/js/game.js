@@ -149,9 +149,14 @@ function storyHtml(g) {
     <section class="shots-story reveal-scroll" id="shots" aria-labelledby="shotsTitle">
       <h2 class="sec" id="shotsTitle">${t('game.shots')}</h2>
       <div class="shots-layout">
-        <div class="shots-stage" aria-hidden="true">
-          ${list.map((c, i) => `<img class="stage-img${i ? '' : ' is-active'}" src="${esc(c.src)}" alt="" loading="lazy" width="1280" height="720">`).join('')}
-          <span class="shots-counter"><b id="shotNow">01</b> / ${String(n).padStart(2, '0')}</span>
+        <div class="shots-stage-wrap" aria-hidden="true">
+          <div class="shots-stage">
+            ${list.map((c, i) => `<img class="stage-img${i ? '' : ' is-active'}" src="${esc(c.src)}" alt="" loading="lazy" width="1280" height="720">`).join('')}
+          </div>
+          <div class="shots-meta">
+            <span class="shots-counter"><b id="shotNow">01</b> / ${String(n).padStart(2, '0')}</span>
+            <span class="shots-bar">${list.map((_, i) => `<i${i ? '' : ' class="is-active"'}></i>`).join('')}</span>
+          </div>
         </div>
         <ol class="shots-steps">
           ${list.map((c, i) => `
@@ -171,6 +176,7 @@ function storyHtml(g) {
 function initStory(g) {
   const steps = [...document.querySelectorAll('.shot-step')];
   const stage = [...document.querySelectorAll('.stage-img')];
+  const bar = [...document.querySelectorAll('.shots-bar i')];
   const now = $('#shotNow');
   let active = 0;
   const setActive = (i) => {
@@ -178,6 +184,7 @@ function initStory(g) {
     active = i;
     steps.forEach((s, j) => s.classList.toggle('is-active', j === i));
     stage.forEach((s, j) => s.classList.toggle('is-active', j === i));
+    bar.forEach((s, j) => s.classList.toggle('is-active', j === i));
     now.textContent = String(i + 1).padStart(2, '0');
   };
   // บทปัจจุบัน = บทที่ครอบกลางจอ (แบบเดียวกับ "ซื้อง่ายใน 3 ขั้น" หน้าแรก) — desktop เท่านั้น มือถือเป็นแถวปัดแนวนอน

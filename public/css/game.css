@@ -88,7 +88,7 @@
    มือถือ: แถวปัดแนวนอน (ภาพเต็ม + หัวข้อ)   desktop: ภาพใหญ่ติดกับที่ (sticky) เปลี่ยนตามบทที่เลื่อนถึง
    ========================================================================== */
 .shots-story { margin-bottom: var(--sp-8); }
-.shots-stage { display: none; }
+.shots-stage-wrap { display: none; }
 .shots-steps {
   list-style: none; padding: 0 0 var(--sp-2); margin: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 82%);
   gap: var(--sp-4); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
@@ -103,21 +103,22 @@
 
 @media (min-width: 901px) {
   .shots-layout { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: var(--sp-7); }
+  /* ตัวนับ + แถบบทอยู่ใต้ภาพ (ไม่ทับภาพในเกม — ภาพจริงอาจมี HUD/ตัวเลขที่มุมไหนก็ได้) */
+  .shots-stage-wrap { display: block; position: sticky; top: 120px; align-self: start; }
   .shots-stage {
-    display: block; position: sticky; top: 120px; align-self: start; aspect-ratio: 16 / 9; overflow: hidden;
+    display: block; position: relative; aspect-ratio: 16 / 9; overflow: hidden;
     border-radius: var(--r-xl); border: 1px solid var(--glass-border); box-shadow: var(--shadow-3);
   }
+  .shots-meta { display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-3); }
+  .shots-bar { display: flex; flex: 1; gap: 6px; }
+  .shots-bar i { flex: 1; height: 3px; border-radius: 3px; background: var(--c-border); transition: background-color var(--dur-3) var(--ease-out); }
+  .shots-bar i.is-active { background: var(--c-accent); }
   .stage-img {
     position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
     opacity: 0; transform: scale(1.05); transition: opacity var(--dur-4) var(--ease-out), transform 1.2s var(--ease-out);
   }
   .stage-img.is-active { opacity: 1; transform: none; }
-  .shots-counter {
-    position: absolute; right: var(--sp-4); bottom: var(--sp-4); padding: 6px 12px; border-radius: var(--r-pill);
-    font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--c-text-2);
-    background: var(--glass-bg-strong); border: 1px solid var(--glass-border);
-    -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur));
-  }
+  .shots-counter { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--c-text-2); }
   .shots-counter b { color: var(--c-text); }
   .shots-steps { display: block; overflow: visible; padding: 0; }
   .shot-step {

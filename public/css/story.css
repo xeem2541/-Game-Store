@@ -107,7 +107,7 @@
     /* หน้าเกม: ภาพปกลอยขึ้นเร็วกว่าเนื้อหา ฉากหลังเบลอเลื่อนช้ากว่า */
     .detail-cover-wrap { animation: px-lift linear both; animation-timeline: scroll(root); animation-range: 0 80vh; }
     .game-backdrop { animation: px-slow linear both; animation-timeline: scroll(root); animation-range: 0 100vh; }
-    .game-glow { animation: px-mid linear both; animation-timeline: scroll(root); animation-range: 0 100vh; }
+    .game-glow, .catalog-glow { animation: px-mid linear both; animation-timeline: scroll(root); animation-range: 0 100vh; }
     /* ส่วนที่อยู่ใต้จอค่อย ๆ ปรากฏตอนเลื่อนถึง (ส่วนที่เห็นตั้งแต่แรกแสดงเต็มทันที) */
     .reveal-scroll { animation: reveal-in linear both; animation-timeline: view(); animation-range: entry 0% entry 70%; }
   }
