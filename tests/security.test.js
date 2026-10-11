@@ -101,6 +101,8 @@ test('sitemap.xml: มีหน้าหลัก + เกมที่เปิ�
   const xml = await r.text();
   assert.match(xml, /<urlset[^>]*sitemaps\.org/);
   assert.ok(xml.includes(`${config.appUrl}/game/dragon-realm`));
+  assert.match(xml, /xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1"/);
+  assert.ok(xml.includes(`<image:loc>${config.appUrl}/og/dragon-realm.png</image:loc>`), 'หน้าเกมต้องแนบรูปใน sitemap');
   assert.ok(!/\/(admin|api|cart|checkout|profile|order)\b/.test(xml.replace(/<\?xml.*?\?>/, '')), 'sitemap มีหน้าที่ไม่ควรให้ index');
   const hidden = db.prepare('SELECT slug FROM games WHERE active = 0 LIMIT 1').get();
   if (hidden) assert.ok(!xml.includes(`/game/${hidden.slug}<`));
@@ -130,6 +132,22 @@ test('หน้าเกม: title/description/canonical/OG/Twitter/JSON-LD Prod
   assert.match(String(prod.offers.price), /^\d+(\.\d{1,2})?$/);
   assert.ok(!html.includes('{{') && !html.includes('<!--SEO-->'), 'ยังมี placeholder ค้าง');
   if (prod.aggregateRating) assert.ok(prod.aggregateRating.reviewCount >= 1, 'AggregateRating ต้องมาจากรีวิวจริง');
+  assert.equal(prod.url, `${config.appUrl}/game/dragon-realm`);
+  const crumbs = [].concat(data['@graph'] ?? data).find((x) => x['@type'] === 'BreadcrumbList');
+  assert.ok(crumbs, 'ไม่มี BreadcrumbList');
+  assert.deepEqual(crumbs.itemListElement.map((i) => i.position), [1, 2, 3, 4]);
+  assert.equal(crumbs.itemListElement.at(-1).item, `${config.appUrl}/game/dragon-realm`);
+});
+
+test('หน้าแรก: JSON-LD มี WebSite + ช่องค้นหา และข้อมูลร้าน (OnlineStore + โลโก้)', async () => {
+  const html = await (await get('/')).text();
+  const graph = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1])['@graph'];
+  const site = graph.find((x) => x['@type'] === 'WebSite');
+  assert.match(site.potentialAction.target, /\/games\.html\?q=\{search_term_string\}$/);
+  const store = graph.find((x) => x['@type'] === 'OnlineStore');
+  assert.equal(site.publisher['@id'], store['@id']);
+  assert.match(store.logo.url, /\/apple-touch-icon\.png$/);
+  assert.equal((await get('/apple-touch-icon.png')).status, 200, 'โลโก้ต้องเปิดได้จริง');
 });
 
 test('JSON-LD/HTML ไม่ถูกแทรกสคริปต์ผ่านชื่อเกม (escape </script>)', async () => {

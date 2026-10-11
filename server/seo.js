@@ -56,8 +56,20 @@ export function homeMeta() {
   return {
     title: 'Game Store – ร้านขายเกมออนไลน์ เกมแท้ ราคาโดนใจ', path: '/', image: '/og/default.png',
     jsonLd: {
-      '@context': 'https://schema.org', '@type': 'WebSite', name: SITE, url: absUrl('/'),
-      potentialAction: { '@type': 'SearchAction', target: `${absUrl('/games.html')}?q={search_term_string}`, 'query-input': 'required name=search_term_string' },
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'WebSite', '@id': absUrl('/#website'), name: SITE, url: absUrl('/'), inLanguage: 'th-TH',
+          publisher: { '@id': absUrl('/#store') },
+          potentialAction: { '@type': 'SearchAction', target: `${absUrl('/games.html')}?q={search_term_string}`, 'query-input': 'required name=search_term_string' },
+        },
+        // ข้อมูลร้าน (ชื่อ/โลโก้ใน Knowledge Panel) — ไม่ใส่ที่อยู่/เบอร์โทรที่ไม่มีจริง
+        {
+          '@type': 'OnlineStore', '@id': absUrl('/#store'), name: SITE, url: absUrl('/'), description: DEFAULT_DESC,
+          logo: { '@type': 'ImageObject', url: absUrl('/apple-touch-icon.png'), width: 180, height: 180 }, image: absUrl('/og/default.png'),
+          currenciesAccepted: 'THB', paymentAccepted: 'Credit Card, PromptPay',
+        },
+      ],
     },
   };
 }
@@ -69,28 +81,46 @@ export function gameMeta(slug) {
   if (!g) return { found: false, meta: { title: 'ไม่พบเกม – Game Store', description: 'ไม่พบเกมที่คุณต้องการ', path: `/game/${slug}`, robots: 'noindex,nofollow' } };
   const stock = db.prepare("SELECT COUNT(*) AS n FROM game_keys WHERE game_id = ? AND status = 'available'").get(g.id).n;
   const image = `/og/${g.slug}.png`;
-  const jsonLd = {
-    '@context': 'https://schema.org', '@type': 'Product', name: g.title, description: g.description, image: [absUrl(image)],
+  const url = absUrl(`/game/${g.slug}`);
+  const product = {
+    '@type': 'Product', '@id': `${url}#product`, url, name: g.title, description: g.description,
+    image: [absUrl(image), ...gameScreenshots(g.id).map(absUrl)],
     sku: g.slug, category: g.genre, brand: { '@type': 'Brand', name: g.platform },
     offers: {
-      '@type': 'Offer', url: absUrl(`/game/${g.slug}`), priceCurrency: 'THB', price: (finalPrice(g) / 100).toFixed(2),
+      '@type': 'Offer', url, priceCurrency: 'THB', price: (finalPrice(g) / 100).toFixed(2),
       availability: stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
     },
   };
-  if (g.review_count > 0) jsonLd.aggregateRating = { '@type': 'AggregateRating', ratingValue: String(g.rating), reviewCount: g.review_count, bestRating: '5', worstRating: '1' };
+  if (g.review_count > 0) product.aggregateRating = { '@type': 'AggregateRating', ratingValue: String(g.rating), reviewCount: g.review_count, bestRating: '5', worstRating: '1' };
+  // breadcrumb ในผลค้นหา: หน้าแรก › เกมทั้งหมด › แนวเกม › ชื่อเกม
+  const crumbs = [['Game Store', '/'], ['เกมทั้งหมด', '/games.html'], [g.genre, `/games.html?genre=${encodeURIComponent(g.genre)}`], [g.title, `/game/${g.slug}`]];
+  const breadcrumb = {
+    '@type': 'BreadcrumbList',
+    itemListElement: crumbs.map(([name, p], i) => ({ '@type': 'ListItem', position: i + 1, name, item: absUrl(p) })),
+  };
+  const jsonLd = { '@context': 'https://schema.org', '@graph': [product, breadcrumb] };
   return {
     found: true, game: g,
     meta: { title: `${g.title} – Game Store`, description: g.description.slice(0, 200), path: `/game/${g.slug}`, image, type: 'product', jsonLd },
   };
 }
 
+// ภาพตัวอย่างที่อัปโหลดของเกม (เรียงตามที่แอดมินจัด)
+const gameScreenshots = (gameId) => db.prepare("SELECT filename FROM game_images WHERE game_id = ? AND kind = 'screenshot' ORDER BY position, id")
+  .all(gameId).map((r) => `/uploads/games/${r.filename}`);
+
 // ---------- sitemap.xml / robots.txt ----------
 const STATIC_URLS = ['/', '/games.html', '/privacy', '/terms', '/refund-policy'];
 
+// หน้าเกมแนบรูปด้วย (image sitemap): ภาพแชร์ 1200×630 + ภาพตัวอย่าง → ช่วยให้ขึ้นใน Google รูปภาพ
 export function sitemapXml() {
-  const games = db.prepare('SELECT slug FROM games WHERE active = 1 ORDER BY id').all();
-  const urls = [...STATIC_URLS, ...games.map((g) => `/game/${g.slug}`)];
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${esc(absUrl(u))}</loc></url>`).join('\n')}\n</urlset>\n`;
+  const games = db.prepare('SELECT id, slug FROM games WHERE active = 1 ORDER BY id').all();
+  const entry = (p, images = []) => `  <url><loc>${esc(absUrl(p))}</loc>${images.map((i) => `<image:image><image:loc>${esc(absUrl(i))}</image:loc></image:image>`).join('')}</url>`;
+  const urls = [
+    ...STATIC_URLS.map((u) => entry(u)),
+    ...games.map((g) => entry(`/game/${g.slug}`, [`/og/${g.slug}.png`, ...gameScreenshots(g.id)])),
+  ];
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls.join('\n')}\n</urlset>\n`;
 }
 
 export const robotsTxt = () => [

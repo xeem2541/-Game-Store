@@ -2,9 +2,8 @@ import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml, la
 import { canRender3D, prefersReducedMotion, whenIdle } from './motion.js';
 import { splitWords } from './kinetic.js';
 import { initScrollFx } from './scroll-fx.js';
-import { gsap, ScrollTrigger } from './vendor/gsap.js';
+import { gsap } from './vendor/gsap.js';
 
-gsap.registerPlugin(ScrollTrigger);
 initScrollFx(); // parallax สำรองสำหรับเบราว์เซอร์ที่ไม่รองรับ CSS scroll-driven animation
 
 // หัวข้อ hero แยกเป็นคำ (ทำก่อนรอ API เพื่อให้เปลี่ยนเร็วที่สุดหลังแสดงผลแรก) — ขนาดและตำแหน่งข้อความไม่เปลี่ยน แค่ห่อคำด้วย span
@@ -72,8 +71,14 @@ function setStep(el) {
 }
 // ขั้นปัจจุบัน = ขั้นที่ครอบกลางจอ (หรือใกล้กลางจอที่สุด) — คำนวณทันทีตอนเลื่อน (อ่านตำแหน่งแค่ 3 กล่อง ไม่แพง)
 // ไม่ใช้ IntersectionObserver แถบบาง ๆ กลางจอ หรือรอ requestAnimationFrame: Safari/WebKit พลาดการแจ้งเมื่อเลื่อนข้ามขั้นแบบทันที
+const stepsList = $('.howto-steps');
 const pickStep = () => {
   const mid = innerHeight / 2;
+  // desktop + มีแอนิเมชัน: แถบความคืบหน้าเลื่อนตามจริง (0 เมื่อขั้นแรกถึงกลางจอ → 1 เมื่อขั้นสุดท้ายพ้นกลางจอ)
+  if (progress.classList.contains('scrub')) {
+    const r = stepsList.getBoundingClientRect();
+    progress.style.setProperty('--p', Math.min(1, Math.max(0, (mid - r.top) / r.height)).toFixed(3));
+  }
   let best = steps[0];
   let bestDist = Infinity;
   for (const s of steps) {
@@ -103,23 +108,33 @@ if (!prefersReducedMotion()) {
     .fromTo('.hero-actions .btn', { y: 16, opacity: 0 }, { ...done, stagger: 0.08 }, '-=0.35')
     .fromTo('.hero-points li', { y: 12, opacity: 0 }, { ...done, stagger: 0.06 }, '-=0.35');
 
-  // หัวข้อ "ซื้อง่ายใน 3 ขั้น" แยกคำแล้วลอยขึ้นตอนเลื่อนถึง
+  // แอนิเมชันตอนเลื่อนถึง: ใช้ IntersectionObserver (ไม่อ่านเลย์เอาต์ทั้งหน้าแบบ ScrollTrigger ที่ทำให้หน้าแรกค้างบนมือถือ)
+  // เริ่มก่อนเข้าจอเล็กน้อย; ส่วนที่อยู่ในจออยู่แล้วตอนโหลดเริ่มทันที (ไม่กะพริบ: แสดง → ซ่อน → ลอยขึ้น)
   const howtoTitle = $('#howtoTitle > span');
-  gsap.fromTo(splitWords(howtoTitle, { locale: lang }), { yPercent: 80, opacity: 0 }, {
-    yPercent: 0, opacity: 1, duration: 0.6, stagger: 0.06, ease: 'power3.out', clearProps: 'opacity,transform',
-    scrollTrigger: { trigger: howtoTitle, start: 'top 85%', once: true },
-  });
-  // แถบความคืบหน้าเลื่อนตามจริง (scrub) แทนการกระโดดทีละขั้น — desktop เท่านั้น (มือถือไม่มีภาพประกอบ)
+  const reveals = [
+    // หัวข้อ "ซื้อง่ายใน 3 ขั้น" แยกคำแล้วลอยขึ้น
+    [howtoTitle, () => gsap.fromTo(splitWords(howtoTitle, { locale: lang }), { yPercent: 80, opacity: 0 }, {
+      yPercent: 0, opacity: 1, duration: 0.6, stagger: 0.06, ease: 'power3.out', clearProps: 'opacity,transform',
+    })],
+    ...[...document.querySelectorAll('.content-wrapper .grid')].map((grid) => [grid, () => gsap.fromTo(grid.querySelectorAll(':scope > .tile, .card'), { y: 32, opacity: 0 }, {
+      ...done, duration: 0.6, stagger: 0.05, ease: 'power2.out',
+    })]),
+  ];
+  // อ่านตำแหน่งทุกส่วนก่อนเขียน style ใด ๆ (อ่านสลับเขียน = บังคับคำนวณเลย์เอาต์ใหม่ทุกครั้ง)
+  const inViewNow = reveals.map(([el]) => el.getBoundingClientRect().top < innerHeight);
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      io.unobserve(e.target);
+      reveals.find(([el]) => el === e.target)[1]();
+    }
+  }, { rootMargin: '0px 0px 80px 0px' });
+  reveals.forEach(([el, run], i) => (inViewNow[i] ? run() : io.observe(el)));
+
+  // แถบความคืบหน้าเลื่อนตามจริง (คำนวณใน pickStep) แทนการกระโดดทีละขั้น — desktop เท่านั้น (มือถือไม่มีภาพประกอบ)
   if (matchMedia('(min-width: 901px)').matches) {
     progress.classList.add('scrub');
-    gsap.fromTo(progress.firstElementChild, { scaleX: 0 }, { scaleX: 1, ease: 'none', scrollTrigger: { trigger: '.howto-steps', start: 'top center', end: 'bottom center', scrub: true } });
-  }
-
-  for (const grid of document.querySelectorAll('.content-wrapper .grid')) {
-    gsap.fromTo(grid.querySelectorAll(':scope > .tile, .card'), { y: 32, opacity: 0 }, {
-      ...done, duration: 0.6, stagger: 0.05, ease: 'power2.out',
-      scrollTrigger: { trigger: grid, start: 'top 88%', once: true },
-    });
+    requestAnimationFrame(pickStep);
   }
 }
 

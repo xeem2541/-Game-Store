@@ -4,6 +4,8 @@ import sharp from 'sharp';
 import Database from 'better-sqlite3';
 import { Client, makeAdminClient, makeUser, outbox, startServer, totpNow } from './helpers.js';
 
+const thaiToday = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
+
 const { db } = await import('../server/db/index.js');
 const { migrate } = await import('../server/db/migrations.js');
 const { seedCoupons } = await import('../server/db/seed.js');
@@ -348,7 +350,7 @@ test('ออเดอร์ (แอดมิน): ค้นหา/กรอง/�
   const paid = (await staff.get('/api/admin/orders?status=paid&provider=dev&limit=3&page=1&sort=totalDesc')).data;
   assert.ok(paid.items.length <= 3 && paid.items.every((o) => o.status === 'paid' && o.provider === 'dev'));
   assert.ok(paid.items.every((o, i, a) => i === 0 || a[i - 1].total >= o.total));
-  const today = new Date().toISOString().slice(0, 10);
+  const today = thaiToday(); // ตัวกรองวันที่ของหลังบ้านเป็นวันตามเวลาไทย (UTC+7)
   assert.ok((await staff.get(`/api/admin/orders?from=${today}&to=${today}`)).data.total >= 1);
   assert.equal((await staff.get('/api/admin/orders?from=2000-01-01&to=2000-01-02')).data.total, 0);
   assert.equal((await staff.get('/api/admin/orders?status=bogus')).status, 400);
@@ -505,7 +507,7 @@ test('Dashboard: ตัวเลขตรงกับข้อมูลจริ
   const d = (await admin.get('/api/admin/dashboard')).data;
   const orders = db.prepare('SELECT * FROM orders').all();
   const bkk = (ts) => new Date(new Date(ts.replace(' ', 'T') + 'Z').getTime() + 7 * 3600_000).toISOString().slice(0, 10);
-  const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
+  const today = thaiToday();
   const paid = orders.filter((o) => o.status === 'paid');
 
   for (const s of ['pending', 'paid', 'cancelled', 'refunded']) assert.equal(d.summary.byStatus[s], orders.filter((o) => o.status === s).length, s);
@@ -582,7 +584,7 @@ test('CSV: BOM + ภาษาไทยไม่เพี้ยน, กัน for
   const lines = text.trim().split('\r\n');
   assert.equal(lines.length - 1, db.prepare('SELECT COUNT(*) AS n FROM orders').get().n);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = thaiToday(); // ตัวกรองวันที่ของหลังบ้านเป็นวันตามเวลาไทย (UTC+7)
   const none = (await admin.raw('/api/admin/reports/orders.csv?from=2000-01-01&to=2000-01-31')).buf.toString('utf8');
   assert.equal(none.trim().split('\r\n').length, 1); // เหลือแต่หัวตาราง
   assert.equal((await admin.raw(`/api/admin/reports/orders.csv?status=paid&from=${today}&to=${today}`)).status, 200);
@@ -619,7 +621,7 @@ test('Audit log: admin เท่านั้น, กรองตามผู้�
   assert.ok(upd.meta.before && upd.meta.after);
   assert.equal(upd.userName.startsWith('User'), true);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = thaiToday(); // ตัวกรองวันที่ของหลังบ้านเป็นวันตามเวลาไทย (UTC+7)
   assert.ok((await admin.get(`/api/admin/audit?from=${today}&to=${today}&action=order.`)).data.total >= 1);
   assert.equal((await admin.get('/api/admin/audit?from=2000-01-01&to=2000-01-02')).data.total, 0);
   assert.equal((await admin.get('/api/admin/audit?page=1&limit=2')).data.items.length, 2);
