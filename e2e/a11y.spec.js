@@ -99,7 +99,10 @@ test('ซื้อยังไง 3 ขั้น: ภาพประกอบเ
     // เลื่อนซ้ำจนกว่าจะตรง: รายการเกมด้านบนอาจโหลดเสร็จทีหลังแล้วดันตำแหน่งลง (Safari ไม่ยึดตำแหน่งการเลื่อนไว้)
     await expect(async () => {
       await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' }));
-      await page.waitForTimeout(150);
+      // WebKit แบบ headless หยุดวาดหน้าเมื่อหน้านิ่งและไม่มีแอนิเมชัน (ขอลดการเคลื่อนไหว) → scroll event/IntersectionObserver
+      // ที่ส่งตอนวาดหน้าจะค้างไว้ (บันทึกจาก CI: scrollY เลื่อนแล้วแต่ได้ scroll event แค่ครั้งเดียว) — จับภาพหน้าจอเพื่อให้วาดหน้า 1 รอบ
+      // (Safari จริงที่แสดงบนจอวาดหน้าทุกครั้งที่เลื่อนอยู่แล้ว)
+      await page.screenshot();
       const state = await page.evaluate(() => JSON.stringify({ y: scrollY, scrolls: window.__scrolls, history: window.__steps,
         steps: [...document.querySelectorAll('.howto-step')].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }) }));
       await expect(visual, `ขั้น ${n}: ${state}`).toHaveAttribute('data-step', n, { timeout: 1000 });
