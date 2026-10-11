@@ -5,7 +5,7 @@
 > **สถานะ:** พร้อมทดสอบและ deploy แต่ **ยังไม่เคยทดสอบกับ Stripe จริง / SMTP จริง / Docker build จริง** — อ่าน [`docs/CHECKLIST.md`](docs/CHECKLIST.md) ก่อนเปิดขายจริงเสมอ
 
 ## สารบัญ
-1. [ฟีเจอร์](#ฟีเจอร์) · 2. [โครงสร้างโปรเจกต์](#โครงสร้างโปรเจกต์) · 3. [ติดตั้งเพื่อพัฒนา](#ติดตั้งเพื่อพัฒนา) · 4. [ติดตั้งด้วย Docker](#ติดตั้งด้วย-docker) · 5. [ตัวแปร .env ทั้งหมด](#ตัวแปร-env-ทั้งหมด) · 6. [ตั้งค่า Stripe / PromptPay](#ตั้งค่า-stripe--promptpay) · 7. [ตั้งค่า SMTP](#ตั้งค่า-smtp-อีเมล) · 8. [สร้างแอดมิน/พนักงาน](#สร้างแอดมินพนักงาน) · 9. [รันเทสต์](#รันเทสต์) · 10. [สำรอง/กู้คืนข้อมูล](#สำรองและกู้คืนข้อมูล) · 11. [Deploy](#deploy-ขึ้นเซิร์ฟเวอร์จริง) · 12. [ความปลอดภัย](#ความปลอดภัยที่ทำไว้) · 13. [แก้ปัญหา](#แก้ปัญหาที่พบบ่อย)
+1. [ฟีเจอร์](#ฟีเจอร์) · 2. [โครงสร้างโปรเจกต์](#โครงสร้างโปรเจกต์) · 3. [ติดตั้งเพื่อพัฒนา](#ติดตั้งเพื่อพัฒนา) · 4. [ติดตั้งด้วย Docker](#ติดตั้งด้วย-docker) · 5. [ตัวแปร .env ทั้งหมด](#ตัวแปร-env-ทั้งหมด) · 6. [ตั้งค่า Stripe / PromptPay](#ตั้งค่า-stripe--promptpay) · 7. [ตั้งค่า SMTP](#ตั้งค่า-smtp-อีเมล) · 8. [สร้างแอดมิน/พนักงาน](#สร้างแอดมินพนักงาน) · 9. [รันเทสต์](#รันเทสต์) · 10. [สำรอง/กู้คืนข้อมูล](#สำรองและกู้คืนข้อมูล) · 11. [Deploy](#deploy-ขึ้นเซิร์ฟเวอร์จริง) ([บน Render](#deploy-บน-render)) · 12. [ความปลอดภัย](#ความปลอดภัยที่ทำไว้) · 13. [แก้ปัญหา](#แก้ปัญหาที่พบบ่อย)
 
 ## ฟีเจอร์
 
@@ -79,7 +79,7 @@ docker compose ps                      # คอลัมน์ STATUS ควร�
 |---|---|---|
 | `NODE_ENV` | `development` | `production` = เปิดการตรวจเข้ม, HSTS, ปิดโหมดจำลอง, ไม่ seed ข้อมูลตัวอย่าง |
 | `PORT` | `3000` | พอร์ต |
-| `APP_URL` | `http://localhost:3000` | URL สาธารณะ (ลิงก์อีเมล, canonical, sitemap, OG) — production ต้องเป็น `https://` |
+| `APP_URL` | `http://localhost:3000` | URL สาธารณะ (ลิงก์อีเมล, canonical, sitemap, OG) — production ต้องเป็น `https://` · ไม่ตั้งจะใช้ `RENDER_EXTERNAL_URL` ที่ Render ตั้งให้อัตโนมัติ |
 | `DATABASE_PATH` | `./data/store.db` | ไฟล์ SQLite (รูปอัปโหลดอยู่โฟลเดอร์ `uploads/` ข้างไฟล์นี้) |
 | `TRUST_PROXY` | ว่าง | จำนวน reverse proxy ที่เชื่อถือ (ปกติ `1` เมื่ออยู่หลัง Caddy/nginx/Cloudflare) |
 | `CORS_ORIGINS` | = `APP_URL` | โดเมนที่เรียก API ข้ามเว็บได้ (คั่น `,`) |
@@ -99,6 +99,7 @@ docker compose ps                      # คอลัมน์ STATUS ควร�
 | `STAFF_PERMISSIONS` | ว่าง | สิทธิ์เสริมของ staff — ดูด้านล่าง |
 | `BACKUP_DIR` / `BACKUP_KEEP` | `./backups` / `14` | ที่เก็บ/จำนวนชุดสำรอง |
 | `ALLOW_HTTP_APP_URL` | – | `1` = ยอมให้ `APP_URL` เป็น http ใน production (เฉพาะทดลอง) |
+| `REQUIRE_EXISTING_DB` | – | `1` = ไม่ยอมเริ่มถ้าไม่พบไฟล์ฐานข้อมูล (กัน disk/volume ไม่ถูก mount แล้วได้ฐานข้อมูลว่างใหม่) — ตั้งหลังติดตั้งครั้งแรก |
 | `ALLOW_DEMO_SEED` | – | `1` = ยอมให้ seed ข้อมูลตัวอย่างใน production (**ห้ามใช้กับร้านจริง**) |
 
 **สิทธิ์ของ staff (`STAFF_PERMISSIONS`):** ค่าเริ่มต้นว่าง = staff **อ่านอย่างเดียว** (ดูแดชบอร์ด ออเดอร์ สต็อก รีวิว รายงาน) และยกเลิก/ส่งอีเมลซ้ำของออเดอร์ที่ยังไม่จ่ายได้ ต้องการให้ทำมากกว่านี้ ให้ระบุ (คั่น `,`):
@@ -173,6 +174,30 @@ npm run restore -- backups/backup-2026-10-08-12-00-00 --yes
 4. สร้างแอดมิน, เพิ่มเกม, นำเข้าโค้ดเกมจริง (CSV) ผ่านหลังบ้าน
 5. ตั้ง Stripe webhook ที่โดเมนจริง แล้ว **ทดสอบซื้อจริงด้วยยอดต่ำสุดและคืนเงิน** ก่อนเปิดให้ลูกค้า
 6. ทำตาม [`docs/CHECKLIST.md`](docs/CHECKLIST.md) ให้ครบ (รวมการตรวจทางกฎหมาย/บัญชี)
+
+### Deploy บน Render
+
+ไฟล์ [`render.yaml`](render.yaml) เป็น Blueprint สำเร็จรูป: Docker + **persistent disk ที่ `/app/data`** (ฐานข้อมูล SQLite, รูปที่อัปโหลด, ไฟล์สำรอง)
+
+> ⚠️ **ห้ามใช้ plan ฟรี** — ไม่มี persistent disk ระบบไฟล์ถูกล้างทุกครั้งที่ deploy/restart (ออเดอร์และโค้ดเกมที่ขายแล้วหายหมด) และบริการ sleep ทำให้งานตั้งเวลา (ยกเลิกออเดอร์หมดอายุ, คิวอีเมล) หยุด Blueprint จึงตั้งเป็น `starter` (เสียเงิน)
+>
+> บริการที่ต่อ disk รันได้ **1 instance** และ deploy แต่ละครั้งมี **ช่วงหยุดให้บริการสั้น ๆ** (Render ต้องย้าย disk ไปเครื่องใหม่) — ควร deploy ช่วงคนน้อย
+
+1. Render Dashboard → **New → Blueprint** → เลือก repo นี้ → Render จะถามค่าที่เป็น `sync: false`:
+   - `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` — ใส่คีย์ test ก่อนได้
+   - `STRIPE_WEBHOOK_SECRET` — ยังไม่มีให้ใส่ค่าชั่วคราว `whsec_` ตามด้วยตัวอักษร 16 ตัวขึ้นไป แล้วแก้ในข้อ 3 (ระบบไม่ยอมเริ่มถ้าว่าง)
+   - `SMTP_*`, `SHOP_NAME`, `SHOP_ADDRESS`, `SHOP_TAX_ID`
+   - `APP_URL` — **เว้นว่างได้** (ใช้ `https://<ชื่อบริการ>.onrender.com` อัตโนมัติ) ใส่เมื่อผูกโดเมนของตัวเอง
+   - `REQUIRE_EXISTING_DB` — **เว้นว่างไว้ก่อน** (deploy แรกต้องสร้างฐานข้อมูลใหม่)
+2. `JWT_SECRET` / `KEY_ENCRYPTION_SECRET` Render สุ่มให้ → **เปิดหน้า Environment แล้วคัดลอก `KEY_ENCRYPTION_SECRET` ไปเก็บใน password manager ทันที** (ทำหาย = ถอดรหัสโค้ดเกมไม่ได้อีก; ไฟล์สำรองไม่รวมค่านี้)
+3. Stripe → Webhooks → Add endpoint `https://<โดเมน>/api/webhooks/stripe` (event ตาม [ตั้งค่า Stripe](#ตั้งค่า-stripe--promptpay) ข้อ 6) → นำ Signing secret ไปแทนค่า `STRIPE_WEBHOOK_SECRET`
+4. สร้างแอดมิน: สมัครสมาชิกที่หน้าเว็บ แล้วเปิด **Shell** ของบริการบน Render → `node server/scripts/make-role.js admin you@example.com`
+5. **ตั้ง `REQUIRE_EXISTING_DB=1`** (Environment) หลังทุกอย่างทำงานแล้ว → ต่อไปถ้า disk ไม่ถูก mount หรือ `DATABASE_PATH` ผิด ระบบจะ**ไม่ยอมเริ่ม** (health check ไม่ผ่าน) แทนที่จะเปิดร้านด้วยฐานข้อมูลว่าง
+6. สำรองข้อมูล: Render ทำ snapshot ของ disk ให้รายวัน แต่ควรมีสำเนานอก Render ด้วย — ใน Shell รัน `node server/scripts/backup.js` (เก็บที่ `/app/data/backups`) แล้วดาวน์โหลดออกมาเป็นระยะ
+
+แก้ปัญหา:
+- log ขึ้น `เขียนโฟลเดอร์ข้อมูล /app/data ไม่ได้` → disk ไม่ได้ mount ที่ `/app/data` หรือผู้ใช้ `node` ในคอนเทนเนอร์ไม่มีสิทธิ์เขียน ตรวจ Disks ในหน้าบริการ (mount path ต้องเป็น `/app/data`)
+- log ขึ้น `สร้างฐานข้อมูลใหม่ (ว่าง)` ทั้งที่ไม่ใช่ deploy แรก → ข้อมูลไม่ได้อยู่บน disk หยุดรับออเดอร์และตรวจ Disks/`DATABASE_PATH` ทันที
 
 ## ความปลอดภัยที่ทำไว้
 

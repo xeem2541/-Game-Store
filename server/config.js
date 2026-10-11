@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { checkProductionEnv } from './envcheck.js';
+import { checkProductionEnv, resolveAppUrl } from './envcheck.js';
 
 const env = process.env.NODE_ENV || 'development';
 const isProd = env === 'production';
@@ -27,7 +27,7 @@ function requiredSecret(name, testFallback) {
   throw new Error(`ยังไม่ได้ตั้ง ${name} ใน .env (คัดลอกจาก .env.example แล้วใส่ค่าสุ่ม: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")`);
 }
 
-const appUrl = (process.env.APP_URL || process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000').replace(/\/$/, '');
+const appUrl = resolveAppUrl(process.env) || 'http://localhost:3000';
 
 // TRUST_PROXY: เว้นว่าง/false = ไม่เชื่อ header จาก proxy | true | จำนวน hop (เช่น 1) | 'loopback' ฯลฯ (รูปแบบเดียวกับ express "trust proxy")
 function parseTrustProxy(v) {
@@ -50,6 +50,8 @@ export const config = {
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   jwtSecret: requiredSecret('JWT_SECRET', 'test-only-jwt-secret'),
   keySecret: requiredSecret('KEY_ENCRYPTION_SECRET', 'test-only-key-encryption-secret'),
+  // 1 = ไม่ยอมเริ่มถ้าไม่พบไฟล์ฐานข้อมูล (กัน disk ไม่ถูก mount แล้วได้ฐานข้อมูลว่างใหม่) — ตั้งหลังติดตั้งครั้งแรก
+  requireExistingDb: process.env.REQUIRE_EXISTING_DB === '1',
   orderExpiryMinutes: Number(process.env.ORDER_EXPIRY_MINUTES) || 30,
   // ปุ่ม/endpoint จำลองการชำระเงิน: ต้องเปิดเองด้วย DEV_PAY=1 และไม่มีวันเปิดใน production (ลืมตั้งค่า = ปิด)
   devPay: !isProd && process.env.DEV_PAY === '1',

@@ -1,18 +1,65 @@
+# Render Blueprint — สร้างด้วย: Render Dashboard → New → Blueprint → เลือก repo นี้
+# ข้อมูลทั้งหมด (SQLite + รูปที่อัปโหลด + ไฟล์สำรอง) อยู่ที่ /app/data ซึ่งต้องเป็น persistent disk
+# ⚠️ plan ฟรีไม่มี persistent disk และระบบไฟล์ถูกล้างทุกครั้งที่ deploy/restart → ออเดอร์/โค้ดเกมที่ขายแล้วหายหมด ห้ามใช้ขายจริง
+# ข้อจำกัดของบริการที่มี disk: รันได้ 1 instance เท่านั้น (ตรงกับแอปนี้ที่เก็บ rate limit/คิวอีเมลในหน่วยความจำ)
+#   และ deploy แต่ละครั้งมีช่วงหยุดให้บริการสั้น ๆ (ไม่มี zero-downtime)
+# รายละเอียดขั้นตอน: README.md หัวข้อ "Deploy บน Render"
 services:
   - type: web
     name: game-store
     runtime: docker
-    plan: free
+    dockerfilePath: ./Dockerfile
+    plan: starter          # ต้องเป็น plan แบบเสียเงินจึงต่อ disk ได้ และไม่ sleep (งานตั้งเวลา: ยกเลิกออเดอร์หมดอายุ/คิวอีเมล)
     region: singapore
+    numInstances: 1
     healthCheckPath: /healthz
+    disk:
+      name: gamestore-data
+      mountPath: /app/data # ต้องตรงกับ DATABASE_PATH / BACKUP_DIR ด้านล่าง (และ ENV ใน Dockerfile)
+      sizeGB: 1
     envVars:
+      # ---- ค่าคงที่ ----
       - key: NODE_ENV
         value: production
-      - key: USE_DIST
-        value: "1"
+      - key: DATABASE_PATH
+        value: /app/data/store.db
+      - key: BACKUP_DIR
+        value: /app/data/backups
       - key: TRUST_PROXY
         value: "1"
+      # ---- ความลับที่ Render สุ่มให้ตอนสร้างครั้งแรก ----
+      # คัดลอก KEY_ENCRYPTION_SECRET จากหน้า Environment ไปเก็บในที่ปลอดภัยทันที — ทำหาย = ถอดรหัสโค้ดเกมไม่ได้อีก
       - key: JWT_SECRET
         generateValue: true
       - key: KEY_ENCRYPTION_SECRET
         generateValue: true
+      # ---- ต้องกรอกเองตอนสร้าง Blueprint (sync: false = ไม่เก็บค่าใน repo) ----
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET   # Signing secret ของ endpoint https://<โดเมน>/api/webhooks/stripe
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SHOP_NAME
+        sync: false
+      - key: SHOP_ADDRESS
+        sync: false
+      - key: SHOP_TAX_ID
+        sync: false
+      # ไม่บังคับ: เว้นว่างได้ — ระบบใช้ RENDER_EXTERNAL_URL (https://<ชื่อบริการ>.onrender.com) ที่ Render ตั้งให้อัตโนมัติ
+      # ตั้งเมื่อผูกโดเมนของตัวเองแล้ว เช่น https://shop.example.com
+      - key: APP_URL
+        sync: false
+      # หลัง deploy ครั้งแรกสำเร็จและสร้างแอดมินแล้ว ให้ตั้งเป็น 1 → ถ้า disk ไม่ถูก mount ระบบจะไม่ยอมเริ่ม (แทนที่จะสร้างฐานข้อมูลว่างใหม่)
+      - key: REQUIRE_EXISTING_DB
+        sync: false

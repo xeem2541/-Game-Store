@@ -16,6 +16,7 @@
 - [ ] **สร้างแอดมินจริง** (`make-admin`) ด้วยรหัสผ่านยาว ไม่ซ้ำ; ตรวจว่าไม่มีบัญชีทดสอบ (`buyer@…`, `staff1@…` ฯลฯ) เหลืออยู่ใน DB production
 - [ ] `NODE_ENV=production npm run check:env` ผ่านโดยไม่มี error และอ่านคำเตือนทุกข้อ
 - [ ] **HTTPS ใช้งานได้จริง** + `APP_URL=https://…` + `TRUST_PROXY=1` (ถ้าอยู่หลัง proxy) → เปิดเว็บแล้วตรวจ header `Strict-Transport-Security` และไม่มี mixed content
+- [ ] **ข้อมูลอยู่บนดิสก์ถาวร** (Docker volume / Render persistent disk ที่ `/app/data` — **ไม่ใช่ plan ฟรีของ Render**) และตั้ง `REQUIRE_EXISTING_DB=1` หลังติดตั้งครั้งแรก → ทดสอบโดย redeploy/restart แล้วตรวจว่าออเดอร์/ผู้ใช้เดิมยังอยู่
 - [ ] **ตั้งสำรองข้อมูลอัตโนมัติ + คัดลอกออกนอกเครื่อง + ทดสอบกู้คืนอย่างน้อยหนึ่งครั้ง** (`npm run backup` / `npm run restore`)
 
 ## 🟠 ต้องให้ผู้เชี่ยวชาญตรวจก่อนเปิดจริง (ระบบนี้ไม่ใช่คำปรึกษาทางกฎหมาย/บัญชี)
