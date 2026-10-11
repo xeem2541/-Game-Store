@@ -59,6 +59,9 @@ export const config = {
   apiRateLimit: Number(process.env.API_RATE_LIMIT) || 300, // คำขอ /api ต่อนาทีต่อ IP
   authRateLimit: Number(process.env.AUTH_RATE_LIMIT) || 20, // ต่อ 15 นาที ต่อ IP
   emailResendLimit: Number(process.env.EMAIL_RESEND_LIMIT) || 5, // ต่อ 10 นาทีต่อผู้ใช้
+  // กันกักสต็อก: ออเดอร์ pending จองโค้ดไว้ → จำกัดจำนวนที่ค้างได้พร้อมกัน และความถี่การสร้างออเดอร์ต่อผู้ใช้
+  maxPendingOrders: Number(process.env.MAX_PENDING_ORDERS) || 3,
+  orderRateLimit: Number(process.env.ORDER_RATE_LIMIT) || 10, // ต่อ 10 นาทีต่อผู้ใช้
   get staffPermissions() { return staffPermissions(); },
   stripe: {
     secretKey: stripeSecret,

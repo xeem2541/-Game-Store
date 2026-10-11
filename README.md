@@ -96,6 +96,8 @@ docker compose ps                      # คอลัมน์ STATUS ควร�
 | `SHOP_NAME` `SHOP_ADDRESS` `SHOP_TAX_ID` | ตัวอย่าง | ข้อมูลร้านบนใบเสร็จ (ต้องแก้เป็นของจริง) |
 | `ORDER_EXPIRY_MINUTES` | `30` | ออเดอร์รอจ่ายหมดอายุกี่นาที |
 | `EMAIL_RESEND_LIMIT` | `5` | ส่งอีเมลซ้ำได้กี่ครั้งต่อ 10 นาที |
+| `MAX_PENDING_ORDERS` | `3` | คำสั่งซื้อที่รอชำระค้างได้พร้อมกันต่อผู้ใช้ (กันกักโค้ดในสต็อก) |
+| `ORDER_RATE_LIMIT` | `10` | สร้างคำสั่งซื้อได้กี่ครั้งต่อ 10 นาทีต่อผู้ใช้ |
 | `STAFF_PERMISSIONS` | ว่าง | สิทธิ์เสริมของ staff — ดูด้านล่าง |
 | `BACKUP_DIR` / `BACKUP_KEEP` | `./backups` / `14` | ที่เก็บ/จำนวนชุดสำรอง |
 | `ALLOW_HTTP_APP_URL` | – | `1` = ยอมให้ `APP_URL` เป็น http ใน production (เฉพาะทดลอง) |

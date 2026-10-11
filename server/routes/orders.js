@@ -26,7 +26,13 @@ function orderWithKeys(req, order) {
   return out;
 }
 
-ordersRouter.post('/', (req, res) => {
+const createLimiter = rateLimit({
+  windowMs: 10 * 60_000, limit: config.orderRateLimit, standardHeaders: true, legacyHeaders: false,
+  keyGenerator: (req) => `user-${req.user.id}`,
+  message: { error: 'สร้างคำสั่งซื้อบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่', code: 'ORDER_RATE_LIMIT' },
+});
+
+ordersRouter.post('/', createLimiter, (req, res) => {
   const body = z.object({
     couponCode: z.string().trim().max(40).optional(),
     idempotencyKey: z.string().trim().min(8).max(100),

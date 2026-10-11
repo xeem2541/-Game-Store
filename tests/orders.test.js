@@ -291,3 +291,45 @@ test('เกมในตะกร้าที่ถูกหยุดขาย: 
     db.prepare("UPDATE games SET active = 1 WHERE slug = 'mystery-manor'").run();
   }
 });
+
+// ---------- กันกักสต็อกด้วยออเดอร์ pending ----------
+test('จำกัดออเดอร์รอชำระต่อผู้ใช้ (ค่าเริ่มต้น 3): เกินแล้ว 409, key เดิมยังได้ออเดอร์เดิม, ยกเลิก/หมดอายุแล้วสั่งต่อได้', async () => {
+  const c = await makeUser();
+  const made = [];
+  for (const slug of ['tower-defense-legends', 'final-boss-rush', 'speed-legends-gt']) {
+    await setCart(c, [slug]);
+    const idempotencyKey = key();
+    const r = await c.post('/api/orders', { idempotencyKey });
+    assert.equal(r.status, 201, JSON.stringify(r.data));
+    made.push({ id: r.data.order.id, idempotencyKey });
+  }
+  await setCart(c, ['wild-west-legends']);
+  const blocked = await order(c);
+  assert.equal(blocked.status, 409);
+  assert.equal(blocked.data.code, 'TOO_MANY_PENDING');
+  assert.equal(blocked.data.params.n, 3);
+  const wwlId = db.prepare("SELECT id FROM games WHERE slug = 'wild-west-legends'").get().id;
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM game_keys WHERE game_id = ? AND status = 'reserved'").get(wwlId).n, 0, 'ไม่จองโค้ดเพิ่ม');
+
+  // กดซ้ำด้วย key เดิม (เช่น รีเฟรชหน้า) ยังได้ออเดอร์เดิม ไม่ติดลิมิต
+  const again = await c.post('/api/orders', { idempotencyKey: made[0].idempotencyKey });
+  assert.equal(again.status, 200);
+  assert.equal(again.data.order.id, made[0].id);
+
+  assert.equal((await c.post(`/api/orders/${made[0].id}/cancel`)).status, 200);
+  assert.equal((await order(c)).status, 201, 'ยกเลิกหนึ่งรายการแล้วสั่งใหม่ได้');
+
+  // ออเดอร์ที่เลยเวลาแล้ว (แม้งานยกเลิกอัตโนมัติยังไม่ทำงาน) ไม่นับ
+  db.prepare('UPDATE orders SET expires_at = ? WHERE id = ?').run(Date.now() - 1000, made[1].id);
+  await setCart(c, ['vampire-castle']);
+  assert.equal((await order(c)).status, 201);
+});
+
+test('สร้างคำสั่งซื้อถี่เกินไป (ค่าเริ่มต้น 10 ครั้ง/10 นาที/ผู้ใช้): 429, ผู้ใช้อื่นไม่โดนด้วย', async () => {
+  const c = await makeUser();
+  for (let i = 0; i < 10; i += 1) assert.equal((await order(c)).status, 400); // ตะกร้าว่าง — ครั้งที่ล้มเหลวก็นับ
+  const limited = await order(c);
+  assert.equal(limited.status, 429);
+  assert.equal(limited.data.code, 'ORDER_RATE_LIMIT');
+  assert.equal((await order(await makeUser())).status, 400, 'นับแยกต่อผู้ใช้ ไม่ใช่ต่อ IP');
+});

@@ -83,7 +83,7 @@
 ## ออเดอร์ — `/api/orders`
 | Method | Path | สิทธิ์ | หมายเหตุ |
 |---|---|---|---|
-| POST | `/` | ✅ | สร้างออเดอร์จากตะกร้า `{idempotencyKey, couponCode?}` — จองโค้ดเกมทันที, กดซ้ำด้วย key เดิมได้ออเดอร์เดิม |
+| POST | `/` | ✅ | สร้างออเดอร์จากตะกร้า `{idempotencyKey, couponCode?}` — จองโค้ดเกมทันที, กดซ้ำด้วย key เดิมได้ออเดอร์เดิม · ค้างรอชำระได้ไม่เกิน `MAX_PENDING_ORDERS` (`409 TOO_MANY_PENDING`) · สร้างได้ `ORDER_RATE_LIMIT` ครั้ง/10 นาที/ผู้ใช้ (`429 ORDER_RATE_LIMIT`) |
 | GET | `/:id` | 👤 เจ้าของ | รายละเอียด (โค้ดแสดงเมื่อ `paid` เท่านั้น) |
 | POST | `/:id/cancel` | 👤 เจ้าของ | ยกเลิกเฉพาะ `pending` |
 | POST | `/:id/pay` | 👤 เจ้าของ | สร้าง Stripe Checkout Session → `{url}` (ไม่ได้ยืนยันการจ่าย) · ต่ออายุออเดอร์ให้ครอบคลุม session · `409 ORDER_TOO_OLD` ถ้าออเดอร์เปิดมาเกิน 2 ชม. · `503` ถ้ายังไม่ตั้ง Stripe |

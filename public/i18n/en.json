@@ -190,6 +190,8 @@
   "errc.PASSWORD_REQUIRED": "Enter your current password to change your email",
   "errc.WRONG_PASSWORD": "Current password is incorrect",
   "errc.REVIEW_PURCHASE_REQUIRED": "Only customers who bought this game can review it",
+  "errc.TOO_MANY_PENDING": "You have {n} unpaid orders — please pay or cancel one before placing a new order",
+  "errc.ORDER_RATE_LIMIT": "Too many orders placed — please wait a moment and try again",
   "errc.ORDER_TOO_OLD": "This order has been open too long — please cancel it and place a new order",
   "errc.COUPON_EXPIRED": "This coupon has expired",
   "errc.COUPON_MIN": "Your order doesn't reach this coupon's minimum (minimum ฿{min})",

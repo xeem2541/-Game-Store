@@ -144,6 +144,11 @@ export function createOrder(user, { couponCode, idempotencyKey }) {
 
     const all = cartGames(user.id);
     if (!all.length) throw new HttpError(400, 'ตะกร้าว่างเปล่า', 'CART_EMPTY');
+    // ออเดอร์ pending จองโค้ดไว้จนหมดอายุ → จำกัดจำนวนที่ค้างพร้อมกัน (กันบัญชีเดียวสร้างออเดอร์รัว ๆ กักโค้ดให้คนอื่นซื้อไม่ได้)
+    const pendingCount = db.prepare("SELECT COUNT(*) AS n FROM orders WHERE user_id = ? AND status = 'pending' AND expires_at > ?").get(user.id, Date.now()).n;
+    if (pendingCount >= config.maxPendingOrders) {
+      throw new HttpError(409, `มีคำสั่งซื้อที่รอชำระอยู่ ${pendingCount} รายการ กรุณาชำระหรือยกเลิกก่อนสั่งซื้อใหม่`, 'TOO_MANY_PENDING', { n: pendingCount });
+    }
     const unavailable = all.filter((g) => !g.active);
     if (unavailable.length) return { unavailable }; // ลบออกจากตะกร้านอก transaction นี้ (throw ในนี้จะ rollback การลบไปด้วย)
     const ids = all.map((g) => g.id);
