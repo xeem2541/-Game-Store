@@ -132,9 +132,18 @@ test('ตะกร้าบนเซิร์ฟเวอร์: บันทึ
   assert.equal((await c.put('/api/cart', { slugs: [] })).data.items.length, 0);
 });
 
+// ซื้อเกม + จำลองชำระเงิน (รีวิวได้เฉพาะผู้ที่ซื้อแล้ว)
+async function buyGame(c, slug) {
+  await c.put('/api/cart', { slugs: [slug] });
+  const o = await c.post('/api/orders', { idempotencyKey: `k-${Math.random().toString(36).slice(2)}-${Date.now()}` });
+  assert.equal(o.status, 201, JSON.stringify(o.data));
+  assert.equal((await c.post(`/api/orders/${o.data.order.id}/dev-pay`, {})).status, 200);
+  return o.data.order;
+}
+
 test('รีวิว: 1 คน/1 เกม, แก้ไข, ลบ, คะแนนเฉลี่ยคำนวณจากรีวิวจริง', async () => {
-  const c = await newClient();
-  await c.post('/api/auth/login', { email: creds.email, password: creds.password });
+  const c = await makeUser(srv.url);
+  await buyGame(c, 'dragon-realm');
   const game = (await c.get('/api/games/dragon-realm')).data;
   const base = game.rating; // คะแนนตั้งต้นก่อนมีรีวิว
   assert.equal(game.review_count, 0);
@@ -260,4 +269,29 @@ test('เปลี่ยนอีเมล: ต้องใส่รหัสผ
   assert.ok(sent.some((m) => m.to === newEmail && m.subject.includes('ยืนยัน')));
   assert.equal((await stolen.get('/api/auth/me')).data.user, null, 'เซสชันอื่นถูกเพิกถอน');
   assert.equal((await c.get('/api/auth/me')).data.user.email, newEmail, 'เครื่องที่เปลี่ยนยังล็อกอินอยู่');
+});
+
+test('รีวิวได้เฉพาะผู้ที่ซื้อเกมแล้ว: ยังไม่ซื้อ/รอชำระ → 403, ซื้อแล้วรีวิวได้และติดป้ายซื้อแล้ว', async () => {
+  const slug = 'sky-kingdoms';
+  const c = await makeUser(srv.url);
+  const gid = (await c.get(`/api/games/${slug}`)).data.id;
+  const base = `/api/games/${gid}/reviews`;
+
+  assert.equal((await c.get(base)).data.canReview, false);
+  const denied = await c.post(base, { rating: 5, body: 'ยังไม่ได้ซื้อแต่ให้ 5 ดาว' });
+  assert.equal(denied.status, 403);
+  assert.equal(denied.data.code, 'REVIEW_PURCHASE_REQUIRED');
+
+  // ออเดอร์ที่ยังไม่จ่ายไม่นับ
+  await c.put('/api/cart', { slugs: [slug] });
+  const pending = await c.post('/api/orders', { idempotencyKey: `k-${Date.now()}` });
+  assert.equal(pending.status, 201);
+  assert.equal((await c.post(base, { rating: 5 })).status, 403);
+
+  assert.equal((await c.post(`/api/orders/${pending.data.order.id}/dev-pay`, {})).status, 200);
+  assert.equal((await c.get(base)).data.canReview, true);
+  assert.equal((await c.post(base, { rating: 4, body: 'สนุกดี' })).status, 201);
+  const mineItem = (await c.get(base)).data.items.find((r) => r.mine);
+  assert.equal(mineItem.verified, true);
+  assert.equal((await (await newClient()).get(base)).data.canReview, false, 'ไม่ล็อกอิน = รีวิวไม่ได้');
 });

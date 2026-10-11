@@ -459,7 +459,11 @@ async function pendingOrderWith(slug, couponCode) {
 test('รีวิว: ค้นหา/ลบพร้อมเหตุผล (staff ทำได้), คะแนนเฉลี่ยคำนวณใหม่, audit', async () => {
   const slug = 'forest-spirit';
   const gid = gameId(slug);
-  const mk = async (rating, body) => { const u = await makeUser(srv.url); await u.post(`/api/games/${gid}/reviews`, { rating, body }); return u; };
+  const mk = async (rating, body) => { // รีวิวได้เฉพาะผู้ที่ซื้อแล้ว
+    const { c: u } = await paidOrder([slug]);
+    assert.equal((await u.post(`/api/games/${gid}/reviews`, { rating, body })).status, 201);
+    return u;
+  };
   await mk(5, 'ยอดเยี่ยมมาก');
   await mk(1, 'ข้อความไม่เหมาะสม <script>alert(1)</script>');
   const pub = () => new Client(srv.url).get(`/api/games/${slug}`).then((r) => r.data);

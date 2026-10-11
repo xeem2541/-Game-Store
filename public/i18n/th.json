@@ -75,6 +75,8 @@
   "reviews.deleted": "ลบรีวิวแล้ว",
   "reviews.more": "ดูรีวิวเพิ่มเติม",
   "reviews.mine": "ของคุณ",
+  "reviews.purchaseRequired": "รีวิวได้เฉพาะผู้ที่ซื้อเกมนี้แล้ว",
+  "reviews.verified": "ซื้อแล้ว",
   "auth.login": "เข้าสู่ระบบ",
   "auth.register": "สมัครสมาชิก",
   "auth.forgot": "ลืมรหัสผ่าน",

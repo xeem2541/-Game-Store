@@ -111,16 +111,18 @@ async function initReviews(g) {
   const base = `/games/${g.id}/reviews`;
   let page = 1;
   let mine = null;
+  let canReview = false;
 
   const reviewHtml = (r) => `
     <article class="review ${r.mine ? 'mine' : ''}">
-      <div class="review-head"><strong>${esc(r.name)}</strong>${r.mine ? ` <span class="tag">${t('reviews.mine')}</span>` : ''}
+      <div class="review-head"><strong>${esc(r.name)}</strong>${r.verified ? ` <span class="tag">✓ ${t('reviews.verified')}</span>` : ''}${r.mine ? ` <span class="tag">${t('reviews.mine')}</span>` : ''}
         <span class="stars" aria-label="${r.rating}/5">${stars(r.rating)}</span><small>${fmtDate(r.updated_at)}</small></div>
       ${r.body ? `<p>${esc(r.body)}</p>` : ''}
     </article>`;
 
   function formHtml() {
     if (!user) return `<p><a class="btn" href="${esc(loginUrl())}">${t('reviews.loginToReview')}</a></p>`;
+    if (!mine && !canReview) return `<p class="meta">${t('reviews.purchaseRequired')}</p>`; // รีวิวได้เฉพาะผู้ที่ซื้อแล้ว (มีรีวิวเดิมอยู่ยังแก้/ลบได้)
     return `
     <form id="reviewForm" class="review-form">
       <label>${t('reviews.yourRating')}
@@ -140,7 +142,7 @@ async function initReviews(g) {
   async function load(reset = true) {
     if (reset) page = 1;
     const data = await api(`${base}?page=${page}`);
-    if (reset) mine = data.mine;
+    if (reset) { mine = data.mine; canReview = data.canReview; }
     if (reset) {
       root.innerHTML = `
         <h2 class="sec">${t('reviews.title')} <small id="revSummary"></small></h2>
