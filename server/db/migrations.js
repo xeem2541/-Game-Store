@@ -78,6 +78,14 @@ export const MIGRATIONS = [
       addColumn(db, 'users', 'totp_last_step', 'INTEGER NOT NULL DEFAULT 0');
     },
   },
+  {
+    id: '010_payments_amount_refunded',
+    // ยอดที่ Stripe คืนไปแล้ว (สะสม) — ใช้บันทึกการคืนเงินบางส่วนจาก Stripe Dashboard ที่ไม่เปลี่ยนสถานะออเดอร์
+    up: (db) => {
+      const hasPayments = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'payments'").get();
+      if (hasPayments) addColumn(db, 'payments', 'amount_refunded', 'INTEGER NOT NULL DEFAULT 0');
+    },
+  },
 ];
 
 export function migrate(db) {

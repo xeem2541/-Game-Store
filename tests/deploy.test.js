@@ -52,6 +52,11 @@ test('envcheck: ใช้ RENDER_EXTERNAL_URL แทน APP_URL ได้, ไ�
   assert.ok(checkProductionEnv({ ...base, RENDER: 'true', RENDER_EXTERNAL_URL: 'https://x.onrender.com' }).warnings.some((w) => w.includes('REQUIRE_EXISTING_DB')));
 });
 
+test('envcheck: ALLOW_DEMO_SEED=1 ใน production มีคำเตือน (โค้ดเกมปลอมขายด้วยเงินจริงได้)', () => {
+  assert.ok(!checkProductionEnv(validProdEnv()).warnings.some((w) => w.includes('ALLOW_DEMO_SEED')));
+  assert.ok(checkProductionEnv(validProdEnv({ ALLOW_DEMO_SEED: '1' })).warnings.some((w) => w.includes('ALLOW_DEMO_SEED') && w.includes('FAKE')));
+});
+
 // ---------- กันข้อมูลหายตอนสตาร์ท ----------
 test('REQUIRE_EXISTING_DB=1: ไม่พบไฟล์ฐานข้อมูล → ไม่ยอมเริ่ม (ไม่สร้างฐานข้อมูลว่างใหม่); มีไฟล์แล้ว → เริ่มได้', () => {
   const dir = tmpDir();

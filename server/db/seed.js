@@ -140,6 +140,9 @@ const demoAllowed = () => process.env.NODE_ENV !== 'production' || process.env.A
 
 export function seedIfEmpty() {
   if (!demoAllowed()) return;
+  if (process.env.NODE_ENV === 'production' && db.prepare('SELECT COUNT(*) AS n FROM game_keys').get().n === 0) {
+    console.warn('⚠️  ALLOW_DEMO_SEED=1 ใน production: กำลังใส่ข้อมูลตัวอย่างและโค้ดเกมปลอม (FAKE-...) — ห้ามใช้กับร้านที่ขายจริง');
+  }
   if (db.prepare('SELECT COUNT(*) AS n FROM games').get().n === 0) console.log(`seeded ${seedGames()} games`);
   if (db.prepare('SELECT COUNT(*) AS n FROM coupons').get().n === 0) console.log(`seeded ${seedCoupons()} coupons`);
   if (db.prepare('SELECT COUNT(*) AS n FROM game_keys').get().n === 0) console.log(`seeded ${seedKeys()} FAKE test game keys`);

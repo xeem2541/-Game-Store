@@ -336,13 +336,28 @@ test('คืนเงิน (แอดมิน): refunded, เพิกถอ�
   assert.equal((await c.post('/api/orders', { idempotencyKey: key() })).status, 201);
 });
 
-test('คืนเงินจาก Stripe Dashboard (webhook charge.refunded): เพิกถอนโค้ด; คืนบางส่วนแค่แจ้งเตือน', async () => {
+test('คืนเงินจาก Stripe Dashboard (webhook charge.refunded): เพิกถอนโค้ด; คืนบางส่วนบันทึกยอด + แจ้งเตือน แต่ยังเป็น paid', async () => {
   const c = await makeUser(srv.url);
   const { order, sessionId } = await paidViaWebhook(c, ['island-tycoon']);
-  const partial = await webhook('charge.refunded', { id: 'ch_p', payment_intent: `pi_${sessionId}`, amount: order.total, amount_refunded: 100 });
+  const partial = await webhook('charge.refunded', { id: 'ch_p', payment_intent: `pi_${sessionId}`, amount: order.total, amount_refunded: 10000 });
   assert.equal(partial.status, 200);
   assert.equal((await c.get(`/api/orders/${order.id}`)).data.order.status, 'paid');
-  assert.ok(alerts('PARTIAL_REFUND').some((a) => a.order_id === order.id));
+  assert.equal((await c.get('/api/me/library')).data.items.length, 1, 'โค้ดยังใช้ได้');
+  const partialAlerts = () => alerts('PARTIAL_REFUND').filter((a) => a.order_id === order.id);
+  assert.equal(partialAlerts().length, 1);
+  assert.match(partialAlerts()[0].detail, /฿100 จาก/);
+  const admin = await makeAdmin();
+  const detail = (await admin.get(`/api/admin/orders/${order.id}`)).data;
+  assert.equal(detail.payments.find((p) => p.status === 'succeeded').amountRefunded, 10000);
+  const csv = (await admin.raw(`/api/admin/reports/orders.csv?status=paid`)).buf.toString('utf8');
+  assert.ok(csv.includes('refunded_via_stripe_thb'));
+  assert.ok(csv.split('\r\n').some((l) => l.startsWith(`${order.id},`) && l.includes(',100,')));
+  // Stripe ส่ง event เดิมซ้ำ/ยอดเท่าเดิม → ไม่แจ้งซ้ำ; คืนเพิ่ม → อัปเดตยอดสะสม
+  await webhook('charge.refunded', { id: 'ch_p', payment_intent: `pi_${sessionId}`, amount: order.total, amount_refunded: 10000 });
+  assert.equal(partialAlerts().length, 1);
+  await webhook('charge.refunded', { id: 'ch_p', payment_intent: `pi_${sessionId}`, amount: order.total, amount_refunded: 25000 });
+  assert.equal(partialAlerts().length, 2);
+  assert.equal(db.prepare("SELECT amount_refunded FROM payments WHERE order_id = ? AND status = 'succeeded'").get(order.id).amount_refunded, 25000);
 
   await webhook('charge.refunded', { id: 'ch_f', payment_intent: `pi_${sessionId}`, amount: order.total, amount_refunded: order.total });
   assert.equal((await c.get(`/api/orders/${order.id}`)).data.order.status, 'refunded');

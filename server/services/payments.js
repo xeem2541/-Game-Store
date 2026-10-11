@@ -4,6 +4,7 @@ import { adminAlert } from './audit.js';
 import { enqueueAutoRefund, processAutoRefunds } from './autoRefunds.js';
 import { HttpError } from './errors.js';
 import { orderEvents, transition } from './orders.js';
+import { formatBaht } from './pricing.js';
 import { getStripe, stripeConfigured } from './stripe.js';
 
 const MIN_AMOUNT = 1000; // ขั้นต่ำการเรียกเก็บของ Stripe สำหรับ THB = ฿10.00 (หน่วยสตางค์)
@@ -200,13 +201,18 @@ function onChargeRefunded(event, charge) {
   if (pay.status === 'needs_review') { touch(pay.id, { status: 'refunded' }); return; } // คืนอัตโนมัติของรายการที่ไม่ได้ใช้ซื้อ
   if (pay.status !== 'succeeded' || order.status !== 'paid') return; // ผ่านระบบเราไปแล้ว/ไม่เกี่ยวข้อง
   if (charge.amount_refunded < charge.amount) {
-    adminAlert('PARTIAL_REFUND', order.id, `Stripe แจ้งคืนเงินบางส่วน (${charge.amount_refunded}/${charge.amount}) — ระบบรองรับเฉพาะคืนเต็มจำนวน โปรดตรวจสอบ`);
+    // คืนบางส่วน (เช่น ชดเชยให้ลูกค้า): บันทึกยอดสะสมไว้ที่ payment — ออเดอร์ยัง paid และโค้ดเกมยังใช้ได้
+    // (โค้ดดิจิทัลแบ่งคืนครึ่งเดียวไม่ได้ ถ้าต้องการยกเลิกการขายให้คืนส่วนที่เหลือจน Stripe แจ้งว่าคืนครบ ระบบจะเพิกถอนโค้ดเอง)
+    if (charge.amount_refunded > pay.amount_refunded) {
+      touch(pay.id, { amount_refunded: charge.amount_refunded });
+      adminAlert('PARTIAL_REFUND', order.id, `Stripe คืนเงินบางส่วนแล้ว ${formatBaht(charge.amount_refunded)} จาก ${formatBaht(charge.amount)} — ออเดอร์ยังเป็น "ชำระแล้ว" และโค้ดเกมยังใช้ได้`);
+    }
     return;
   }
   // คืนเต็มจำนวนจาก Stripe Dashboard
   db.prepare("INSERT OR IGNORE INTO refunds (order_id, amount, reason, source) VALUES (?, ?, 'refunded via Stripe Dashboard', 'stripe_dashboard')").run(order.id, charge.amount_refunded);
   transition(order.id, 'refunded');
-  touch(pay.id, { status: 'refunded' });
+  touch(pay.id, { status: 'refunded', amount_refunded: charge.amount_refunded });
 }
 
 // ---------- ออเดอร์ถูกยกเลิก/หมดอายุ → expire Checkout Session ฝั่ง Stripe ----------

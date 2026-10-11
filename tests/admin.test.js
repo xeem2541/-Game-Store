@@ -646,7 +646,7 @@ test('Migration: รันซ้ำได้ ไม่คูณราคาซ�
   migrate(legacy);
   migrate(legacy);
   assert.deepEqual(snap(), { prices: [129000, 0, 19900], roles: ['user', 'admin'] });
-  assert.equal(legacy.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 9);
+  assert.equal(legacy.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 10);
   assert.deepEqual(legacy.prepare('SELECT totp_enabled AS e, totp_last_step AS s, totp_secret_enc AS k FROM users WHERE id = 1').get(), { e: 0, s: 0, k: null });
   // 008: สรุปรีวิวเดิมถูกคำนวณย้อนหลัง (เกมที่ไม่มีรีวิว rating_avg = NULL)
   assert.deepEqual(legacy.prepare('SELECT review_count AS c, rating_avg AS a FROM games ORDER BY id').all(), [{ c: 3, a: 4.3 }, { c: 0, a: null }, { c: 0, a: null }]);

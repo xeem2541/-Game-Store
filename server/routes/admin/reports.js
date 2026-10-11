@@ -19,13 +19,14 @@ reportsRouter.get('/orders.csv', (req, res) => {
   const { where, args } = orderFilter(req.query);
   const rows = db.prepare(`SELECT o.id, o.created_at, o.paid_at, o.status, u.email, u.name, o.subtotal, o.game_discount, o.coupon_code, o.coupon_discount, o.total,
       (SELECT p.provider FROM payments p WHERE p.order_id = o.id ORDER BY p.id DESC LIMIT 1) AS provider,
+      (SELECT COALESCE(SUM(p.amount_refunded), 0) FROM payments p WHERE p.order_id = o.id) AS refunded,
       (SELECT number FROM invoices i WHERE i.order_id = o.id) AS invoice,
       (SELECT group_concat(title, ' | ') FROM order_items oi WHERE oi.order_id = o.id) AS items
     FROM orders o JOIN users u ON u.id = o.user_id WHERE ${where} ORDER BY o.id`).all(...args);
   done(req, 'orders', rows.length);
   sendCsv(res, `orders-${stamp()}.csv`,
-    ['order_id', 'created_at_utc', 'paid_at_utc', 'status', 'email', 'name', 'items', 'list_price_thb', 'game_discount_thb', 'coupon', 'coupon_discount_thb', 'total_thb', 'payment_provider', 'invoice_no'],
-    rows.map((r) => [r.id, r.created_at, r.paid_at, r.status, r.email, r.name, r.items, baht(r.subtotal), baht(r.game_discount), r.coupon_code, baht(r.coupon_discount), baht(r.total), r.provider, r.invoice]));
+    ['order_id', 'created_at_utc', 'paid_at_utc', 'status', 'email', 'name', 'items', 'list_price_thb', 'game_discount_thb', 'coupon', 'coupon_discount_thb', 'total_thb', 'refunded_via_stripe_thb', 'payment_provider', 'invoice_no'],
+    rows.map((r) => [r.id, r.created_at, r.paid_at, r.status, r.email, r.name, r.items, baht(r.subtotal), baht(r.game_discount), r.coupon_code, baht(r.coupon_discount), baht(r.total), baht(r.refunded), r.provider, r.invoice]));
 });
 
 reportsRouter.get('/sales.csv', (req, res) => {
