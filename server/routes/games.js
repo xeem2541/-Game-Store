@@ -4,19 +4,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { db } from '../db/index.js';
 import { UPLOAD_DIR } from '../services/images.js';
+import { FINAL_PRICE_SQL, finalPrice } from '../services/pricing.js';
 
 export const gamesRouter = Router();
 
 export const withFinal = (g) => ({
   ...g,
-  finalPrice: Math.round(g.price * (1 - g.discount / 100)),
+  finalPrice: finalPrice(g),
   cover: `/api/games/${g.slug}/cover.svg`,
 });
 
 const SORTS = {
   default: 'featured DESC, sales DESC',
-  priceAsc: 'price * (100 - discount) ASC',
-  priceDesc: 'price * (100 - discount) DESC',
+  priceAsc: `${FINAL_PRICE_SQL} ASC, id`,
+  priceDesc: `${FINAL_PRICE_SQL} DESC, id`,
   rating: 'rating DESC',
   discount: 'discount DESC',
   newest: 'release_date DESC',
@@ -44,8 +45,8 @@ gamesRouter.get('/', (req, res) => {
   if (p.q) { where.push('(title LIKE ? OR description LIKE ?)'); args.push(`%${p.q}%`, `%${p.q}%`); }
   if (p.genre) { where.push('genre = ?'); args.push(p.genre); }
   if (p.platform) { where.push('platform = ?'); args.push(p.platform); }
-  if (p.minPrice !== undefined) { where.push('price * (100 - discount) / 100 >= ?'); args.push(p.minPrice); }
-  if (p.maxPrice !== undefined) { where.push('price * (100 - discount) / 100 <= ?'); args.push(p.maxPrice); }
+  if (p.minPrice !== undefined) { where.push(`${FINAL_PRICE_SQL} >= ?`); args.push(p.minPrice); }
+  if (p.maxPrice !== undefined) { where.push(`${FINAL_PRICE_SQL} <= ?`); args.push(p.maxPrice); }
   if (p.onSale) where.push('discount > 0');
   if (p.featured) where.push('featured = 1');
   const w = where.join(' AND ');

@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import { config } from './config.js';
 import { db } from './db/index.js';
 import { UPLOAD_DIR } from './services/images.js';
+import { finalPrice } from './services/pricing.js';
 
 // หน้า HTML ที่ต้องมี meta SEO จริง (เซิร์ฟเวอร์ใส่แทน <!--SEO--> ในเทมเพลต) — อ่านเทมเพลตจากโฟลเดอร์ที่ใช้งานอยู่ (public หรือ dist/public)
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -49,7 +50,6 @@ function template(name) {
 }
 export const renderTemplate = (name, meta) => template(name).replace('<!--SEO-->', seoTags(meta));
 
-export const finalPrice = (g) => Math.round((g.price * (100 - g.discount)) / 100);
 
 export function homeMeta() {
   return {

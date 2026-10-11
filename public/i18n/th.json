@@ -123,6 +123,8 @@
   "cartpage.loginNeeded": "เข้าสู่ระบบเพื่อใช้คูปองและสั่งซื้อ",
   "cartpage.toCheckout": "ดำเนินการสั่งซื้อ",
   "cartpage.owned": "มีเกมนี้ในคลังแล้ว — กรุณาลบออกจากตะกร้า",
+  "cartpage.unavailable": "เกมต่อไปนี้หยุดจำหน่ายแล้วและไม่ถูกนับในยอด: {titles}",
+  "cartpage.removeUnavailable": "นำออกจากตะกร้า",
   "coupon.label": "โค้ดส่วนลด",
   "coupon.placeholder": "กรอกโค้ดส่วนลด",
   "coupon.apply": "ใช้โค้ด",

@@ -5,6 +5,7 @@ import { requirePerm } from '../../middleware/adminAuth.js';
 import { audit } from '../../services/audit.js';
 import { HttpError } from '../../services/errors.js';
 import { deleteGameImage, saveGameImage } from '../../services/images.js';
+import { finalPrice } from '../../services/pricing.js';
 import { idParam, likeArg, pageInfo, paging, uploadImage } from './util.js';
 
 export const gamesAdminRouter = Router();
@@ -64,7 +65,7 @@ gamesAdminRouter.get('/', (req, res) => {
       g.low_stock_threshold AS lowStockThreshold,
       (SELECT COUNT(*) FROM game_keys k WHERE k.game_id = g.id AND k.status = 'available') AS available
     FROM games g WHERE ${w} ORDER BY ${SORTS[sort] ?? SORTS.id} LIMIT ? OFFSET ?`).all(...args, limit, offset)
-    .map((g) => ({ ...g, active: !!g.active, featured: !!g.featured }));
+    .map((g) => ({ ...g, active: !!g.active, featured: !!g.featured, finalPrice: finalPrice(g) }));
   res.json({ items, ...pageInfo(total, page, limit) });
 });
 

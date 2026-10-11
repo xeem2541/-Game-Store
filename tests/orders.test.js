@@ -222,6 +222,7 @@ test('เกมฟรี (ยอด 0) ชำระอัตโนมัติ; 
   const r = await order(c);
   assert.equal(r.status, 409);
   assert.equal(r.data.code, 'GAME_UNAVAILABLE'); // ตะกร้า PUT กรองเกมที่ปิดอยู่ แต่เกมที่ปิดทีหลังต้องกันตอนสั่ง
+  assert.equal(r.data.params.titles, 'Puzzle Palace');
   db.prepare("UPDATE games SET active = 1 WHERE slug = 'puzzle-palace'").run();
 });
 
@@ -236,4 +237,57 @@ test('ประวัติคำสั่งซื้อ: แบ่งหน้
   assert.deepEqual(r.items[0].titles, ['Forest Spirit']);
   assert.equal((await c.get('/api/me/orders?page=2')).data.items.length, 0);
   assert.equal((await (await makeUser()).get('/api/me/orders')).data.total, 0);
+});
+
+// ---------- ราคาหลังส่วนลด: แหล่งเดียว (pricing.finalPrice) ทุกหน้าตรงกับยอดที่เรียกเก็บ ----------
+test('ราคาที่แสดงตรงกับราคาที่เรียกเก็บ แม้ราคามีเศษสตางค์ (เดิมคลาด 1 สตางค์จาก float)', async () => {
+  const { finalPrice, FINAL_PRICE_SQL } = await import('../server/services/pricing.js');
+  // ฿100.50 ลด 33%: สูตร float เดิมแสดง 6733 แต่เก็บเงิน 6734
+  const before = db.prepare("SELECT price, discount FROM games WHERE slug = 'space-miner'").get();
+  db.prepare("UPDATE games SET price = 10050, discount = 33 WHERE slug = 'space-miner'").run();
+  try {
+    const c = await makeUser();
+    const shown = (await c.get('/api/games/space-miner')).data.finalPrice;
+    assert.equal(shown, 6734);
+    await setCart(c, ['space-miner']);
+    assert.equal((await c.get('/api/cart')).data.items[0].finalPrice, shown);
+    assert.equal((await c.get('/api/cart/summary')).data.total, shown);
+    assert.equal((await order(c)).data.order.total, shown);
+    // ตัวกรองราคาใช้สูตรเดียวกัน: ค่าขอบพอดีต้องเจอ
+    const hit = (await c.get('/api/games?minPrice=6734&maxPrice=6734&limit=60')).data.items.map((g) => g.slug);
+    assert.ok(hit.includes('space-miner'));
+    assert.ok(!(await c.get('/api/games?minPrice=6735&limit=60')).data.items.some((g) => g.slug === 'space-miner'));
+  } finally {
+    db.prepare("UPDATE games SET price = ?, discount = ? WHERE slug = 'space-miner'").run(before.price, before.discount);
+  }
+  // สูตร SQL ให้ผลเท่ากับ finalPrice() ทุกกรณี (ราคา 0-2000 สตางค์ × ส่วนลด 0-100% + ราคาสูง)
+  const sql = db.prepare(`SELECT ${FINAL_PRICE_SQL} AS v FROM (SELECT ? AS price, ? AS discount)`);
+  for (const price of [...Array(2001).keys(), 99999, 100_000_000]) {
+    for (let discount = 0; discount <= 100; discount += price > 2000 ? 1 : 3) {
+      assert.equal(sql.get(price, discount).v, finalPrice({ price, discount }), `price=${price} discount=${discount}`);
+    }
+  }
+});
+
+test('เกมในตะกร้าที่ถูกหยุดขาย: summary แจ้งชื่อ, สั่งซื้อแล้วถูกนำออกจากตะกร้า, สั่งใหม่ได้ทันที', async () => {
+  const c = await makeUser();
+  await setCart(c, ['ocean-explorer', 'mystery-manor']);
+  db.prepare("UPDATE games SET active = 0 WHERE slug = 'mystery-manor'").run();
+  try {
+    const s = (await c.get('/api/cart/summary')).data;
+    assert.deepEqual(s.unavailable, [{ slug: 'mystery-manor', title: 'Mystery Manor' }]);
+    assert.deepEqual(s.items.map((i) => i.slug), ['ocean-explorer']);
+
+    const r = await order(c);
+    assert.equal(r.status, 409);
+    assert.equal(r.data.code, 'GAME_UNAVAILABLE');
+    assert.equal((await c.get('/api/me/orders')).data.total, 0, 'ไม่มีออเดอร์ถูกสร้าง');
+    assert.deepEqual((await c.get('/api/cart/summary')).data.unavailable, [], 'เกมที่หยุดขายถูกนำออกจากตะกร้าแล้ว');
+
+    const ok = await order(c); // ลองใหม่ได้เลย เหลือเฉพาะเกมที่ยังขายอยู่
+    assert.equal(ok.status, 201);
+    assert.deepEqual(ok.data.order.items.map((i) => i.slug), ['ocean-explorer']);
+  } finally {
+    db.prepare("UPDATE games SET active = 1 WHERE slug = 'mystery-manor'").run();
+  }
 });

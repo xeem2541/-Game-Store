@@ -103,7 +103,8 @@ const ownedGameIds = (userId, status, gameIds) => {
 
 // สรุปราคาตะกร้าของผู้ใช้ (ใช้ทั้งหน้าตะกร้า/checkout) — คำนวณจากฐานข้อมูลเท่านั้น
 export function buildSummary(userId, couponCode) {
-  const games = cartGames(userId).filter((g) => g.active);
+  const all = cartGames(userId);
+  const games = all.filter((g) => g.active);
   const base = priceCart(games);
   let coupon = null;
   let couponError = null;
@@ -121,12 +122,22 @@ export function buildSummary(userId, couponCode) {
     coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
     couponError,
     owned: owned.map((id) => bySlug.get(id).slug),
+    // เกมในตะกร้าที่ถูกซ่อน/หยุดขายภายหลัง: ไม่นับในยอด แต่ต้องบอกผู้ใช้ (ไม่งั้นจะงงว่าทำไมสั่งซื้อไม่ได้)
+    unavailable: all.filter((g) => !g.active).map((g) => ({ slug: g.slug, title: g.title })),
     currency: 'THB',
   };
 }
 
+// เกมที่หยุดขายแล้วถูกนำออกจากตะกร้าให้เลย (ผู้ใช้มองไม่เห็นเกมนั้นในหน้าตะกร้า จึงลบเองไม่ได้) แล้วแจ้งให้ตรวจยอดใหม่ก่อนสั่งอีกครั้ง
+function rejectUnavailable(userId, games) {
+  const del = db.prepare('DELETE FROM cart_items WHERE user_id = ? AND game_id = ?');
+  db.transaction(() => { for (const g of games) del.run(userId, g.id); })();
+  const titles = games.map((g) => g.title).join(', ');
+  throw new HttpError(409, `เกมต่อไปนี้หยุดจำหน่ายแล้วและถูกนำออกจากตะกร้า: ${titles} — กรุณาตรวจสอบยอดแล้วสั่งซื้ออีกครั้ง`, 'GAME_UNAVAILABLE', { titles });
+}
+
 export function createOrder(user, { couponCode, idempotencyKey }) {
-  return db.transaction(() => {
+  const result = db.transaction(() => {
     // กันกดซ้ำ: key เดิมของผู้ใช้เดิม → คืนออเดอร์เดิม
     const existing = db.prepare('SELECT * FROM orders WHERE user_id = ? AND idempotency_key = ?').get(user.id, idempotencyKey);
     if (existing) return { order: existing, created: false };
@@ -134,9 +145,7 @@ export function createOrder(user, { couponCode, idempotencyKey }) {
     const all = cartGames(user.id);
     if (!all.length) throw new HttpError(400, 'ตะกร้าว่างเปล่า', 'CART_EMPTY');
     const unavailable = all.filter((g) => !g.active);
-    if (unavailable.length) {
-      throw new HttpError(409, 'มีเกมที่หยุดจำหน่ายแล้ว: ' + unavailable.map((g) => g.title).join(', '), 'GAME_UNAVAILABLE', { titles: unavailable.map((g) => g.title).join(', ') });
-    }
+    if (unavailable.length) return { unavailable }; // ลบออกจากตะกร้านอก transaction นี้ (throw ในนี้จะ rollback การลบไปด้วย)
     const ids = all.map((g) => g.id);
     const owned = ownedGameIds(user.id, 'paid', ids);
     if (owned.length) {
@@ -177,4 +186,6 @@ export function createOrder(user, { couponCode, idempotencyKey }) {
     const order = p.total === 0 ? transition(orderId, 'paid') : db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
     return { order, created: true };
   })();
+  if (result.unavailable) rejectUnavailable(user.id, result.unavailable);
+  return result;
 }

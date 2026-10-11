@@ -129,6 +129,15 @@ export function summaryHtml(s) {
   </div>`;
 }
 
+// เกมในตะกร้าที่หยุดขายแล้ว (จาก /cart/summary → unavailable): แจ้งชื่อเกม + ปุ่มนำออก (ใช้ร่วมกันในหน้าตะกร้า/ชำระเงิน)
+export const unavailableHtml = (list) => (list?.length
+  ? `<div class="banner" role="alert"><span>${t('cartpage.unavailable', { titles: list.map((g) => esc(g.title)).join(', ') })}</span><button class="btn" id="rmUnavailable" type="button">${t('cartpage.removeUnavailable')}</button></div>`
+  : '');
+// ตะกร้าในหน้าเว็บไม่มีเกมที่หยุดขายอยู่แล้ว → บันทึกตะกร้าปัจจุบันทับ = ลบเกมเหล่านั้นออกจากเซิร์ฟเวอร์
+export function bindRemoveUnavailable(rerender) {
+  $('#rmUnavailable')?.addEventListener('click', async () => { await cart.save(); await rerender(); });
+}
+
 // ---------- การ์ดเกม ----------
 export const priceHtml = (g) => (g.discount ? `<span class="old">${priceText(g.price)}</span>${priceText(g.finalPrice)}` : priceText(g.price));
 
