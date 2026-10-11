@@ -70,11 +70,9 @@ function setStep(el) {
   visual.dataset.step = el.dataset.step;
   if (!progress.classList.contains('scrub')) progress.style.setProperty('--p', el.dataset.step / steps.length);
 }
-// ขั้นปัจจุบัน = ขั้นที่ครอบกลางจอ (หรือใกล้กลางจอที่สุด) — คำนวณจากตำแหน่งตอนเลื่อน ไม่เกินเฟรมละครั้ง
-// (เดิมใช้ IntersectionObserver แถบบาง ๆ กลางจอ ซึ่ง Safari/WebKit ไม่แจ้งเมื่อเลื่อนข้ามแถบในเฟรมเดียว)
-let stepFrame = 0;
+// ขั้นปัจจุบัน = ขั้นที่ครอบกลางจอ (หรือใกล้กลางจอที่สุด) — คำนวณทันทีตอนเลื่อน (อ่านตำแหน่งแค่ 3 กล่อง ไม่แพง)
+// ไม่ใช้ IntersectionObserver แถบบาง ๆ กลางจอ หรือรอ requestAnimationFrame: Safari/WebKit พลาดการแจ้งเมื่อเลื่อนข้ามขั้นแบบทันที
 const pickStep = () => {
-  stepFrame = 0;
   const mid = innerHeight / 2;
   let best = steps[0];
   let bestDist = Infinity;
@@ -86,10 +84,12 @@ const pickStep = () => {
   if (best.dataset.step !== visual.dataset.step) setStep(best);
 };
 setStep(steps[0]);
-const queueStep = () => { stepFrame ||= requestAnimationFrame(pickStep); };
-addEventListener('scroll', queueStep, { passive: true });
+addEventListener('scroll', pickStep, { passive: true });
 // เนื้อหาด้านบนโหลดทีหลังแล้วดันส่วนนี้ลง (Safari ไม่มี scroll anchoring → ไม่มี scroll event) ให้เลือกขั้นใหม่ด้วย
-new ResizeObserver(queueStep).observe(document.body);
+new ResizeObserver(pickStep).observe(document.body);
+// สำรอง: ขั้นใดเข้า/ออกจอหรือเปลี่ยนสัดส่วนที่เห็น → คำนวณใหม่ (กรณีเบราว์เซอร์ไม่ส่ง scroll event ตอนเลื่อนแบบทันที)
+const stepIo = new IntersectionObserver(pickStep, { threshold: [0, 0.25, 0.5, 0.75, 1] });
+for (const s of steps) stepIo.observe(s);
 pickStep();
 
 if (!prefersReducedMotion()) {
