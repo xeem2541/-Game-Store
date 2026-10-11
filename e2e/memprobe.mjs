@@ -20,10 +20,6 @@ const PAGES = [['home', '/'], ['games', '/games.html'], ['game', '/game/dragon-r
 const VARIANTS = {
   base: '',
   noFilter: '*,*::before,*::after,*::backdrop{filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}',
-  noMask: '*{mask-image:none!important;-webkit-mask-image:none!important}',
-  flat3d: '*{transform-style:flat!important}',
-  noAnim: '*,*::before,*::after{animation:none!important;transition:none!important}',
-  noBgLayers: '.game-backdrop,.game-glow,.hero-canvas,canvas{display:none!important}',
 };
 
 const browser = await webkit.launch();
