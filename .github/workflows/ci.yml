@@ -60,16 +60,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps ${{ matrix.project }}
-      # ชั่วคราว: วัดหน่วยความจำ WebKit ต่อหน้าโดยปิดเอฟเฟกต์ทีละแบบ (หาสาเหตุที่ runner หน่วยความจำเต็ม)
-      - name: WebKit memory probe
-        if: matrix.project == 'webkit'
-        continue-on-error: true
-        timeout-minutes: 8
-        run: node scripts/build.js && node e2e/memprobe.mjs
-      # พิมพ์หน่วยความจำ/โหลดเครื่องทุก 10 วินาทีระหว่างรัน: runner ของ WebKit เคยดับกลางเทสโดยไม่มีข้อความผิดพลาด
-      - run: |
-          (while true; do echo "[mem] $(date +%T) $(free -m | awk 'NR==2{print "used="$3"MB avail="$7"MB"}') load=$(cut -d' ' -f1 /proc/loadavg) wpe=$(pgrep -c WPE) top=$(ps -eo rss,comm --sort=-rss | awk 'NR>1&&NR<7{printf "%s=%dMB ", $2, $1/1024}')"; sleep 10; done) &
-          npx playwright test --project=${{ matrix.project }}
+      - run: npx playwright test --project=${{ matrix.project }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
