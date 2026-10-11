@@ -396,6 +396,23 @@ test('ใบเสร็จ PDF: เฉพาะเจ้าของ + paid, �
   assert.equal((await c.req('GET', `/api/orders/${a.order.id}/receipt.pdf`)).status, 409); // คืนเงินแล้วไม่ออกใบเสร็จ
 });
 
+test('ใบเสร็จ PDF รายการยาว: ขึ้นหน้าใหม่ (ไม่ล้นขอบกระดาษ) และมีเลขหน้า; สร้างไม่สำเร็จ = error ก่อนส่งข้อมูล', async () => {
+  const { renderReceipt } = await import('../server/services/receipt.js');
+  const c = await makeUser(srv.url);
+  const { order } = await paidViaWebhook(c, ['cyber-samurai']);
+  const pages = (buf) => (buf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length;
+  assert.equal(pages(await renderReceipt(order.id)), 1);
+
+  const ins = db.prepare(`INSERT INTO order_items (order_id, game_id, slug, title, platform, list_price, discount_percent, unit_price)
+    SELECT order_id, game_id, slug, ?, platform, list_price, discount_percent, unit_price FROM order_items WHERE order_id = ? LIMIT 1`);
+  for (let i = 0; i < 70; i += 1) ins.run(i % 5 ? `เกมทดสอบ ${i}` : `เกมชื่อยาวมาก ${i} `.repeat(6), order.id);
+  const long = await renderReceipt(order.id);
+  assert.ok(pages(long) >= 3, `ได้ ${pages(long)} หน้า`);
+  db.prepare('DELETE FROM order_items WHERE order_id = ? AND id NOT IN (SELECT MIN(id) FROM order_items WHERE order_id = ?)').run(order.id, order.id);
+
+  await assert.rejects(renderReceipt(999_999_999));
+});
+
 test('อีเมลหลังซื้อ: ส่งล้มเหลวแล้ว retry (backoff), ไม่ทำให้ออเดอร์พัง, ครบกำหนดแล้วแจ้งแอดมิน', async () => {
   await drainEmails();
   const c = await makeUser(srv.url);

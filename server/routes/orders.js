@@ -59,16 +59,16 @@ ordersRouter.post('/:id/pay', async (req, res) => {
   res.json(await createCheckout(req.user, order));
 });
 
-ordersRouter.get('/:id/receipt.pdf', (req, res) => {
+ordersRouter.get('/:id/receipt.pdf', async (req, res) => {
   const order = getOwnOrder(req.user.id, idParam.parse(req.params.id)); // ของคนอื่น → 404
   if (order.status !== 'paid') throw new HttpError(409, 'ออกใบเสร็จได้เฉพาะคำสั่งซื้อที่ชำระแล้ว', 'RECEIPT_NOT_AVAILABLE');
   const number = serializeOrder(order).invoiceNumber ?? `order-${order.id}`;
+  const pdf = await renderReceipt(order.id); // สร้างเสร็จก่อนค่อยส่ง header
   res.set({
     'Content-Type': 'application/pdf',
     'Content-Disposition': `attachment; filename="receipt-${number}.pdf"`,
     'Cache-Control': 'private, no-store',
-  });
-  renderReceipt(order.id, res);
+  }).send(pdf);
 });
 
 const resendLimiter = rateLimit({
