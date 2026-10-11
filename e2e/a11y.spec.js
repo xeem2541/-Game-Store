@@ -5,6 +5,9 @@ import { PUBLIC_PAGES } from './pages.js';
 test.setTimeout(240_000);
 
 // ตรวจ accessibility ด้วย axe (WCAG 2 A/AA: alt, label, คอนทราสต์สี, ชื่อปุ่ม ฯลฯ) ทุกหน้า × 2 ภาษา (ธีมมืดอย่างเดียว)
+// พิมพ์หน้าที่กำลังเปิดลง log ของ CI: WebKit บน CI เคยทำ runner ดับกลางเทสที่วนหลายหน้า (ไม่มีข้อความผิดพลาด) — บอกได้ว่าค้างที่หน้าไหน
+const trace = (testName, page) => console.log(`[trace] ${new Date().toISOString().slice(11, 19)} ${testName} → ${page}`);
+
 const serious = (r) => r.violations.filter((v) => ['serious', 'critical'].includes(v.impact));
 const fmt = (vs) => vs.map((v) => `${v.id} (${v.impact}):\n${v.nodes.slice(0, 4).map((n) => `   ${n.target.join(' ')} — ${(n.any[0]?.message ?? n.failureSummary ?? '').replace(/\s+/g, ' ').slice(0, 150)}`).join('\n')}`).join('\n');
 
@@ -13,6 +16,7 @@ for (const lang of ['th', 'en']) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.addInitScript((l) => { localStorage.setItem('lang', l); }, lang);
     for (const [name, url] of PUBLIC_PAGES) {
+      trace(`a11y ${lang}`, name);
       await page.goto(url);
       await page.waitForLoadState('networkidle');
       await page.waitForSelector('body.ready, body:not([data-async])', { state: 'attached' });
@@ -49,6 +53,7 @@ test('ภาษา/ธีม: ไม่มี key แปลหลุดเป็
   for (const lang of ['th', 'en']) {
     await page.addInitScript((l) => localStorage.setItem('lang', l), lang);
     for (const [name, url] of PUBLIC_PAGES) {
+      trace(`i18n ${lang}`, name);
       await page.goto(url);
       await page.waitForLoadState('networkidle');
       const text = await page.evaluate(() => document.body.innerText);
