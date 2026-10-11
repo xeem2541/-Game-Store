@@ -2,6 +2,7 @@
 // ล้าง 2FA ของบัญชีหลังบ้านเมื่อทำโทรศัพท์หายและไม่มีรหัสกู้คืน (เช่น admin คนสุดท้าย) — ทุกเซสชันของบัญชีนั้นถูกเพิกถอน
 import { db } from '../db/index.js';
 import { resetMfa } from '../routes/admin/mfa.js';
+import { audit } from '../services/audit.js';
 
 const email = (process.argv[2] ?? '').trim().toLowerCase();
 if (!email) {
@@ -14,6 +15,5 @@ if (!user) {
   process.exit(1);
 }
 resetMfa(user.id);
-db.prepare('INSERT INTO audit_log (user_id, action, entity, entity_id, meta) VALUES (NULL, ?, ?, ?, ?)')
-  .run('user.mfa_reset_cli', 'user', String(user.id), JSON.stringify({ email }));
+audit(null, 'user.mfa_reset_cli', 'user', user.id, { email }); // ไม่มีผู้ใช้/IP — ทำจากเครื่องเซิร์ฟเวอร์
 console.log(`✓ ล้าง 2FA ของ ${email} แล้ว — ล็อกอินหลังบ้านครั้งถัดไปต้องตั้ง 2FA ใหม่`);

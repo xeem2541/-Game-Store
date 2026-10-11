@@ -124,7 +124,10 @@ export async function processStripeEvent(event) {
     }
     return 'processed';
   })();
-  await processAutoRefunds(); // คืนเงินทันทีถ้าทำได้ — ไม่สำเร็จก็ยังอยู่ในคิว (ไม่ทำให้ webhook ล้ม)
+  // คืนเงินทันทีถ้าทำได้ เฉพาะงานของการชำระในเหตุการณ์นี้ — ไม่สำเร็จก็ยังอยู่ในคิว (ไม่ทำให้ webhook ล้ม) งานอื่นรอรอบตั้งเวลา
+  const obj = event.data?.object ?? {};
+  const pi = obj.object === 'payment_intent' ? obj.id : obj.payment_intent;
+  if (typeof pi === 'string') await processAutoRefunds(Date.now(), { paymentIntent: pi });
   return result;
 }
 

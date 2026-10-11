@@ -550,6 +550,20 @@ test('ออเดอร์ที่เปิดไว้นานเกิน 2
   assert.equal(calls.create.length, before, 'ต้องไม่เรียก Stripe');
 });
 
+test('webhook คืนเงินเฉพาะงานของการชำระในเหตุการณ์นั้น (ไม่รองานเก่าที่ค้างในคิว)', async () => {
+  db.prepare("INSERT INTO auto_refunds (payment_intent, order_id, reason, next_attempt_at) VALUES ('pi_unrelated_old', NULL, 'duplicate', ?)").run(Date.now() - 1000);
+  try {
+    const c = await makeUser(srv.url);
+    const { order, sessionId } = await startPay(c, ['chef-rush']);
+    const before = calls.refunds.length;
+    assert.equal((await webhook('checkout.session.completed', completed(order, sessionId, { amount_total: 1 }))).status, 200);
+    assert.deepEqual(calls.refunds.slice(before).map((x) => x.params.payment_intent), [`pi_${sessionId}`], 'เรียก Stripe เฉพาะของเหตุการณ์นี้');
+    assert.equal(db.prepare("SELECT attempts FROM auto_refunds WHERE payment_intent = 'pi_unrelated_old'").get().attempts, 0, 'งานอื่นรอรอบตั้งเวลา');
+  } finally {
+    db.prepare("DELETE FROM auto_refunds WHERE payment_intent = 'pi_unrelated_old'").run();
+  }
+});
+
 // ---------- M4: คืนเงินอัตโนมัติผ่านคิว (outbox) ----------
 test('คืนเงินอัตโนมัติล้มเหลว: อยู่ในคิวและ retry จนสำเร็จ, webhook ไม่ล้ม, แจ้งแอดมินตอนล้มเหลวครั้งแรก', async () => {
   const c = await makeUser(srv.url);

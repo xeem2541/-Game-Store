@@ -168,3 +168,21 @@ test('TOTP ตรงกับ test vector ของ RFC 6238 (SHA-1) และ�
   assert.equal(verifyTotp(secret, totpCode(secret, step), { now, lastStep: step }), null, 'ช่วงที่ใช้ไปแล้วไม่รับ');
   assert.equal(verifyTotp(secret, '12345', { now }), null);
 });
+
+test('2FA: ใส่รหัสผิดเกิน 5 ครั้งใน 15 นาที → บัญชีถูกล็อกการยืนยัน (แม้รหัสถูกหรือเปลี่ยน IP/คุกกี้)', async () => {
+  const a = await makeAdminClient(srv.url);
+  await a.post('/api/admin/auth/logout');
+  for (let i = 0; i < 5; i += 1) {
+    assert.equal((await login(a)).data.mfaRequired, true);
+    assert.equal((await a.post('/api/admin/auth/mfa/verify', { code: '000000' })).status, 401);
+  }
+  assert.equal((await login(a)).data.mfaRequired, true);
+  const locked = await a.post('/api/admin/auth/mfa/verify', { code: await totpNow(a.totpSecret, a.totpOffset) });
+  assert.equal(locked.status, 429);
+  assert.equal(locked.data.code, 'MFA_LOCKED');
+  assert.ok(!a.cookies.admin_token, 'ไม่ได้เซสชัน');
+  // หมดช่วงล็อก (ย้อนเวลาบันทึกที่ผิด) → ยืนยันได้ตามปกติ
+  db.prepare("UPDATE audit_log SET created_at = datetime('now', '-16 minutes') WHERE user_id = ? AND action = 'admin.mfa_failed'").run(a.userId);
+  assert.equal((await login(a)).data.mfaRequired, true);
+  assert.equal((await a.post('/api/admin/auth/mfa/verify', { code: await totpNow(a.totpSecret, a.totpOffset++) })).status, 200);
+});

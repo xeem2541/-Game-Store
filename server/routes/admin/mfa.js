@@ -2,7 +2,7 @@ import QRCode from 'qrcode';
 import { z } from 'zod';
 import { config } from '../../config.js';
 import { db } from '../../db/index.js';
-import { mfaPendingUser, mfaSatisfied, clearMfaPendingCookie, setAdminCookie } from '../../middleware/adminAuth.js';
+import { mfaPendingUser, mfaSatisfied, clearMfaPendingCookie, publicAdmin, setAdminCookie } from '../../middleware/adminAuth.js';
 import { revokeSessions } from '../../middleware/auth.js';
 import { audit } from '../../services/audit.js';
 import { decrypt, encrypt } from '../../services/crypto.js';
@@ -38,10 +38,22 @@ const consumeRecoveryCode = (user, code) =>
   db.prepare('UPDATE admin_recovery_codes SET used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND code_hash = ? AND used_at IS NULL')
     .run(user.id, hashRecoveryCode(code)).changes === 1;
 
+// จำกัดการเดารหัส 2FA ต่อบัญชี (นอกเหนือจาก rate limit ต่อ IP): คนที่ได้รหัสผ่านไปแล้วเปลี่ยน IP เดารหัส 6 หลักไปเรื่อย ๆ ไม่ได้
+// นับจาก audit log ที่บันทึกทุกครั้งที่ใส่ผิดอยู่แล้ว — ระหว่างถูกล็อก แม้รหัสถูกก็ไม่รับ
+const MFA_MAX_FAILURES = 5;
+const MFA_LOCK_MINUTES = 15;
+const recentMfaFailures = (userId) => db.prepare(`SELECT COUNT(*) AS n FROM audit_log
+  WHERE user_id = ? AND action = 'admin.mfa_failed' AND created_at > datetime('now', ?)`).get(userId, `-${MFA_LOCK_MINUTES} minutes`).n;
+
 // ---- ขั้นที่ 2 ของการล็อกอิน (ยังไม่มีเซสชันแอดมิน — ใช้คุกกี้รอยืนยันที่ได้จากการใส่รหัสผ่านถูก) ----
 export async function verifyLogin(req, res) {
   const user = mfaPendingUser(req.cookies);
   if (!user) throw new HttpError(401, 'หมดเวลายืนยันรหัส กรุณาเข้าสู่ระบบใหม่', 'MFA_SESSION_EXPIRED');
+  if (recentMfaFailures(user.id) >= MFA_MAX_FAILURES) {
+    clearMfaPendingCookie(res);
+    audit({ user, ip: req.ip }, 'admin.mfa_locked', 'user', user.id);
+    throw new HttpError(429, `ใส่รหัสยืนยันผิดหลายครั้ง กรุณารอ ${MFA_LOCK_MINUTES} นาทีแล้วเข้าสู่ระบบใหม่`, 'MFA_LOCKED');
+  }
   const { code } = codeBody.parse(req.body);
   let method = null;
   if (/^\s*\d{6}\s*$/.test(code) && consumeTotp(user, code)) method = 'totp';
@@ -54,7 +66,7 @@ export async function verifyLogin(req, res) {
   setAdminCookie(res, user, { mfa: true });
   const left = recoveryCodesLeft(user.id);
   audit({ user, ip: req.ip }, 'admin.login', 'user', user.id, { mfa: method, ...(method === 'recovery' ? { recoveryCodesLeft: left } : {}) });
-  res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, recoveryCodesLeft: left });
+  res.json({ user: publicAdmin(user), recoveryCodesLeft: left });
 }
 
 // ---- ตั้งค่า 2FA ครั้งแรก (มีเซสชันที่ยืนยันแค่รหัสผ่าน) ----

@@ -333,3 +333,16 @@ test('สร้างคำสั่งซื้อถี่เกินไป (
   assert.equal(limited.data.code, 'ORDER_RATE_LIMIT');
   assert.equal((await order(await makeUser())).status, 400, 'นับแยกต่อผู้ใช้ ไม่ใช่ต่อ IP');
 });
+
+test('กดสั่งซื้อซ้ำด้วย idempotency key เดิม (เน็ตไม่เสถียร) ไม่กินโควตาการสร้างออเดอร์', async () => {
+  const c = await makeUser();
+  await setCart(c, ['kart-mania']);
+  const first = await c.post('/api/orders', { idempotencyKey: 'retry-same-key-123' });
+  assert.equal(first.status, 201);
+  for (let i = 0; i < 12; i += 1) {
+    const r = await c.post('/api/orders', { idempotencyKey: 'retry-same-key-123' });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.order.id, first.data.order.id);
+  }
+  assert.equal((await c.post(`/api/orders/${first.data.order.id}/cancel`)).status, 200);
+});

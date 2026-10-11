@@ -350,19 +350,16 @@ function mountLayout() {
 }
 
 // เน้นส่วนของชื่อที่ตรงกับคำค้น (ทุกคำ ไม่สนตัวพิมพ์เล็ก/ใหญ่) — escape ข้อความก่อนเสมอ ใส่ได้แค่ <mark>
+// ใช้ regex แบบ i+u บนข้อความเดิม (ไม่หาตำแหน่งจาก toLowerCase() ซึ่งบางตัวอักษรยาวขึ้น เช่น "İ" ตำแหน่งจะเลื่อน)
 export function highlight(text, q) {
-  const lower = text.toLowerCase();
-  const ranges = [];
-  for (const term of q.toLowerCase().split(/\s+/).filter(Boolean)) {
-    for (let i = lower.indexOf(term); i !== -1; i = lower.indexOf(term, i + term.length)) ranges.push([i, i + term.length]);
-  }
-  ranges.sort((a, b) => a[0] - b[0]);
+  const terms = q.split(/\s+/).filter(Boolean).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (!terms.length) return esc(text);
+  const re = new RegExp(terms.sort((a, b) => b.length - a.length).join('|'), 'giu'); // คำยาวก่อน
   let out = '';
   let pos = 0;
-  for (const [a, b] of ranges) {
-    if (a < pos) { if (b > pos) { out += `<mark>${esc(text.slice(pos, b))}</mark>`; pos = b; } continue; }
-    out += esc(text.slice(pos, a)) + `<mark>${esc(text.slice(a, b))}</mark>`;
-    pos = b;
+  for (const m of text.matchAll(re)) {
+    out += esc(text.slice(pos, m.index)) + `<mark>${esc(m[0])}</mark>`;
+    pos = m.index + m[0].length;
   }
   return out + esc(text.slice(pos));
 }

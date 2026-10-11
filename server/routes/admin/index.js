@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { config } from '../../config.js';
 import { db } from '../../db/index.js';
-import { adminAuth, adminOnly, clearAdminCookie, clearMfaPendingCookie, permissionsOf, requireMfa, requirePerm, setAdminCookie, setMfaPendingCookie, staffOrAdmin } from '../../middleware/adminAuth.js';
+import { ADMIN_ROLES, adminAuth, adminOnly, clearAdminCookie, clearMfaPendingCookie, permissionsOf, publicAdmin, requireMfa, requirePerm, setAdminCookie, setMfaPendingCookie, staffOrAdmin } from '../../middleware/adminAuth.js';
 import { audit } from '../../services/audit.js';
 import { checkPassword } from '../../services/passwords.js';
 import { auditRouter } from './audit.js';
@@ -23,7 +23,6 @@ const loginLimiter = rateLimit({
   windowMs: 15 * 60_000, limit: config.authRateLimit, standardHeaders: true, legacyHeaders: false,
   message: { error: 'พยายามหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่' },
 });
-const publicAdmin = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role });
 
 // ---------- เข้าสู่ระบบแอดมิน (แยกจากการล็อกอินของลูกค้า) ----------
 adminRouter.post('/auth/login', loginLimiter, async (req, res) => {
@@ -31,7 +30,7 @@ adminRouter.post('/auth/login', loginLimiter, async (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(body.email);
   const ok = await checkPassword(user, body.password);
   // ผู้ใช้ทั่วไป/รหัสผิด/บัญชีถูกระงับ ตอบข้อความเดียวกัน ไม่เปิดเผยว่าอีเมลนี้เป็นแอดมินหรือไม่
-  if (!ok || user.status !== 'active' || !['staff', 'admin'].includes(user.role)) {
+  if (!ok || user.status !== 'active' || !ADMIN_ROLES.includes(user.role)) {
     audit({ ip: req.ip }, 'admin.login_failed', 'user', null, { email: body.email });
     return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   }

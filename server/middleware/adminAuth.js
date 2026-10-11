@@ -8,6 +8,8 @@ import { tokenIsCurrent } from './auth.js';
 export const ADMIN_COOKIE = 'admin_token';
 export const ADMIN_SESSION_MS = 2 * 3600 * 1000;
 export const ADMIN_ROLES = ['staff', 'admin'];
+// ข้อมูลแอดมินที่ส่งให้หน้าเว็บ (ใช้ทุกเส้นทางล็อกอิน — รหัสผ่านอย่างเดียว / ผ่าน 2FA / /auth/me)
+export const publicAdmin = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role });
 
 const cookieOpts = (maxAge) => ({ httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge, path: '/' });
 

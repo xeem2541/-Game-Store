@@ -29,6 +29,9 @@ function orderWithKeys(req, order) {
 const createLimiter = rateLimit({
   windowMs: 10 * 60_000, limit: config.orderRateLimit, standardHeaders: true, legacyHeaders: false,
   keyGenerator: (req) => `user-${req.user.id}`,
+  // กดซ้ำด้วย idempotency key เดิม (ได้ออเดอร์เดิมคืน 200) ไม่กินโควตา — ครั้งที่สร้างใหม่หรือล้มเหลวยังนับ (กันการยิงถี่)
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: (_req, res) => res.statusCode === 200,
   message: { error: 'สร้างคำสั่งซื้อบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่', code: 'ORDER_RATE_LIMIT' },
 });
 
