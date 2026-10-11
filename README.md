@@ -164,7 +164,7 @@ npm run build && npm run bench   # load test เบา ๆ ด้วย autocann
 
 เทสต์ไม่เรียก Stripe/SMTP จริง (ใช้ Stripe ปลอม + webhook ที่เซ็นลายเซ็นเอง) ภาพหน้าจอ responsive อยู่ที่ `e2e/screenshots/`
 
-**CI** (`.github/workflows/ci.yml`): ทุก push เข้า `main` และทุก pull request รัน `npm test` + `npm run build` บน Node 22 และ 24 และตรวจว่าค่าตัวอย่างใน `.env.example` ไม่ผ่านการตรวจ production · e2e (Chromium) รันด้วยแต่ยังไม่บล็อก (เทส a11y บางตัวไม่เสถียร)
+**CI** (`.github/workflows/ci.yml`): ทุก push เข้า `main` และทุก pull request รัน `npm test` + `npm run build` บน Node 22 และ 24 และตรวจว่าค่าตัวอย่างใน `.env.example` ไม่ผ่านการตรวจ production · e2e (Chromium) ต้องผ่านด้วย
 
 ## สำรองและกู้คืนข้อมูล
 

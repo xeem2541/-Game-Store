@@ -29,7 +29,7 @@
 
 ### Tests / CI
 - เทส webhook ที่ขาด: PromptPay ยืนยันทีหลัง (async succeeded/failed), session หมดอายุ, ได้เงินแต่ไม่พบออเดอร์, จ่ายซ้ำ, event ที่ไม่ใช้ — `payments.js` branch coverage 64% → 80%
-- GitHub Actions: เทส + build บน Node 22/24, e2e Chromium (ยังไม่บล็อก)
+- GitHub Actions: เทส + build บน Node 22/24, e2e Chromium (ต้องผ่านก่อน merge)
 
 ### Deploy
 - `render.yaml`: เปลี่ยนจาก plan ฟรี (ไม่มีดิสก์ถาวร → ฐานข้อมูลหายทุกครั้งที่ deploy) เป็น `starter` + persistent disk ที่ `/app/data`, instance เดียว และประกาศตัวแปรที่ production ต้องใช้ครบ (`sync: false` สำหรับความลับที่ต้องกรอก)
