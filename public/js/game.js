@@ -16,10 +16,10 @@ if (game) {
   remember([g, ...g.related]);
   const specsContent = g.spec_min || g.spec_rec ? `
     <div class="bento-card sys-req">
-      <div class="bento-label">SYSTEM REQUIREMENTS</div>
+      <div class="bento-label">${t('game.specs')}</div>
       <div class="specs">
-        ${g.spec_min ? `<div><strong>MINIMUM</strong><p>${esc(g.spec_min)}</p></div>` : ''}
-        ${g.spec_rec ? `<div><strong>RECOMMENDED</strong><p>${esc(g.spec_rec)}</p></div>` : ''}
+        ${g.spec_min ? `<div><strong>${t('game.min')}</strong><p>${esc(g.spec_min)}</p></div>` : ''}
+        ${g.spec_rec ? `<div><strong>${t('game.rec')}</strong><p>${esc(g.spec_rec)}</p></div>` : ''}
       </div>
     </div>` : '';
 
@@ -38,38 +38,38 @@ if (game) {
         <div class="price-row big-price">
           <span class="price">${priceHtml(g)}${g.discount ? ` <span class="badge inline">-${g.discount}%</span>` : ''}</span>
         </div>
-        <button class="btn primary big" id="addBtn" type="button">ADD TO CART</button>
+        <button class="btn primary big" id="addBtn" type="button">${t('game.add')}</button>
       </div>
     </div>
 
-    <!-- The Bento Grid -->
+    <!-- bento: ภาพรวม (2×2) + คะแนน วางจำหน่าย แนวเกม แพลตฟอร์ม + สเปก/การรับโค้ด -->
     <div class="game-bento-grid reveal-scroll">
       <div class="bento-card overview">
-        <div class="bento-label">GAME OVERVIEW</div>
+        <div class="bento-label">${t('game.overview')}</div>
         <p>${esc(descOf(g))}</p>
       </div>
-      
-      <div class="bento-card rating">
-        <div class="bento-label">RATING</div>
+      <a class="bento-card rating" href="#reviews">
+        <div class="bento-label">${t('game.rating')}</div>
         <div class="bento-val">⭐ <span id="ratingNow">${g.rating}</span> <small id="ratingCount"></small></div>
-      </div>
-      
+        <span class="bento-hint">${t('game.toReviews')}</span>
+      </a>
       <div class="bento-card release">
-        <div class="bento-label">RELEASE DATE</div>
+        <div class="bento-label">${t('game.release')}</div>
         <div class="bento-val">${esc(g.release_date)}</div>
       </div>
-      
-      <div class="bento-card genre">
-        <div class="bento-label">GENRE</div>
+      <a class="bento-card genre" href="/games.html?genre=${encodeURIComponent(g.genre)}">
+        <div class="bento-label">${t('game.genre')}</div>
         <div class="bento-val">${esc(genreName(g.genre))}</div>
-      </div>
-      
-      <div class="bento-card dev">
-        <div class="bento-label">PLATFORM</div>
+      </a>
+      <a class="bento-card dev" href="/games.html?platform=${encodeURIComponent(g.platform)}">
+        <div class="bento-label">${t('game.platform')}</div>
         <div class="bento-val">${esc(g.platform)}</div>
-      </div>
-      
+      </a>
       ${specsContent}
+      <div class="bento-card delivery">
+        <div class="bento-label">${t('game.delivery')}</div>
+        <ul><li>${t('game.delivery1')}</li><li>${t('game.delivery2')}</li><li>${t('game.delivery3', { platform: esc(g.platform) })}</li></ul>
+      </div>
     </div>
 
     ${trailer}

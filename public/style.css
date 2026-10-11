@@ -1,5 +1,6 @@
-/* จุดรวม CSS ของหน้าร้าน (หลังบ้านใช้ร่วมด้วย) — ลำดับสำคัญ: token → ส่วนประกอบพื้นฐาน → โครงหน้า → เอฟเฟกต์ */
+/* จุดรวม CSS ของหน้าร้าน (หลังบ้านใช้ร่วมด้วย) — ลำดับสำคัญ: token → ส่วนประกอบพื้นฐาน → โครงหน้า → bento → เอฟเฟกต์ */
 @import url('./css/tokens.css');
 @import url('./css/components.css');
 @import url('./css/layout.css');
+@import url('./css/bento.css');
 @import url('./css/effects.css');

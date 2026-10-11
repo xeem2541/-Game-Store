@@ -130,5 +130,24 @@ async function show(name) {
   try { await views[name](); } catch (e) { panel.innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
 }
 
-tabs.forEach((b) => b.addEventListener('click', () => { history.replaceState(null, '', '#' + b.dataset.tab); show(b.dataset.tab); }));
+const goTo = (name) => { history.replaceState(null, '', '#' + name); show(name); };
+tabs.forEach((b) => b.addEventListener('click', () => goTo(b.dataset.tab)));
+
+// การ์ดสรุปบัญชี (bento) — กดแล้วไปแท็บที่เกี่ยวข้อง
+async function renderStats() {
+  const box = $('#stats');
+  const s = await api('/me/summary').catch(() => null);
+  if (!s) { box.hidden = true; return; }
+  const tile = (tab, label, val, sub = '', cls = '') => `<button class="tile stat-tile ${cls}" type="button" data-goto="${tab}">
+      <span class="tile-label">${label}</span><span class="stat-val">${val}</span>${sub ? `<span class="stat-sub">${sub}</span>` : ''}</button>`;
+  box.innerHTML = [
+    tile('orders', t('profile.stat.orders'), s.orders, s.pendingOrders ? t('profile.stat.pending', { n: s.pendingOrders }) : ''),
+    tile('library', t('profile.stat.library'), s.library),
+    tile('wishlist', t('profile.stat.wishlist'), s.wishlist),
+    tile('info', t('profile.stat.account'), s.emailVerified ? `✓ ${t('profile.stat.verified')}` : t('profile.stat.unverified'), '', s.emailVerified ? 'ok' : 'warn'),
+  ].join('');
+  box.removeAttribute('aria-busy');
+  box.onclick = (e) => { const b = e.target.closest('[data-goto]'); if (b) goTo(b.dataset.goto); };
+}
+renderStats();
 show(location.hash.slice(1)).finally(markReady);

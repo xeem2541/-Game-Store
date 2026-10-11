@@ -1,0 +1,131 @@
+/* ==========================================================================
+   Bento Grid (UI เฟส 3) — การ์ดหลายขนาดในตารางเดียว
+   หลักกัน layout shift: ขนาดของแต่ละช่องกำหนดที่ class ตำแหน่ง (.area-x) ซึ่ง skeleton และเนื้อหาจริงใช้ร่วมกัน
+   (สูงคงที่ หรือ aspect-ratio) เนื้อหาเข้ามาแล้วช่องจึงไม่เปลี่ยนขนาด
+   ========================================================================== */
+
+/* ---- การ์ดเกม: กรอบปก 4:3 ตามขนาดภาพจริง (800×600) — เดิมปกยืดตามความสูงการ์ดจนชื่อเกมในภาพถูกตัด ---- */
+/* ความสูงการ์ด = ปก 4:3 + ส่วนข้อมูลที่จองความสูงไว้ (พอสำหรับราคาลดที่ขึ้น 2 บรรทัด) — skeleton ใช้ class .info เดียวกันจึงสูงเท่ากัน */
+.grid .card { aspect-ratio: auto; }
+.grid .card .cover { flex: none; aspect-ratio: 4 / 3; }
+.grid .card .info { flex: 1; min-height: 176px; }
+.grid .card .price-row { margin-top: auto; }
+
+/* ---- ช่อง (tile) พื้นฐาน ---- */
+.tile {
+  position: relative; display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; min-height: 0;
+  padding: var(--sp-5); border: var(--border-thin); border-radius: var(--r-lg); background: var(--surface-1);
+  color: var(--c-text); text-decoration: none; overflow: hidden;
+  transition: transform var(--dur-3) var(--ease-out), border-color var(--dur-2), box-shadow var(--dur-3) var(--ease-out);
+}
+a.tile:hover { transform: translateY(-4px); border-color: rgb(var(--rgb-accent) / 0.5); box-shadow: var(--shadow-2); }
+.tile:focus-within { border-color: rgb(var(--rgb-focus) / 0.6); }
+.tile-label { font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-accent); }
+.tile-links { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.tile-links a {
+  display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--sp-4); border-radius: var(--r-pill);
+  border: var(--border-thin); background: var(--surface-tint); color: var(--c-text); font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-decoration: none;
+  transition: border-color var(--dur-2), color var(--dur-2), background-color var(--dur-2), transform var(--dur-2) var(--ease-out);
+}
+.tile-links a:hover { border-color: var(--c-accent); color: var(--c-accent); background: rgb(var(--rgb-accent) / 0.08); }
+.tile-links a:active { transform: scale(0.97); }
+
+/* skeleton ของช่อง */
+.sk-tile { background: var(--c-surface-2); border-color: transparent; }
+.sk-tile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgb(var(--rgb-white) / 0.06), transparent); animation: sk-shimmer 1.5s infinite; }
+@media (prefers-reduced-motion: reduce) { .sk-tile::after { animation: none; } }
+
+/* ==========================================================================
+   หน้าแรก: เกมแนะนำ + ทางลัด
+   a = เกมเด่น  b = ดีลลดแรงสุด  c = ตามงบ  d = แพลตฟอร์ม  e/f = เกมแนะนำ  g = แนวเกม
+   ========================================================================== */
+.grid.bento-home {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-areas: "a a b b" "a a c d" "e f g g";
+  gap: var(--sp-5);
+}
+.area-a { grid-area: a; } .area-b { grid-area: b; } .area-c { grid-area: c; } .area-d { grid-area: d; }
+.area-e { grid-area: e; } .area-f { grid-area: f; } .area-g { grid-area: g; }
+.bento-home .area-b, .bento-home .area-c, .bento-home .area-d { height: 220px; }
+.bento-home .area-a { height: calc(2 * 220px + var(--sp-5)); } /* 2 แถวของ b/c/d พอดี */
+.bento-home .area-e, .bento-home .area-f { aspect-ratio: 2 / 3; }
+.bento-home > div[class*="area-"] > .card { height: 100%; aspect-ratio: auto; }
+/* เกมเด่น: ปกเต็มพื้นที่ที่เหลือ ชื่อใหญ่ขึ้น */
+.bento-home .area-a .card .cover { flex: 1; aspect-ratio: auto; min-height: 0; }
+.bento-home .area-a .card .info { flex: none; }
+.bento-home .area-a .card .title { font-size: var(--fs-xl); }
+
+/* ดีลลดแรงสุด: ภาพปกจาง ๆ ด้านหลัง + ไล่สีทึบใต้ข้อความ (contrast AA) */
+.tile-deal { justify-content: flex-end; gap: var(--sp-1); }
+.tile-deal .tile-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.45; z-index: -2; transition: transform var(--dur-4) var(--ease-out); }
+.tile-deal::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgb(var(--rgb-bg) / 0.92) 0%, rgb(var(--rgb-bg) / 0.65) 55%, rgb(var(--rgb-bg) / 0.25)); }
+.tile-deal { isolation: isolate; }
+.tile-deal:hover .tile-bg { transform: scale(1.05); }
+.tile-deal .tile-label { margin-bottom: auto; }
+.deal-pct { font-size: clamp(2.5rem, 2rem + 2vw, 3.5rem); line-height: 1; color: var(--c-sale); text-shadow: 0 0 24px rgb(var(--rgb-ok) / 0.35); }
+.deal-title { font-size: var(--fs-lg); font-weight: var(--fw-bold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile-deal .price { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+
+/* ตามงบ: ลิงก์เรียงแนวตั้งเต็มความกว้าง */
+.area-c .tile-links { flex-direction: column; flex-wrap: nowrap; }
+.area-c .tile-links a { width: 100%; justify-content: space-between; border-radius: var(--r-md); }
+.area-c .tile-links a::after { content: '→'; opacity: 0.6; }
+/* แนวเกม: จำนวนขึ้นกับข้อมูล — ถ้าเยอะเกินช่องให้เลื่อนในช่องได้ (ช่องไม่ขยายจนดัน layout) */
+.area-g .tile-links { overflow-y: auto; }
+
+@media (max-width: 1024px) {
+  .grid.bento-home { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "a a" "b b" "c d" "e f" "g g"; gap: var(--sp-4); }
+  .bento-home .area-a { height: 400px; }
+  .bento-home .area-b { height: 200px; }
+  .bento-home .area-c, .bento-home .area-d { height: 230px; }
+  .bento-home .area-g { height: 220px; }
+}
+@media (max-width: 560px) {
+  .grid.bento-home { grid-template-columns: minmax(0, 1fr); grid-template-areas: "a" "b" "c" "d" "e" "f" "g"; }
+  .bento-home .area-a { height: 420px; }
+  .bento-home .area-c { height: 230px; }
+  .bento-home .area-d { height: 150px; }
+  .bento-home .area-e, .bento-home .area-f { aspect-ratio: auto; height: 440px; }
+  .bento-home .area-g { height: 240px; }
+  .tile-deal::before { background: linear-gradient(0deg, rgb(var(--rgb-bg) / 0.95) 35%, rgb(var(--rgb-bg) / 0.6)); }
+}
+
+/* ==========================================================================
+   หน้าเกม: ภาพรวม (2×2) + คะแนน วางจำหน่าย แนวเกม แพลตฟอร์ม + สเปก/การรับโค้ด (ครึ่งแถว)
+   ========================================================================== */
+.game-bento-grid { gap: var(--sp-5); margin-bottom: var(--sp-8); }
+.bento-card { padding: var(--sp-5); border-radius: var(--r-lg); }
+.bento-card.sys-req, .bento-card.delivery { grid-column: span 2; }
+.game-bento-grid > .delivery:last-child:nth-child(6) { grid-column: span 4; } /* ไม่มีสเปก → เต็มแถว */
+a.bento-card { color: inherit; text-decoration: none; }
+/* ยกขึ้นตอน hover เฉพาะช่องที่กดได้ (ช่องข้อมูลเฉย ๆ ไม่ควรทำท่าเหมือนปุ่ม) */
+.bento-card:hover { transform: none; box-shadow: none; border-color: var(--c-border); }
+a.bento-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-2); border-color: rgb(var(--rgb-accent) / 0.5); }
+a.bento-card .bento-hint { margin-top: auto; padding-top: var(--sp-3); font-size: var(--fs-sm); color: var(--c-text-2); }
+a.bento-card:hover .bento-hint { color: var(--c-accent); }
+.bento-card.delivery ul { list-style: none; padding: 0; display: grid; gap: var(--sp-2); color: var(--c-text-2); }
+.bento-card.delivery li { display: flex; gap: var(--sp-2); align-items: baseline; }
+.bento-card.delivery li::before { content: '✓'; color: var(--c-ok); font-weight: var(--fw-bold); }
+@media (max-width: 1024px) {
+  .game-bento-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bento-card.overview, .bento-card.sys-req, .bento-card.delivery, .game-bento-grid > .delivery:last-child:nth-child(6) { grid-column: span 2; grid-row: auto; }
+}
+@media (max-width: 560px) {
+  /* ช่องข้อมูลสั้น (คะแนน วันวางจำหน่าย แนวเกม แพลตฟอร์ม) เรียง 2 คอลัมน์ ช่องเนื้อหายาวเต็มแถว */
+  .game-bento-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+  .bento-card { padding: var(--sp-4); }
+  .bento-val { font-size: var(--fs-xl); }
+}
+
+/* ==========================================================================
+   โปรไฟล์: การ์ดสรุป (คำสั่งซื้อ คลังเกม รายการโปรด สถานะบัญชี) — กดแล้วไปแท็บนั้น
+   ========================================================================== */
+.profile-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6); }
+.profile-stats > * { height: 128px; }
+.stat-tile { justify-content: flex-start; gap: var(--sp-2); padding: var(--sp-4) var(--sp-5); cursor: pointer; font: inherit; text-align: left; }
+.stat-tile .stat-val { font-size: var(--fs-2xl); font-weight: var(--fw-bold); line-height: 1; }
+.stat-tile .stat-sub { font-size: var(--fs-sm); color: var(--c-text-2); }
+.stat-tile:hover { border-color: rgb(var(--rgb-accent) / 0.5); transform: translateY(-3px); }
+.stat-tile.warn .stat-val { color: var(--c-warn); font-size: var(--fs-lg); }
+.stat-tile.ok .stat-val { color: var(--c-ok); font-size: var(--fs-lg); }
+@media (max-width: 760px) { .profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); } .profile-stats > * { height: 124px; } .stat-tile { padding: var(--sp-4); } }

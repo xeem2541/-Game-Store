@@ -1,22 +1,51 @@
-import { api, cardHtml, remember, $, markReady, esc, t } from './common.js';
+import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml } from './common.js';
 import { canRender3D, prefersReducedMotion, whenIdle } from './motion.js';
 import { gsap, ScrollTrigger } from './vendor/gsap.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
 // hero อยู่ใน index.html แล้ว (แสดงผลทันทีไม่ต้องรอ API) — ที่นี่เติมแค่ลิงก์เกมแนะนำ
-const data = await api('/games/home');
+const [data, facets] = await Promise.all([api('/games/home'), api('/games/facets').catch(() => ({ genres: [], platforms: [] }))]);
 const heroGame = data.featured[0];
 if (heroGame) {
   $('#heroFeatured').innerHTML = `${t('hero.featured')} <a href="/game/${esc(heroGame.slug)}">${esc(heroGame.title)}</a>`; // บรรทัดนี้จองที่ไว้ใน HTML แล้ว
 }
 
-for (const key of ['featured', 'bestsellers', 'newest', 'onSale']) {
-  let items = data[key];
-  if (key === 'featured') items = items.slice(1, 5); // เกมแรกอยู่ใน hero แล้ว; bento มี 4 ช่อง
-  remember(items);
+// ---- bento เกมแนะนำ + ทางลัด: ช่อง a = เกมเด่น, b = ดีลลดแรงสุด, c = ตามงบ, d = แพลตฟอร์ม, e/f = เกมแนะนำ, g = แนวเกม ----
+const links = (items) => `<ul class="tile-links">${items.map(([href, label]) => `<li><a href="${esc(href)}">${esc(label)}</a></li>`).join('')}</ul>`;
+const linkTile = (area, id, title, items) => `<nav class="tile tile-links-wrap area-${area}" aria-labelledby="${id}"><h3 class="tile-label" id="${id}">${title}</h3>${links(items)}</nav>`;
+function bentoHtml() {
+  const [, big, ...more] = data.featured; // เกมแรกอยู่ใน hero แล้ว
+  const deal = data.onSale[0]; // API เรียงตามส่วนลดมากสุด
+  const gameTile = (area, g) => (g ? `<div class="area-${area}">${cardHtml(g)}</div>` : '');
+  return [
+    gameTile('a', big),
+    deal ? `<a class="tile tile-deal area-b" href="/game/${esc(deal.slug)}">
+        <img class="tile-bg" src="${esc(deal.cover)}?size=sm" alt="" loading="lazy" decoding="async" width="400" height="300">
+        <span class="tile-label">${t('home.deal')}</span>
+        <strong class="deal-pct">-${deal.discount}%</strong>
+        <span class="deal-title">${esc(deal.title)}</span>
+        <span class="price">${priceHtml(deal)}</span>
+      </a>` : '',
+    linkTile('c', 'tileBudget', t('home.budget'), [
+      ['/games.html?maxPrice=500&sort=priceAsc', t('home.budget1')],
+      ['/games.html?minPrice=500&maxPrice=1000&sort=priceAsc', t('home.budget2')],
+      ['/games.html?minPrice=1000&sort=priceAsc', t('home.budget3')],
+    ]),
+    linkTile('d', 'tilePlatforms', t('home.platforms'), facets.platforms.map((p) => [`/games.html?platform=${encodeURIComponent(p)}`, p])),
+    gameTile('e', more[0]),
+    gameTile('f', more[1]),
+    linkTile('g', 'tileGenres', t('home.genres'), facets.genres.map((g) => [`/games.html?genre=${encodeURIComponent(g)}`, genreName(g)])),
+  ].join('');
+}
+remember(data.featured.slice(1, 4));
+$('#featured').innerHTML = bentoHtml();
+$('#featured').removeAttribute('aria-busy');
+
+for (const key of ['bestsellers', 'newest', 'onSale']) {
+  remember(data[key]);
   const grid = $('#' + key);
-  grid.innerHTML = items.map(cardHtml).join('');
+  grid.innerHTML = data[key].map(cardHtml).join('');
   grid.removeAttribute('aria-busy');
 }
 markReady();
@@ -31,7 +60,7 @@ if (!prefersReducedMotion()) {
     .fromTo('.hero-points li', { y: 12, opacity: 0 }, { ...done, stagger: 0.06 }, '-=0.35');
 
   for (const grid of document.querySelectorAll('.content-wrapper .grid')) {
-    gsap.fromTo(grid.querySelectorAll('.card'), { y: 32, opacity: 0 }, {
+    gsap.fromTo(grid.querySelectorAll(':scope > .tile, .card'), { y: 32, opacity: 0 }, {
       ...done, duration: 0.6, stagger: 0.05, ease: 'power2.out',
       scrollTrigger: { trigger: grid, start: 'top 88%', once: true },
     });

@@ -47,6 +47,7 @@
 | GET | `/api/me` | ข้อมูลของฉัน |
 | PUT | `/api/me` | แก้ `{name, email, currentPassword?}` — **เปลี่ยนอีเมลต้องส่ง `currentPassword`** (`400 PASSWORD_REQUIRED` / `WRONG_PASSWORD`), ส่งแจ้งเตือนไปอีเมลเดิม, เพิกถอนเซสชันอื่น และต้องยืนยันอีเมลใหม่ |
 | POST | `/api/me/password` | เปลี่ยนรหัสผ่าน (ต้องส่งรหัสเดิม) |
+| GET | `/api/me/summary` | ตัวเลขสรุปบัญชี `{orders, pendingOrders, library, wishlist, emailVerified}` (นับอย่างเดียว ไม่ถอดรหัสโค้ด) |
 | GET | `/api/me/orders` | ประวัติสั่งซื้อ |
 | GET | `/api/me/library` | คลังเกม (โค้ดที่ซื้อแล้ว, ซ่อนบางส่วนจนกว่าจะกดแสดง) |
 

@@ -149,3 +149,23 @@ test('ประวัติคำสั่งซื้อ: ชื่อเกม
   assert.ok(expirePending() >= 1);
   assert.equal(db.prepare('SELECT status FROM orders WHERE id = ?').get(theirs.id).status, 'cancelled');
 });
+
+test('สรุปบัญชี /me/summary: นับคำสั่งซื้อ/คลังเกม/รายการโปรดถูกต้อง และไม่บันทึก audit การดูโค้ด', async () => {
+  const c = await makeUser(srv.url);
+  const empty = (await c.get('/api/me/summary')).data;
+  assert.deepEqual(empty, { orders: 0, pendingOrders: 0, library: 0, wishlist: 0, emailVerified: true });
+
+  await c.put('/api/cart', { slugs: ['tower-defense-legends', 'chef-rush'] });
+  const paid = (await c.post('/api/orders', { idempotencyKey: key() })).data.order;
+  await c.post(`/api/orders/${paid.id}/dev-pay`, {});
+  await c.put('/api/cart', { slugs: ['puzzle-palace'] });
+  await c.post('/api/orders', { idempotencyKey: key() });
+  const gid = db.prepare("SELECT id FROM games WHERE slug = 'sky-kingdoms'").get().id;
+  await c.post('/api/wishlist', { gameId: gid });
+
+  const s = (await c.get('/api/me/summary')).data;
+  assert.deepEqual(s, { orders: 2, pendingOrders: 1, library: 2, wishlist: 1, emailVerified: true });
+  const uid = db.prepare('SELECT user_id FROM orders WHERE id = ?').get(paid.id).user_id;
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'key.view' AND user_id = ?").get(uid).n, 0);
+  assert.equal((await new Client(srv.url).get('/api/me/summary')).status, 401);
+});

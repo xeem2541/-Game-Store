@@ -71,6 +71,19 @@ meRouter.post('/password', async (req, res) => {
   res.json({ ok: true });
 });
 
+// ตัวเลขสรุปของบัญชี (การ์ดบนหน้าโปรไฟล์) — นับอย่างเดียว ไม่ถอดรหัสโค้ดเกม จึงไม่บันทึก audit "key.view"
+meRouter.get('/summary', (req, res) => {
+  const id = req.user.id;
+  res.json({
+    orders: db.prepare('SELECT COUNT(*) AS n FROM orders WHERE user_id = ?').get(id).n,
+    pendingOrders: db.prepare("SELECT COUNT(*) AS n FROM orders WHERE user_id = ? AND status = 'pending' AND expires_at > ?").get(id, Date.now()).n,
+    library: db.prepare(`SELECT COUNT(DISTINCT oi.game_id) AS n FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id WHERE o.user_id = ? AND o.status = 'paid'`).get(id).n,
+    wishlist: db.prepare('SELECT COUNT(*) AS n FROM wishlist w JOIN games g ON g.id = w.game_id WHERE w.user_id = ? AND g.active = 1').get(id).n,
+    emailVerified: !!req.user.email_verified,
+  });
+});
+
 // ประวัติคำสั่งซื้อ (แบ่งหน้า ใหม่สุดก่อน)
 meRouter.get('/orders', (req, res) => {
   expirePending(Date.now(), { userId: req.user.id });
