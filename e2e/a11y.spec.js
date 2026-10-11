@@ -91,7 +91,9 @@ test('ซื้อยังไง 3 ขั้น: ภาพประกอบเ
     // เลื่อนซ้ำจนกว่าจะตรง: รายการเกมด้านบนอาจโหลดเสร็จทีหลังแล้วดันตำแหน่งลง (Safari ไม่ยึดตำแหน่งการเลื่อนไว้)
     await expect(async () => {
       await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' }));
-      await expect(visual).toHaveAttribute('data-step', n, { timeout: 1000 });
+      const state = await page.evaluate(() => JSON.stringify({ y: scrollY, ih: innerHeight, H: document.documentElement.scrollHeight,
+        steps: [...document.querySelectorAll('.howto-step')].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }) }));
+      await expect(visual, `ขั้น ${n}: ${state}`).toHaveAttribute('data-step', n, { timeout: 1000 });
     }).toPass({ timeout: 10000 });
     await expect(page.locator(`.howto-step[data-step="${n}"]`)).toHaveClass(/is-active/);
   }

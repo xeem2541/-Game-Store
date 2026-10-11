@@ -70,6 +70,8 @@ export async function adminLogin(page, { email, password: pw }) {
   const step = await Promise.race([
     page.waitForSelector('#mfaForm:not([hidden])').then(() => 'verify'),
     page.waitForURL('**/admin/').then(() => 'app'),
+    // ล็อกอินไม่ผ่าน (ข้อความผิดพลาดขึ้น) → ล้มทันทีพร้อมข้อความ แทนที่จะรอจนหมดเวลา
+    page.waitForSelector('#msg:not(:empty)').then(async () => { throw new Error(`ล็อกอินหลังบ้านไม่ผ่าน: ${await page.textContent('#msg')}`); }),
   ]);
   if (step === 'verify') {
     const codes = recoveryCodes.get(email);
