@@ -1,0 +1,138 @@
+/* ==========================================================================
+   เอฟเฟกต์ (UI เฟส 2): Glassmorphism + Micro-interactions
+   - ใช้ token จาก tokens.css เท่านั้น
+   - ระยะเวลาทั้งหมดใช้ --dur-* ซึ่งเป็น 0 เมื่อผู้ใช้ตั้ง prefers-reduced-motion → แอนิเมชันหายไปเอง
+   - ห้าม transition: all (ไปหน่วงกรอบ focus และค่าที่ JS/GSAP ตั้ง)
+   - การ์ดเกมของหน้าร้านอยู่ใน .grid เสมอ (หลังบ้านใช้ .card ชื่อเดียวกันเป็นกล่องธรรมดา จึงต้องจำกัดที่ .grid .card)
+   ========================================================================== */
+
+/* ---- พื้นหลังบรรยากาศ: แสงสีจาง ๆ ที่ตรึงไว้ ให้แผงกระจกมีอะไรให้ "เบลอ" (ภาพนิ่ง ไม่กินแรงตอนเลื่อน) ---- */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(45% 40% at 88% 0%, rgb(var(--rgb-focus) / 0.10), transparent 70%),
+    radial-gradient(40% 35% at 0% 35%, rgb(var(--rgb-accent) / 0.06), transparent 70%),
+    radial-gradient(45% 40% at 60% 100%, rgb(var(--rgb-ok) / 0.035), transparent 70%);
+}
+
+/* ==========================================================================
+   Glassmorphism — ใช้เฉพาะชิ้นที่ลอยอยู่เหนือเนื้อหา (blur จึงมีผลจริง)
+   ========================================================================== */
+.topbar, .side, .filters, .sticky-cta,
+.cart, .usermenu .menu, .suggest, .toast, .modal {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-2), var(--glass-highlight);
+}
+/* ลอยทับเนื้อหาโดยตรง → ทึบกว่าและเบลอแรงกว่า ข้อความอ่านง่าย */
+.cart, .usermenu .menu, .suggest, .toast, .modal {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(140%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(140%);
+  box-shadow: var(--shadow-3), var(--glass-highlight);
+}
+.topbar.scrolled { background: var(--glass-bg-strong); }
+.sticky-cta { border-width: 1px 0 0; border-radius: 0; }
+/* เบราว์เซอร์ที่ไม่รองรับ backdrop-filter: ใช้พื้นทึบแทน (ไม่โปร่งจนอ่านไม่ออก) */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .topbar, .side, .filters, .sticky-cta, .cart, .usermenu .menu, .suggest, .toast, .modal { background: var(--c-surface); }
+}
+/* ชิ้นที่วางบนพื้นเรียบ ไม่มีอะไรด้านหลังให้เบลอ → ไม่ใช้ backdrop-filter (ประหยัด GPU โดยหน้าตาเหมือนเดิม) */
+.grid .card, .bento-card, .auth-box, .btn { -webkit-backdrop-filter: none; backdrop-filter: none; }
+@media (max-width: 640px) { .scrim { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgb(var(--rgb-black) / 0.7); } }
+
+/* ==========================================================================
+   Micro-interactions
+   ========================================================================== */
+
+/* ---- ปุ่ม: กดยุบเล็กน้อย, ปุ่มหลักมีแสงวิ่งผ่านตอน hover ---- */
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.btn:active:not(:disabled) { transform: translateY(1px) scale(0.98); }
+.btn.primary::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgb(var(--rgb-white) / 0.28) 50%, transparent 70%);
+  transform: translateX(-120%);
+}
+.btn.primary:hover::after { transform: translateX(120%); transition: transform var(--dur-4) var(--ease-out); }
+
+/* กำลังทำงาน (aria-busy="true"): ซ่อนข้อความ แสดงวงหมุนตรงกลาง — ขนาดปุ่มไม่เปลี่ยน ข้อความยังอยู่ให้ screen reader */
+.btn[aria-busy="true"] { color: transparent !important; pointer-events: none; opacity: 1; } /* ไม่จางแบบปุ่ม disabled */
+.btn[aria-busy="true"]::before {
+  content: ''; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--c-text); border-right-color: transparent; animation: spin 0.8s linear infinite;
+}
+.btn.primary[aria-busy="true"]::before { border-color: var(--c-on-accent); border-right-color: transparent; }
+
+/* สำเร็จชั่วครู่ (เพิ่มลงตะกร้า / คัดลอกโค้ด) */
+.btn.is-done { color: var(--c-ok); border-color: rgb(var(--rgb-ok) / 0.5); background: rgb(var(--rgb-ok) / 0.12); }
+.btn.is-done:hover:not(:disabled) { background: rgb(var(--rgb-ok) / 0.18); }
+
+/* ---- ตัวเลขตะกร้าเด้งเมื่อมีของเพิ่ม, หัวใจเด้งเมื่อกดชอบ ---- */
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.4); } 100% { transform: scale(1); } }
+#cartCount.bump { animation: bump var(--dur-3) var(--ease-spring); }
+.heart.pop { animation: bump var(--dur-3) var(--ease-spring); }
+
+/* ---- การ์ดเกม: เอียงตามเมาส์ + แสงสะท้อนตามตำแหน่ง (ค่า --rx/--ry/--mx/--my มาจาก common.js เฉพาะอุปกรณ์ที่มีเมาส์) ---- */
+.grid .card { --rx: 0deg; --ry: 0deg; transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)); }
+.grid .card:hover { transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(-6px); }
+.grid .card:active { transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(-2px) scale(0.99); }
+.grid .card::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgb(var(--rgb-white) / 0.09), transparent 45%);
+  opacity: 0; transition: opacity var(--dur-3) var(--ease-out);
+}
+.grid .card:hover::after { opacity: 1; }
+.grid .card:focus-within { border-color: rgb(var(--rgb-focus) / 0.6); }
+.grid .card.sk::after { display: none; }
+
+/* ---- ลิงก์ข้อความ: เส้นใต้ค่อย ๆ ยืดออก ---- */
+.nav a, .foot-links a, .alt a:not(.btn), .hero-featured a, .order-row .grow a {
+  text-decoration: none;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+  transition: background-size var(--dur-3) var(--ease-out), color var(--dur-2);
+}
+.nav a:hover, .foot-links a:hover, .alt a:not(.btn):hover, .hero-featured a:hover, .order-row .grow a:hover { background-size: 100% 1px; }
+.hero-featured a { background-size: 100% 1px; } /* ลิงก์กลางประโยคต้องเห็นว่าเป็นลิงก์เสมอ */
+
+/* ---- ช่องกรอก: บอกสถานะทันทีหลังผู้ใช้แก้ไข (ไม่แดงตั้งแต่ยังไม่ได้พิมพ์) ---- */
+input:user-invalid, textarea:user-invalid, select:user-invalid { border-color: rgb(var(--rgb-err) / 0.7); }
+input:user-invalid:focus, textarea:user-invalid:focus { box-shadow: 0 0 0 3px rgb(var(--rgb-err) / 0.2); }
+
+/* ---- เนื้อหาที่โหลดเข้ามา: ค่อย ๆ ปรากฏแทน skeleton (หน้าแรกใช้ GSAP แยก จึงไม่รวม) ---- */
+@keyframes fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+#grid > .card:not(.sk), .panel .grid > .card, .order-list > *, #revList > .review {
+  animation: fade-up var(--dur-3) var(--ease-out) backwards;
+}
+#grid > :nth-child(2), .panel .grid > :nth-child(2), .order-list > :nth-child(2) { animation-delay: calc(var(--dur-1) * 0.25); }
+#grid > :nth-child(3), .panel .grid > :nth-child(3), .order-list > :nth-child(3) { animation-delay: calc(var(--dur-1) * 0.5); }
+#grid > :nth-child(4), .panel .grid > :nth-child(4), .order-list > :nth-child(4) { animation-delay: calc(var(--dur-1) * 0.75); }
+#grid > :nth-child(n+5), .panel .grid > :nth-child(n+5), .order-list > :nth-child(n+5) { animation-delay: var(--dur-1); }
+
+/* ---- drawer ตะกร้า ---- */
+.cart:not([hidden]) .cart-item { animation: fade-up var(--dur-3) var(--ease-out) backwards; }
+.cart:not([hidden]) .cart-item:nth-child(2) { animation-delay: calc(var(--dur-1) * 0.3); }
+.cart:not([hidden]) .cart-item:nth-child(n+3) { animation-delay: calc(var(--dur-1) * 0.6); }
+.cart-head .close { transition: transform var(--dur-3) var(--ease-out), border-color var(--dur-2), color var(--dur-2); }
+.cart-head .close:hover { transform: rotate(90deg); }
+.rm { transition: color var(--dur-2), border-color var(--dur-2), background-color var(--dur-2), transform var(--dur-2) var(--ease-out); }
+.rm:active { transform: scale(0.92); }
+
+/* ---- toast: ซ่อนสนิทเมื่อไม่แสดง (เดิมยังโผล่ขอบล่าง), เส้นสีบอกประเภท ---- */
+.toast { opacity: 0; visibility: hidden; border-left: 3px solid var(--c-accent); text-transform: none; transition: transform var(--dur-3) var(--ease-spring), opacity var(--dur-2), visibility 0s var(--dur-3); }
+.toast.show { opacity: 1; visibility: visible; transition: transform var(--dur-3) var(--ease-spring), opacity var(--dur-2), visibility 0s; }
+
+/* ---- สถานะรอชำระ: จุดกะพริบเบา ๆ (ปิดเมื่อขอลดการเคลื่อนไหว) ---- */
+.status.pending::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: currentColor; vertical-align: 1px; animation: pulse-dot 1.6s ease-in-out infinite; }
+@keyframes pulse-dot { 50% { opacity: 0.25; } }
+
+/* ---- ชิป/แท็บ ---- */
+.chip:active { transform: scale(0.97); }
+
+/* animation ที่ไม่ได้ใช้ --dur-* (วนซ้ำ) ต้องปิดเองเมื่อขอลดการเคลื่อนไหว — วงหมุนสถานะช้าลงแทนการปิด */
+@media (prefers-reduced-motion: reduce) {
+  .status.pending::before { animation: none; }
+  .btn[aria-busy="true"]::before, .spinner { animation-duration: 2s; }
+  .grid .card, .grid .card:hover, .grid .card:active { transform: none; }
+}

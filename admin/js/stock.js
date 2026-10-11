@@ -92,6 +92,7 @@ async function renderGame(el, gid, alive) {
     const out = $('#importResult');
     const btn = e.target.querySelector('button');
     btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true'); // นำเข้าไฟล์ใหญ่ใช้เวลา — แสดงวงหมุนที่ปุ่ม
     try {
       const r = await api(`/stock/${gid}/import`, { method: 'POST', body: new FormData(e.target) });
       out.innerHTML = `<div class="alert"><div><strong>นำเข้าเสร็จสิ้น</strong><div>ทั้งหมด ${r.rows} แถว • <b>เพิ่มสำเร็จ ${r.added}</b> • ซ้ำ ${r.duplicates} • รูปแบบผิด ${r.invalid}</div>
@@ -99,7 +100,7 @@ async function renderGame(el, gid, alive) {
       e.target.reset();
       load();
       refreshStats();
-    } catch (err) { out.innerHTML = `<div class="state error">${esc(err.message)}</div>`; } finally { btn.disabled = false; }
+    } catch (err) { out.innerHTML = `<div class="state error">${esc(err.message)}</div>`; } finally { btn.disabled = false; btn.removeAttribute('aria-busy'); }
   });
   $('#thrForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();

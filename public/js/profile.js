@@ -1,5 +1,5 @@
 import { renderKeys } from './keys-ui.js';
-import { markReady, api, $, esc, t, user, loginUrl, cardHtml, remember, toast, money, fmtDateTime } from './common.js';
+import { markReady, api, $, esc, t, user, loginUrl, cardHtml, remember, toast, money, fmtDateTime, emptyArt } from './common.js';
 
 if (!user) { location.replace(loginUrl()); throw new Error('redirect'); }
 
@@ -21,14 +21,23 @@ const views = {
         <label><span>${t('auth.name')}</span><input name="name" required maxlength="80" value="${esc(user.name)}"></label>
         <label><span>${t('auth.email')}</span><input name="email" type="email" required value="${esc(user.email)}"></label>
         <small>${t('profile.emailChangeNote')}</small>
+        <label id="curPwRow" hidden><span>${t('profile.currentPassword')}</span><input name="cur" type="password" autocomplete="current-password"></label>
         <p class="msg" id="msg" role="alert"></p>
         <button class="btn primary" type="submit">${t('common.save')}</button>
       </form>`;
+    // เปลี่ยนอีเมลต้องยืนยันด้วยรหัสผ่านปัจจุบัน → แสดงช่องรหัสผ่านเมื่ออีเมลต่างจากเดิม
+    const emailChanged = () => $('#infoForm').email.value.trim().toLowerCase() !== user.email.toLowerCase();
+    $('#infoForm').email.oninput = () => {
+      $('#curPwRow').hidden = !emailChanged();
+      $('#infoForm').cur.required = emailChanged();
+    };
     $('#infoForm').onsubmit = async (e) => {
       e.preventDefault();
       const f = e.target;
       try {
-        await api('/me', { method: 'PUT', body: { name: f.name.value, email: f.email.value } });
+        const body = { name: f.name.value, email: f.email.value };
+        if (emailChanged()) body.currentPassword = f.cur.value;
+        await api('/me', { method: 'PUT', body });
         $('#msg').classList.add('ok');
         $('#msg').textContent = t('profile.saved');
         setTimeout(() => location.reload(), 600);
@@ -43,7 +52,14 @@ const views = {
         <small>${t('auth.passwordHint')}</small>
         <p class="msg" id="msg" role="alert"></p>
         <button class="btn primary" type="submit">${t('common.save')}</button>
-      </form>`;
+      </form>
+      <div class="auth-form">
+        <small>${t('profile.logoutAllNote')}</small>
+        <button class="btn danger" id="logoutAllBtn" type="button">${t('profile.logoutAll')}</button>
+      </div>`;
+    $('#logoutAllBtn').onclick = async () => {
+      try { await api('/auth/logout-all', { method: 'POST', body: {} }); location.href = '/login'; } catch (err) { toast(err.message); }
+    };
     $('#pwForm').onsubmit = async (e) => {
       e.preventDefault();
       const f = e.target;
@@ -59,7 +75,7 @@ const views = {
   },
   async orders(page = 1) {
     const data = await api('/me/orders?page=' + page);
-    if (!data.items.length) { panel.innerHTML = `<p class="empty">${t('profile.noOrders')}</p>`; return; }
+    if (!data.items.length) { panel.innerHTML = `<div class="empty">${emptyArt('empty-cart')}<p>${t('profile.noOrders')}</p></div>`; return; }
     panel.innerHTML = `
       <div class="order-list">${data.items.map((o) => `
         <div class="order-row">
@@ -89,7 +105,7 @@ const views = {
   },
   async library() {
     const { items } = await api('/me/library');
-    if (!items.length) { panel.innerHTML = `<p class="empty">${t('profile.noLibrary')}</p>`; return; }
+    if (!items.length) { panel.innerHTML = `<div class="empty">${emptyArt('empty-library')}<p>${t('profile.noLibrary')}</p></div>`; return; }
     panel.innerHTML = `<div class="order-list">${items.map((g, i) => `
       <div class="order-row lib-row">
         <img class="thumb" src="${esc(g.cover)}" alt="">
@@ -102,7 +118,7 @@ const views = {
   async wishlist() {
     const { items } = await api('/wishlist');
     remember(items);
-    panel.innerHTML = items.length ? `<div class="grid">${items.map(cardHtml).join('')}</div>` : `<p class="empty">${t('profile.noWishlist')}</p>`;
+    panel.innerHTML = items.length ? `<div class="grid">${items.map(cardHtml).join('')}</div>` : `<div class="empty">${emptyArt('empty-wishlist')}<p>${t('profile.noWishlist')}</p></div>`;
   },
 };
 
@@ -114,5 +130,24 @@ async function show(name) {
   try { await views[name](); } catch (e) { panel.innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
 }
 
-tabs.forEach((b) => b.addEventListener('click', () => { history.replaceState(null, '', '#' + b.dataset.tab); show(b.dataset.tab); }));
+const goTo = (name) => { history.replaceState(null, '', '#' + name); show(name); };
+tabs.forEach((b) => b.addEventListener('click', () => goTo(b.dataset.tab)));
+
+// การ์ดสรุปบัญชี (bento) — กดแล้วไปแท็บที่เกี่ยวข้อง
+async function renderStats() {
+  const box = $('#stats');
+  const s = await api('/me/summary').catch(() => null);
+  if (!s) { box.hidden = true; return; }
+  const tile = (tab, label, val, sub = '', cls = '') => `<button class="tile stat-tile ${cls}" type="button" data-goto="${tab}">
+      <span class="tile-label">${label}</span><span class="stat-val">${val}</span>${sub ? `<span class="stat-sub">${sub}</span>` : ''}</button>`;
+  box.innerHTML = [
+    tile('orders', t('profile.stat.orders'), s.orders, s.pendingOrders ? t('profile.stat.pending', { n: s.pendingOrders }) : ''),
+    tile('library', t('profile.stat.library'), s.library),
+    tile('wishlist', t('profile.stat.wishlist'), s.wishlist),
+    tile('info', t('profile.stat.account'), s.emailVerified ? `✓ ${t('profile.stat.verified')}` : t('profile.stat.unverified'), '', s.emailVerified ? 'ok' : 'warn'),
+  ].join('');
+  box.removeAttribute('aria-busy');
+  box.onclick = (e) => { const b = e.target.closest('[data-goto]'); if (b) goTo(b.dataset.goto); };
+}
+renderStats();
 show(location.hash.slice(1)).finally(markReady);

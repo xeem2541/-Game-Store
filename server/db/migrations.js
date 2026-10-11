@@ -49,6 +49,43 @@ export const MIGRATIONS = [
       }
     },
   },
+  {
+    id: '007_users_token_version',
+    // ฝังใน JWT ทุกตัว: เพิ่มค่านี้ = เพิกถอนเซสชันทั้งหมดของผู้ใช้ (เปลี่ยน/รีเซ็ตรหัสผ่าน, ออกจากระบบทุกอุปกรณ์)
+    up: (db) => { addColumn(db, 'users', 'token_version', 'INTEGER NOT NULL DEFAULT 0'); },
+  },
+  {
+    id: '008_games_review_stats',
+    // สรุปรีวิวเก็บในตาราง games (trigger ใน views.sql อัปเดตทุกครั้งที่รีวิวเปลี่ยน) แทน subquery ต่อแถวใน games_v
+    // rating_avg = NULL เมื่อยังไม่มีรีวิว (games_v จะใช้คะแนนตั้งต้น games.rating)
+    up: (db) => {
+      addColumn(db, 'games', 'review_count', 'INTEGER NOT NULL DEFAULT 0');
+      addColumn(db, 'games', 'rating_avg', 'REAL');
+      const hasReviews = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'reviews'").get();
+      if (hasReviews) {
+        db.exec(`UPDATE games SET
+          review_count = (SELECT COUNT(*) FROM reviews r WHERE r.game_id = games.id),
+          rating_avg = (SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.game_id = games.id)`);
+      }
+    },
+  },
+  {
+    id: '009_users_totp',
+    // 2FA ของหลังบ้าน: secret เข้ารหัสด้วย KEY_ENCRYPTION_SECRET (เหมือนโค้ดเกม), totp_last_step กันใช้รหัสเดิมซ้ำ
+    up: (db) => {
+      addColumn(db, 'users', 'totp_secret_enc', 'TEXT');
+      addColumn(db, 'users', 'totp_enabled', 'INTEGER NOT NULL DEFAULT 0');
+      addColumn(db, 'users', 'totp_last_step', 'INTEGER NOT NULL DEFAULT 0');
+    },
+  },
+  {
+    id: '010_payments_amount_refunded',
+    // ยอดที่ Stripe คืนไปแล้ว (สะสม) — ใช้บันทึกการคืนเงินบางส่วนจาก Stripe Dashboard ที่ไม่เปลี่ยนสถานะออเดอร์
+    up: (db) => {
+      const hasPayments = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'payments'").get();
+      if (hasPayments) addColumn(db, 'payments', 'amount_refunded', 'INTEGER NOT NULL DEFAULT 0');
+    },
+  },
 ];
 
 export function migrate(db) {

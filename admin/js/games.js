@@ -1,4 +1,4 @@
-import { $, api, badge, bahtInput, confirmBox, dt, empty, errorState, esc, formValues, hasPerm, hashParams, loading, money, pager, qs, setHashQuery, table, toSatang, toast } from './core.js';
+import { $, api, badge, bahtInput, confirmBox, dt, errorState, esc, formValues, hasPerm, hashParams, loading, money, pager, qs, setHashQuery, table, toSatang, toast } from './core.js';
 
 export async function render(el, rest, alive) {
   if (rest[0] === 'new') return renderForm(el, null, alive);
@@ -33,7 +33,7 @@ async function renderList(el, alive) {
         { h: '', f: (g) => `<img class="thumb" src="${g.coverImage ? `/uploads/games/${esc(g.coverImage)}` : `/api/games/${esc(g.slug)}/cover.svg`}" alt="" loading="lazy">` },
         { h: 'เกม', f: (g) => `<a href="#/games/${g.id}"><strong>${esc(g.title)}</strong></a><div class="muted">${esc(g.slug)}</div>` },
         { h: 'หมวด / แพลตฟอร์ม', f: (g) => `${esc(g.genre)} • ${esc(g.platform)}` },
-        { h: 'ราคา', cls: 'num', f: (g) => (g.discount ? `<s class="muted">${money(g.price)}</s> ${money(Math.round(g.price * (100 - g.discount) / 100))} <span class="badge paid">-${g.discount}%</span>` : money(g.price)) },
+        { h: 'ราคา', cls: 'num', f: (g) => (g.discount ? `<s class="muted">${money(g.price)}</s> ${money(g.finalPrice)} <span class="badge paid">-${g.discount}%</span>` : money(g.price)) },
         { h: 'โค้ดว่าง', cls: 'num', f: (g) => (g.available < g.lowStockThreshold ? `<span class="badge low">${g.available}</span>` : g.available) },
         { h: 'สถานะ', f: (g) => badge(g.active ? 'active' : 'hidden') },
       ], d.items) + pager(d);

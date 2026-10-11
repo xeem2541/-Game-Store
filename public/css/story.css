@@ -1,0 +1,118 @@
+/* ==========================================================================
+   เล่าเรื่องตามการเลื่อน (UI เฟส 4): Kinetic Typography + Scrollytelling + Parallax
+   - ทุกอย่างขยับด้วย transform/opacity เท่านั้น (ไม่กระทบ layout → ไม่มี CLS และลื่นบนมือถือ)
+   - parallax ใช้ CSS scroll-driven animation (ไม่มี JS) — เบราว์เซอร์ที่ไม่รองรับหรือขอลดการเคลื่อนไหวจะเห็นหน้านิ่งตามปกติ
+   - ห้ามเอฟเฟกต์บังปุ่มซื้อ/ค้นหา/ตะกร้า: ภาพที่ขยับอยู่หลังเนื้อหา (z-index ต่ำกว่า) และ pointer-events: none
+   ========================================================================== */
+
+/* ---- Kinetic typography (คำที่แยกโดย kinetic.js) ---- */
+.kt-word { display: inline-block; }
+/* ไล่สีบนคำที่เน้น — padding บน/ล่างขยายพื้นที่ระบายสีให้ครอบสระบน/วรรณยุกต์ไทยที่ล้นกรอบบรรทัด (ไม่งั้นจะมองไม่เห็น) */
+.kt-accent {
+  padding-block: 0.14em; margin-block: -0.14em;
+  background: linear-gradient(90deg, var(--c-accent), var(--c-warn)); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* ==========================================================================
+   ซื้อยังไง 3 ขั้น (scrollytelling)
+   desktop: ภาพด้านซ้ายติดอยู่กับที่ (position: sticky ไม่ต้อง pin ด้วย JS) และเปลี่ยนตามขั้นที่เลื่อนถึง
+   มือถือ: การ์ดเรียงต่อกัน ไม่มีภาพประกอบ (ไม่ต้องเลื่อนผ่านพื้นที่ยาว ๆ บนจอเล็ก)
+   ========================================================================== */
+.howto-steps { list-style: none; padding: 0; counter-reset: none; }
+.howto-step { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-3); }
+.howto-num {
+  font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: 0.1em;
+  padding: var(--sp-1) var(--sp-3); border: 1px solid rgb(var(--rgb-accent) / 0.5); border-radius: var(--r-pill); color: var(--c-accent); background: rgb(var(--rgb-accent) / 0.08);
+}
+.howto-step h3 { font-size: var(--fs-xl); line-height: var(--lh-head); }
+.howto-step p { color: var(--c-text-2); font-size: var(--fs-md); max-width: 32em; }
+.howto-step .btn { margin-top: var(--sp-2); }
+.howto-stage { display: none; }
+
+@media (min-width: 901px) {
+  .howto-layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--sp-8); }
+  .howto-stage { display: flex; flex-direction: column; gap: var(--sp-4); position: sticky; top: 140px; align-self: start; height: min(56vh, 440px); }
+  /* แต่ละขั้นสูงพอให้เลื่อนผ่านทีละขั้น ภาพจึงอยู่กับที่ระหว่างอ่าน */
+  .howto-step { min-height: 52vh; justify-content: center; padding-left: var(--sp-6); border-left: 2px solid var(--c-border); transition: border-color var(--dur-3) var(--ease-out); }
+  .howto-step h3, .howto-step p { transition: color var(--dur-3) var(--ease-out); }
+  /* ขั้นที่ยังไม่ถึง: ตัวอักษรสีรอง (ยังผ่าน contrast AA ไม่ใช้ opacity จาง) */
+  .howto-step:not(.is-active) h3 { color: var(--c-text-2); }
+  .howto-step.is-active { border-left-color: var(--c-accent); }
+}
+@media (max-width: 900px) {
+  .howto-steps { display: grid; gap: var(--sp-4); }
+  .howto-step { padding: var(--sp-5); border: var(--border-thin); border-radius: var(--r-lg); background: var(--surface-1); }
+  .howto-step .btn { align-self: stretch; }
+}
+
+/* ---- ภาพประกอบ: 3 ฉากซ้อนกัน แสดงฉากตาม data-step ---- */
+.howto-visual {
+  position: relative; flex: 1; overflow: hidden; border: 1px solid var(--glass-border); border-radius: var(--r-xl);
+  background: radial-gradient(80% 70% at 30% 20%, rgb(var(--rgb-focus) / 0.18), transparent 70%), radial-gradient(60% 60% at 90% 100%, rgb(var(--rgb-accent) / 0.14), transparent 70%), var(--surface-1);
+  box-shadow: var(--shadow-2), var(--glass-highlight);
+}
+.hv {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: var(--sp-6);
+  opacity: 0; transform: translateY(24px) scale(0.97); visibility: hidden;
+  transition: opacity var(--dur-4) var(--ease-out), transform var(--dur-4) var(--ease-out), visibility 0s var(--dur-4);
+}
+.howto-visual[data-step="1"] .hv-1, .howto-visual[data-step="2"] .hv-2, .howto-visual[data-step="3"] .hv-3 {
+  opacity: 1; transform: none; visibility: visible; transition: opacity var(--dur-4) var(--ease-out), transform var(--dur-4) var(--ease-out), visibility 0s;
+}
+.howto-progress { height: 4px; border-radius: var(--r-pill); background: var(--c-border); overflow: hidden; }
+.howto-progress span { display: block; height: 100%; background: linear-gradient(90deg, var(--c-accent), var(--c-warn)); transform-origin: left; transform: scaleX(var(--p, 0.33)); transition: transform var(--dur-3) var(--ease-out); }
+.howto-progress.scrub span { transition: none; } /* ตอน GSAP คุมตามการเลื่อน ไม่ต้องหน่วง */
+
+/* ฉาก 1: ปกเกม 3 ใบ ใบกลางถูกเลือก + ตะกร้า */
+.hv-1 { grid-template-rows: 1fr auto; gap: var(--sp-5); }
+.hv-covers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); width: 100%; max-width: 420px; align-items: center; }
+.hv-covers span { aspect-ratio: 4 / 3; border-radius: var(--r-md); border: var(--border-thin); background: var(--c-surface-2) center / cover no-repeat; box-shadow: var(--shadow-1); }
+.hv-covers span:nth-child(2) { transform: scale(1.15); border-color: var(--c-accent); box-shadow: var(--shadow-2), var(--glow-accent); }
+.hv-cart { display: inline-flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-radius: var(--r-pill); border: 1px solid var(--glass-border); background: var(--glass-bg-strong); font-weight: var(--fw-bold); }
+.hv-cart b { display: grid; place-items: center; min-width: 24px; height: 24px; border-radius: var(--r-pill); background: var(--c-accent); color: var(--c-on-accent); font-size: var(--fs-xs); }
+.howto-visual[data-step="1"] .hv-cart b { animation: bump var(--dur-4) var(--ease-spring) var(--dur-3) backwards; }
+
+/* ฉาก 2: หน้าชำระเงิน */
+.hv-pay { display: grid; gap: var(--sp-4); justify-items: center; width: min(100%, 300px); padding: var(--sp-5); border-radius: var(--r-lg); border: 1px solid var(--glass-border); background: var(--glass-bg-strong); box-shadow: var(--shadow-2); }
+.hv-methods { display: flex; gap: var(--sp-2); }
+.hv-methods span { padding: var(--sp-1) var(--sp-3); border-radius: var(--r-pill); border: var(--border-thin); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-2); }
+.hv-methods .on { border-color: var(--c-accent); color: var(--c-accent); }
+/* QR ตกแต่ง (ไม่ใช่ QR จริง): ลายตารางจาก gradient ไม่ต้องโหลดภาพ */
+.hv-qr {
+  width: 120px; aspect-ratio: 1; border-radius: var(--r-md); border: 8px solid var(--c-text);
+  background: repeating-conic-gradient(var(--c-text) 0 25%, var(--c-bg) 0 50%) 0 0 / 20px 20px, var(--c-bg);
+}
+.hv-amount { display: flex; justify-content: space-between; width: 100%; color: var(--c-text-2); font-size: var(--fs-sm); }
+.hv-amount b { color: var(--c-text); font-size: var(--fs-lg); }
+
+/* ฉาก 3: โค้ดเกม */
+.hv-key { display: grid; gap: var(--sp-3); justify-items: center; padding: var(--sp-6) var(--sp-5); border-radius: var(--r-lg); border: 1px dashed rgb(var(--rgb-ok) / 0.5); background: rgb(var(--rgb-ok) / 0.05); text-align: center; }
+.hv-key-label { color: var(--c-text-2); font-size: var(--fs-sm); }
+.hv-key code { font-family: var(--font-mono); font-size: clamp(1rem, 0.6rem + 1.2vw, 1.5rem); font-weight: var(--fw-bold); letter-spacing: 0.08em; color: var(--c-text); }
+.hv-key-ok { color: var(--c-ok); font-weight: var(--fw-bold); font-size: var(--fs-sm); }
+.howto-visual[data-step="3"] .hv-key-ok { animation: bump var(--dur-4) var(--ease-spring) var(--dur-3) backwards; }
+
+/* ==========================================================================
+   Parallax + ค่อย ๆ ปรากฏตามการเลื่อน — CSS scroll-driven animation
+   ========================================================================== */
+@keyframes px-slow { to { transform: translateY(28%); } }      /* ฉากหลังเลื่อนช้ากว่าเนื้อหา → ดูลึก */
+@keyframes px-lift { to { transform: translateY(-56px); } }    /* ชิ้นด้านหน้าเลื่อนเร็วกว่าเล็กน้อย */
+@keyframes reveal-in { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* หน้าแรก: ฉาก 3D/ภาพพื้นหลังของ hero เลื่อนช้ากว่า ส่วนข้อความเลื่อนตามปกติ (ปุ่มยังกดได้ตลอด ไม่มีอะไรทับ) */
+    .hero-bg { animation: px-slow linear both; animation-timeline: scroll(root); animation-range: 0 100vh; }
+    /* หน้าเกม: ภาพปกลอยขึ้นเร็วกว่าเนื้อหา ฉากหลังเบลอเลื่อนช้ากว่า */
+    .detail-cover-wrap { animation: px-lift linear both; animation-timeline: scroll(root); animation-range: 0 80vh; }
+    .game-backdrop { animation: px-slow linear both; animation-timeline: scroll(root); animation-range: 0 100vh; }
+    /* ส่วนที่อยู่ใต้จอค่อย ๆ ปรากฏตอนเลื่อนถึง (ส่วนที่เห็นตั้งแต่แรกแสดงเต็มทันที) */
+    .reveal-scroll { animation: reveal-in linear both; animation-timeline: view(); animation-range: entry 0% entry 70%; }
+  }
+}
+
+/* สำรองเมื่อไม่รองรับ scroll-driven animation (scroll-fx.js ใส่ class .scroll-fx ที่ <html> หลังแสดงส่วนที่อยู่ในจอแล้ว) */
+@media (prefers-reduced-motion: no-preference) {
+  .scroll-fx .reveal-scroll { opacity: 0; transform: translateY(32px); transition: opacity var(--dur-4) var(--ease-out), transform var(--dur-4) var(--ease-out); }
+  .scroll-fx .reveal-scroll.revealed { opacity: 1; transform: none; }
+}

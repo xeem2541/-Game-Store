@@ -2,7 +2,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import Database from 'better-sqlite3';
-import { Client, makeAdminClient, makeUser, outbox, startServer } from './helpers.js';
+import { Client, makeAdminClient, makeUser, outbox, startServer, totpNow } from './helpers.js';
 
 const { db } = await import('../server/db/index.js');
 const { migrate } = await import('../server/db/migrations.js');
@@ -90,7 +90,15 @@ test('ล็อกอินแอดมิน: ผู้ใช้ทั่วไ
 
   assert.equal((await admin.post('/api/admin/auth/logout', {})).status, 200);
   assert.equal((await admin.get('/api/admin/dashboard')).status, 401);
-  assert.equal((await admin.post('/api/admin/auth/login', { email: admin.email, password: admin.password })).status, 200);
+  // เปิด 2FA แล้ว: รหัสผ่านถูกยังไม่ได้เซสชัน ต้องยืนยันรหัสจากแอปก่อน
+  const pw = await admin.post('/api/admin/auth/login', { email: admin.email, password: admin.password });
+  assert.equal(pw.status, 200);
+  assert.equal(pw.data.mfaRequired, true);
+  assert.ok(!admin.cookies.admin_token);
+  assert.equal((await admin.get('/api/admin/dashboard')).status, 401);
+  assert.equal((await admin.post('/api/admin/auth/mfa/verify', { code: await totpNow(admin.totpSecret, admin.totpOffset++) })).status, 200);
+  assert.equal(JSON.parse(Buffer.from(admin.cookies.admin_token.split('.')[1], 'base64url').toString()).mfa, true);
+  assert.equal((await admin.get('/api/admin/dashboard')).status, 200);
 });
 
 test('สิทธิ์ staff: ดูข้อมูล/ออเดอร์/รีวิวได้ แต่ทำสิ่งที่ admin เท่านั้นไม่ได้ (403)', async () => {
@@ -459,7 +467,11 @@ async function pendingOrderWith(slug, couponCode) {
 test('รีวิว: ค้นหา/ลบพร้อมเหตุผล (staff ทำได้), คะแนนเฉลี่ยคำนวณใหม่, audit', async () => {
   const slug = 'forest-spirit';
   const gid = gameId(slug);
-  const mk = async (rating, body) => { const u = await makeUser(srv.url); await u.post(`/api/games/${gid}/reviews`, { rating, body }); return u; };
+  const mk = async (rating, body) => { // รีวิวได้เฉพาะผู้ที่ซื้อแล้ว
+    const { c: u } = await paidOrder([slug]);
+    assert.equal((await u.post(`/api/games/${gid}/reviews`, { rating, body })).status, 201);
+    return u;
+  };
   await mk(5, 'ยอดเยี่ยมมาก');
   await mk(1, 'ข้อความไม่เหมาะสม <script>alert(1)</script>');
   const pub = () => new Client(srv.url).get(`/api/games/${slug}`).then((r) => r.data);
@@ -624,6 +636,8 @@ test('Migration: รันซ้ำได้ ไม่คูณราคาซ�
   legacy.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT, role TEXT NOT NULL DEFAULT 'customer');
     CREATE TABLE games (id INTEGER PRIMARY KEY, slug TEXT, price INTEGER NOT NULL);
     CREATE TABLE game_keys (id INTEGER PRIMARY KEY, game_id INTEGER);
+    CREATE TABLE reviews (id INTEGER PRIMARY KEY, game_id INTEGER, rating INTEGER);
+    INSERT INTO reviews (game_id, rating) VALUES (1, 5), (1, 4), (1, 4);
     INSERT INTO users (email, role) VALUES ('a@x.com', 'customer'), ('b@x.com', 'admin');
     INSERT INTO games (slug, price) VALUES ('g1', 1290), ('g2', 0), ('g3', 199);`);
   migrate(legacy);
@@ -632,12 +646,48 @@ test('Migration: รันซ้ำได้ ไม่คูณราคาซ�
   migrate(legacy);
   migrate(legacy);
   assert.deepEqual(snap(), { prices: [129000, 0, 19900], roles: ['user', 'admin'] });
-  assert.equal(legacy.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 6);
+  assert.equal(legacy.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 10);
+  assert.deepEqual(legacy.prepare('SELECT totp_enabled AS e, totp_last_step AS s, totp_secret_enc AS k FROM users WHERE id = 1').get(), { e: 0, s: 0, k: null });
+  // 008: สรุปรีวิวเดิมถูกคำนวณย้อนหลัง (เกมที่ไม่มีรีวิว rating_avg = NULL)
+  assert.deepEqual(legacy.prepare('SELECT review_count AS c, rating_avg AS a FROM games ORDER BY id').all(), [{ c: 3, a: 4.3 }, { c: 0, a: null }, { c: 0, a: null }]);
   assert.equal(legacy.prepare('SELECT status FROM users').get().status, 'active');
+  assert.equal(legacy.prepare('SELECT token_version AS v FROM users').get().v, 0);
   assert.equal(legacy.prepare('SELECT low_stock_threshold AS t FROM games').get().t, 5);
   assert.ok(legacy.prepare('PRAGMA table_info(game_keys)').all().some((c) => c.name === 'revoke_reason'));
   // ฐานข้อมูลหลักที่ผ่านการ migrate แล้ว ก็ต้องรันซ้ำได้เช่นกัน
   const before = db.prepare("SELECT price FROM games WHERE slug = 'dragon-realm'").get().price;
   migrate(db);
   assert.equal(db.prepare("SELECT price FROM games WHERE slug = 'dragon-realm'").get().price, before);
+});
+
+// ---------------------------------------------------------------- สรุปรีวิว (trigger)
+test('สรุปรีวิวใน games (review_count / rating_avg) ตรงกับการคำนวณจากตาราง reviews เสมอ หลังเพิ่ม/แก้/ลบแบบสุ่ม', () => {
+  const games = db.prepare("SELECT id FROM games WHERE slug IN ('cozy-farm-life', 'pixel-dungeon-quest', 'chef-rush')").all().map((g) => g.id);
+  const users = db.prepare('SELECT id FROM users ORDER BY id LIMIT 12').all().map((u) => u.id);
+  assert.ok(users.length >= 6);
+  let seed = 42;
+  const rnd = (n) => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n; };
+  const ins = db.prepare('INSERT OR IGNORE INTO reviews (user_id, game_id, rating, body) VALUES (?, ?, ?, ?)');
+  for (let i = 0; i < 300; i += 1) {
+    const op = rnd(3);
+    const [uid, gid] = [users[rnd(users.length)], games[rnd(games.length)]];
+    if (op === 0) ins.run(uid, gid, 1 + rnd(5), 'random');
+    else if (op === 1) db.prepare('UPDATE reviews SET rating = ? WHERE user_id = ? AND game_id = ?').run(1 + rnd(5), uid, gid);
+    else db.prepare('DELETE FROM reviews WHERE user_id = ? AND game_id = ?').run(uid, gid);
+  }
+  // ย้ายรีวิวไปอีกเกม (เส้นทาง UPDATE OF game_id) ต้องอัปเดตทั้งสองเกม
+  const moved = db.prepare('SELECT id, user_id FROM reviews WHERE game_id = ? LIMIT 1').get(games[0]);
+  if (moved && !db.prepare('SELECT 1 FROM reviews WHERE user_id = ? AND game_id = ?').get(moved.user_id, games[1])) {
+    db.prepare('UPDATE reviews SET game_id = ? WHERE id = ?').run(games[1], moved.id);
+  }
+  for (const gid of games) {
+    const stored = db.prepare('SELECT review_count AS c, rating_avg AS a FROM games WHERE id = ?').get(gid);
+    const actual = db.prepare('SELECT COUNT(*) AS c, ROUND(AVG(rating), 1) AS a FROM reviews WHERE game_id = ?').get(gid);
+    assert.deepEqual(stored, actual, `game ${gid}`);
+    const v = db.prepare('SELECT g.rating AS base, v.rating, v.review_count FROM games g JOIN games_v v ON v.id = g.id WHERE g.id = ?').get(gid);
+    assert.equal(v.review_count, actual.c);
+    assert.equal(v.rating, actual.a ?? v.base);
+  }
+  db.prepare(`DELETE FROM reviews WHERE game_id IN (${games.join(',')})`).run();
+  for (const gid of games) assert.deepEqual(db.prepare('SELECT review_count AS c, rating_avg AS a FROM games WHERE id = ?').get(gid), { c: 0, a: null });
 });

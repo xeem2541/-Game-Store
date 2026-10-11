@@ -1,22 +1,33 @@
 // โค้ดที่ใช้ร่วมกันทุกหน้า: API, ผู้ใช้, ตะกร้า, wishlist, header/footer, การ์ดเกม
 import { t, applyI18n, lang, setLang, genreName, errText, descOf } from './i18n.js';
+import { flash, prefersReducedMotion, replay } from './motion.js';
 export { t, applyI18n, lang, genreName, descOf };
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // เงินจากเซิร์ฟเวอร์เป็นสตางค์ (จำนวนเต็ม) → แสดงเป็นบาท
+// ภาพประกอบสถานะว่าง (ตกแต่งเท่านั้น alt ว่าง) — กำหนดขนาดไว้ จึงไม่ดันเนื้อหาตอนโหลดภาพ
+// (ประกาศไว้ต้นไฟล์: mountLayout() ด้านล่างเรียกใช้ตอนโหลดโมดูล)
+export const emptyArt = (name) => `<img class="empty-art" src="/img/${name}.svg" alt="" width="240" height="190" decoding="async">`;
+
 export const money = (satang) => '฿' + (satang / 100).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: satang % 100 ? 2 : 0, maximumFractionDigits: 2 });
 export const fmtDateTime = (s) => new Date(typeof s === 'number' ? s : s.replace(' ', 'T') + 'Z').toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });
 // ราคาทุกที่ในระบบเป็น "สตางค์" (จำนวนเต็ม) — แสดงผลเป็นบาท; 0 = ฟรี
 export const priceText = (satang) => (satang === 0 ? t('price.free') : money(satang));
 
-const csrfToken = () => document.cookie.split('; ').find((c) => c.startsWith('csrf='))?.slice(5) ?? '';
+// โทเคน CSRF: อ่านจากคุกกี้ หรือจาก header X-CSRF-Token ของคำตอบล่าสุด (Safari อาจยังไม่เห็นคุกกี้ที่เพิ่งตั้งใน document.cookie)
+let lastCsrf = '';
+const csrfToken = () => document.cookie.split('; ').find((c) => c.startsWith('csrf='))?.slice(5) || lastCsrf;
 
 export async function api(path, { method = 'GET', body } = {}) {
   const opts = { method, headers: {}, credentials: 'same-origin' };
   if (body !== undefined) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
-  if (method !== 'GET') opts.headers['x-csrf-token'] = csrfToken();
+  if (method !== 'GET') {
+    if (!csrfToken()) lastCsrf = (await fetch('/api/health', { credentials: 'same-origin' })).headers.get('x-csrf-token') || '';
+    opts.headers['x-csrf-token'] = csrfToken();
+  }
   const r = await fetch('/api' + path, opts);
+  lastCsrf = r.headers.get('x-csrf-token') || lastCsrf;
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {
     const e = new Error(errText(data.error || r.statusText, data.code, data.params));
@@ -64,6 +75,7 @@ export const cart = {
     cartItems = [...cartItems, slim(game)];
     this.save();
     if (e) flyToCart(e, game);
+    flash(e?.target?.closest?.('.btn'), 'is-done', 1200); // ปุ่มที่กดเป็นสีเขียวชั่วครู่ (ข้อความแจ้งผ่าน toast ที่ screen reader อ่าน)
     toast(t('cart.added'));
   },
   remove(slug) { cartItems = cartItems.filter((i) => i.slug !== slug); return this.save(); },
@@ -105,6 +117,7 @@ async function toggleWish(id) {
   const on = wishIds.has(id);
   on ? wishIds.delete(id) : wishIds.add(id);
   paintHearts();
+  if (!on) document.querySelectorAll(`[data-wish="${id}"]`).forEach((b) => replay(b, 'pop'));
   try {
     if (on) await api('/wishlist/' + id, { method: 'DELETE' });
     else await api('/wishlist', { method: 'POST', body: { gameId: id } });
@@ -127,6 +140,15 @@ export function summaryHtml(s) {
     ${s.couponDiscount ? row(`${t('summary.coupon')} (${esc(s.coupon?.code ?? '')})`, '−' + money(s.couponDiscount), 'neg') : ''}
     ${row(t('cart.total'), money(s.total), 'grand')}
   </div>`;
+}
+
+// เกมในตะกร้าที่หยุดขายแล้ว (จาก /cart/summary → unavailable): แจ้งชื่อเกม + ปุ่มนำออก (ใช้ร่วมกันในหน้าตะกร้า/ชำระเงิน)
+export const unavailableHtml = (list) => (list?.length
+  ? `<div class="banner" role="alert"><span>${t('cartpage.unavailable', { titles: list.map((g) => esc(g.title)).join(', ') })}</span><button class="btn" id="rmUnavailable" type="button">${t('cartpage.removeUnavailable')}</button></div>`
+  : '');
+// ตะกร้าในหน้าเว็บไม่มีเกมที่หยุดขายอยู่แล้ว → บันทึกตะกร้าปัจจุบันทับ = ลบเกมเหล่านั้นออกจากเซิร์ฟเวอร์
+export function bindRemoveUnavailable(rerender) {
+  $('#rmUnavailable')?.addEventListener('click', async () => { await cart.save(); await rerender(); });
 }
 
 // ---------- การ์ดเกม ----------
@@ -152,16 +174,7 @@ export function cardHtml(g) {
 }
 
 function flyToCart(e, game) {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const badge = $('#cartCount');
-    badge.style.transition = 'none';
-    badge.style.transform = 'scale(1.5)';
-    setTimeout(() => {
-      badge.style.transition = 'transform var(--dur-2) var(--ease-out)';
-      badge.style.transform = '';
-    }, 150);
-    return;
-  }
+  if (prefersReducedMotion()) return; // ไม่มีภาพบิน — ตัวเลขตะกร้าเปลี่ยน + toast บอกผลแทน
   const btn = e?.target?.closest('button') || e?.target;
   if (!btn) return;
   const rect = btn.getBoundingClientRect();
@@ -195,9 +208,9 @@ document.addEventListener('click', (e) => {
 // ---------- header / footer / ลิ้นชักตะกร้า ----------
 function mountLayout() {
   const authHtml = user
-    ? `<details class="usermenu"><summary><svg class="icon"><use href="/icons.svg#icon-user" /></svg> ${esc(user.name)}</summary>
+    ? `<details class="usermenu"><summary><svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-user" /></svg><span class="user-name">${esc(user.name)}</span></summary>
          <div class="menu"><a href="/profile">${t('header.profile')}</a><button id="logoutBtn" type="button">${t('header.logout')}</button></div></details>`
-    : `<a class="btn" href="/login">${t('header.login')}</a><a class="btn primary" href="/register">${t('header.register')}</a>`;
+    : `<a class="btn login" href="/login"><svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-user" /></svg><span class="btn-label">${t('header.login')}</span></a><a class="btn primary register" href="/register">${t('header.register')}</a>`;
 
   // header/footer มี placeholder อยู่ใน HTML แล้ว (จองที่ว่างกัน layout shift) — เติมเนื้อหาเข้าไป; ถ้าหน้าไหนไม่มีก็สร้างให้
   let header = $('header.topbar');
@@ -211,7 +224,6 @@ function mountLayout() {
     </form>
     <div class="actions">
       <button id="langBtn" class="icon-btn" type="button" title="${t('header.lang')}" aria-label="${lang === 'th' ? 'EN' : 'TH'} - ${t('header.lang')}">${lang === 'th' ? 'EN' : 'TH'}</button>
-      <button id="themeBtn" class="icon-btn" type="button" title="${t('header.theme')}" aria-label="${t('header.theme')}">◐</button>
       ${authHtml}
       <button id="cartBtn" class="cart-btn" type="button"><svg class="icon"><use href="/icons.svg#icon-cart" /></svg> <span class="cart-label">${t('cart.btn')}</span> <span id="cartCount">0</span></button>
     </div>`;
@@ -229,9 +241,12 @@ function mountLayout() {
     </div>
   </aside>`);
 
+  let shownCount = cart.get().length;
   const renderCart = () => {
     const items = cart.get();
     $('#cartCount').textContent = items.length;
+    if (items.length > shownCount) replay($('#cartCount'), 'bump');
+    shownCount = items.length;
     $('#cartTotal').textContent = priceText(items.reduce((s, i) => s + i.finalPrice, 0)).replace(t('price.free'), '฿0');
     $('#cartItems').innerHTML = items.length
       ? items.map((i) => `
@@ -241,23 +256,24 @@ function mountLayout() {
           <strong>${priceText(i.finalPrice)}</strong>
           <button class="rm" data-rm="${esc(i.slug)}" type="button" aria-label="${t('cart.remove')}"><svg class="icon"><use href="/icons.svg#icon-trash" /></svg></button>
         </div>`).join('')
-      : `<p class="empty">${t('cart.empty')}</p>`;
+      : `<div class="empty">${emptyArt('empty-cart')}<p>${t('cart.empty')}</p></div>`;
   };
   document.addEventListener('cart:change', renderCart);
   renderCart();
 
   let lastFocus;
+  // ย้ายโฟกัสเองทุกครั้งที่กด Tab (ไม่พึ่งลำดับ Tab ของเบราว์เซอร์): ช่วงที่ drawer กำลังเลื่อนเข้า Chromium ข้ามปุ่มใน drawer
+  // ทำให้โฟกัสหลุดออกไปหน้าเว็บด้านหลังถ้ากด Tab เร็ว ๆ — และถ้าโฟกัสอยู่นอก drawer อยู่แล้ว Tab จะดึงกลับเข้ามา
   const trapFocus = (e) => {
-    const focusable = $('#cart').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (e.key === 'Escape') { closeCart(); return; }
+    if (e.key !== 'Tab') return;
+    const focusable = [...$('#cart').querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter((el) => !el.disabled && el.getClientRects().length);
     if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.key === 'Tab') {
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    } else if (e.key === 'Escape') {
-      closeCart();
-    }
+    e.preventDefault();
+    const i = focusable.indexOf(document.activeElement);
+    const n = focusable.length;
+    focusable[e.shiftKey ? (i <= 0 ? n - 1 : i - 1) : (i + 1) % n].focus();
   };
   const openCart = () => {
     lastFocus = document.activeElement;
@@ -282,31 +298,80 @@ function mountLayout() {
   $('#checkout').onclick = () => (cart.get().length ? (location.href = '/cart') : toast(t('cart.empty')));
 
   $('#langBtn').onclick = () => setLang(lang === 'th' ? 'en' : 'th');
-  $('#themeBtn').onclick = () => {
-    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-    document.documentElement.dataset.theme = next;
-    try { localStorage.setItem('theme', next); } catch {}
-  };
   $('#logoutBtn')?.addEventListener('click', async () => {
     await api('/auth/logout', { method: 'POST', body: {} }).catch(() => {});
     location.href = '/';
   });
 
-  // autocomplete
+  // ช่องค้นหา + รายการแนะนำ (ARIA combobox): ลูกศรขึ้น/ลงเลือก, Enter เปิด, Esc ปิด, คำที่ตรงเป็นตัวเน้น
   const input = $('#search');
   const box = $('#suggest');
+  const pageQ = location.pathname.startsWith('/games') ? new URLSearchParams(location.search).get('q') : null;
+  if (pageQ) input.value = pageQ; // หน้ารายการเกม: ช่องค้นหาแสดงคำที่ค้นอยู่
+  input.setAttribute('role', 'combobox');
+  input.setAttribute('aria-autocomplete', 'list');
+  input.setAttribute('aria-controls', 'suggest');
+  input.setAttribute('aria-expanded', 'false');
+  box.setAttribute('role', 'listbox');
+  box.setAttribute('aria-label', t('search.suggestions'));
   let timer;
+  let seq = 0; // กันผลของคำค้นเก่าที่ตอบช้ามาเขียนทับคำค้นใหม่
+  let active = -1;
+  const options = () => [...box.querySelectorAll('[role="option"]')];
+  const show = (open) => {
+    box.hidden = !open;
+    input.setAttribute('aria-expanded', String(open));
+    if (!open) { active = -1; input.removeAttribute('aria-activedescendant'); }
+  };
+  const select = (i) => {
+    const opts = options();
+    if (!opts.length) return;
+    active = (i + opts.length) % opts.length;
+    opts.forEach((o, n) => o.setAttribute('aria-selected', String(n === active)));
+    input.setAttribute('aria-activedescendant', opts[active].id);
+    opts[active].scrollIntoView({ block: 'nearest' });
+  };
   input.addEventListener('input', () => {
     clearTimeout(timer);
     const q = input.value.trim();
-    if (!q) { box.hidden = true; return; }
+    if (!q) { show(false); return; }
     timer = setTimeout(async () => {
+      const mine = ++seq;
       const rows = await api('/games/suggest?q=' + encodeURIComponent(q)).catch(() => []);
-      box.innerHTML = rows.map((r) => `<li><a href="/game/${esc(r.slug)}">${esc(r.title)} <small>${esc(genreName(r.genre))}</small></a></li>`).join('');
-      box.hidden = !rows.length;
-    }, 200);
+      if (mine !== seq || input.value.trim() !== q) return;
+      const all = `/games.html?q=${encodeURIComponent(q)}`;
+      // ตัวเลือกเป็น option ล้วน (ห้ามมีลิงก์ซ้อนใน option) — ปลายทางอยู่ใน data-href
+      box.innerHTML = rows.map((r, i) => `<li id="sug-${i}" role="option" aria-selected="false" data-href="/game/${esc(r.slug)}">${highlight(r.title, q)} <small>${esc(genreName(r.genre))}</small></li>`).join('')
+        + `<li id="sug-all" role="option" aria-selected="false" class="suggest-all" data-href="${esc(all)}">${t('search.all', { q: esc(q) })}</li>`;
+      show(true);
+    }, 150);
   });
-  document.addEventListener('click', (e) => { if (!e.target.closest('.search')) box.hidden = true; });
+  input.addEventListener('keydown', (e) => {
+    if (box.hidden) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); select(active + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); select(active - 1); }
+    else if (e.key === 'Escape') { e.preventDefault(); show(false); }
+    else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); location.href = options()[active].dataset.href; }
+  });
+  box.addEventListener('mousedown', (e) => e.preventDefault()); // คลิกตัวเลือกแล้วโฟกัสยังอยู่ที่ช่องค้นหา (รายการไม่ปิดก่อนคลิกสำเร็จ)
+  box.addEventListener('click', (e) => { const o = e.target.closest('[role="option"]'); if (o) location.href = o.dataset.href; });
+  input.addEventListener('blur', () => show(false));
+  document.addEventListener('click', (e) => { if (!e.target.closest('.search')) show(false); });
+}
+
+// เน้นส่วนของชื่อที่ตรงกับคำค้น (ทุกคำ ไม่สนตัวพิมพ์เล็ก/ใหญ่) — escape ข้อความก่อนเสมอ ใส่ได้แค่ <mark>
+// ใช้ regex แบบ i+u บนข้อความเดิม (ไม่หาตำแหน่งจาก toLowerCase() ซึ่งบางตัวอักษรยาวขึ้น เช่น "İ" ตำแหน่งจะเลื่อน)
+export function highlight(text, q) {
+  const terms = q.split(/\s+/).filter(Boolean).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (!terms.length) return esc(text);
+  const re = new RegExp(terms.sort((a, b) => b.length - a.length).join('|'), 'giu'); // คำยาวก่อน
+  let out = '';
+  let pos = 0;
+  for (const m of text.matchAll(re)) {
+    out += esc(text.slice(pos, m.index)) + `<mark>${esc(m[0])}</mark>`;
+    pos = m.index + m[0].length;
+  }
+  return out + esc(text.slice(pos));
 }
 
 mountLayout();
@@ -316,29 +381,28 @@ applyI18n();
 export const markReady = () => document.body.classList.add('ready');
 if (!document.body.hasAttribute('data-async')) markReady();
 
-// Premium 3D subtle tilt for all game cards globally
-const mqlTilt = window.matchMedia('(prefers-reduced-motion: reduce)');
-if (!mqlTilt.matches) {
-  document.addEventListener('mousemove', (e) => {
-    const card = e.target.closest('.card');
+// การ์ดเกมเอียงตามเมาส์ + แสงสะท้อน: เฉพาะอุปกรณ์ที่มีเมาส์ และไม่ได้ขอลดการเคลื่อนไหว
+// ตั้งแค่ตัวแปร CSS (--rx --ry --mx --my) แล้วให้ CSS ทำ transform/transition — คำนวณไม่เกินเฟรมละครั้ง
+if (window.matchMedia('(hover: hover) and (pointer: fine)').matches && !prefersReducedMotion()) {
+  let frame = 0;
+  let last = null;
+  const applyTilt = () => {
+    frame = 0;
+    const card = last?.target?.closest?.('.card:not(.sk)');
     if (!card) return;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const rotateX = ((rect.height / 2 - y) / (rect.height / 2)) * 4;
-    const rotateY = ((x - rect.width / 2) / (rect.width / 2)) * 4;
-    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-    card.style.transition = 'none';
-    card.style.zIndex = '10';
-  }, { passive: true });
-  
-  document.addEventListener('mouseout', (e) => {
-    const card = e.target.closest('.card');
-    if (!card) return;
-    if (card.contains(e.relatedTarget)) return;
-    card.style.transform = '';
-    card.style.transition = 'all var(--dur-3) var(--ease-out)';
-    card.style.zIndex = '';
+    const r = card.getBoundingClientRect();
+    const x = (last.clientX - r.left) / r.width;
+    const y = (last.clientY - r.top) / r.height;
+    card.style.setProperty('--rx', `${((0.5 - y) * 6).toFixed(2)}deg`);
+    card.style.setProperty('--ry', `${((x - 0.5) * 6).toFixed(2)}deg`);
+    card.style.setProperty('--mx', `${(x * 100).toFixed(1)}%`);
+    card.style.setProperty('--my', `${(y * 100).toFixed(1)}%`);
+  };
+  document.addEventListener('pointermove', (e) => { last = e; frame ||= requestAnimationFrame(applyTilt); }, { passive: true });
+  document.addEventListener('pointerout', (e) => {
+    const card = e.target.closest?.('.card');
+    if (!card || card.contains(e.relatedTarget)) return;
+    for (const v of ['--rx', '--ry', '--mx', '--my']) card.style.removeProperty(v);
   }, { passive: true });
 }
 

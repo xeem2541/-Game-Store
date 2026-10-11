@@ -7,9 +7,9 @@ import { adminFromCookies } from './middleware/adminAuth.js';
 import { authenticate } from './middleware/auth.js';
 import { gameMeta, gamesMeta, homeMeta, ogImage, renderTemplate, robotsTxt, setTemplateRoot, sitemapXml } from './seo.js';
 import { FILE_NAME_RE, UPLOAD_DIR } from './services/images.js';
+import { escHtml } from './services/text.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const attr = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // production (หรือ USE_DIST=1) ใช้ไฟล์ที่ build แล้วใน dist/ (minify + ชื่อไฟล์มี hash + บีบอัดล่วงหน้า) ถ้ายังไม่ได้ build จะ fallback ไปโฟลเดอร์ต้นฉบับ
 export function resolveRoots() {
@@ -59,7 +59,7 @@ export function mountWeb(app) {
   app.get(['/games.html', '/games'], (_req, res) => res.set('Cache-Control', 'no-cache').type('html').send(renderTemplate('games.html', gamesMeta())));
   app.get('/game/:slug', (req, res) => {
     const { found, meta } = gameMeta(req.params.slug);
-    const html = renderTemplate('game.html', meta).replaceAll('{{SLUG}}', found ? attr(req.params.slug) : '');
+    const html = renderTemplate('game.html', meta).replaceAll('{{SLUG}}', found ? escHtml(req.params.slug) : '');
     res.status(found ? 200 : 404).set('Cache-Control', 'no-cache').type('html').send(html);
   });
   app.get('/sitemap.xml', (_req, res) => res.set('Cache-Control', 'public, max-age=3600').type('application/xml').send(sitemapXml()));

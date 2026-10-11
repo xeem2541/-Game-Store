@@ -8,13 +8,17 @@
     "dev": "node --watch server/index.js",
     "start": "node server/index.js",
     "seed": "node server/db/seed.js",
+    "seed:demo": "node server/db/demo.js",
     "make-admin": "node server/scripts/make-role.js admin",
     "make-staff": "node server/scripts/make-role.js staff",
+    "reset-mfa": "node server/scripts/reset-mfa.js",
     "test": "node --test tests/*.test.js",
     "check:env": "node server/scripts/check-env.js",
     "backup": "node server/scripts/backup.js",
     "restore": "node server/scripts/restore.js",
     "build": "node scripts/build.js",
+    "lint": "eslint .",
+    "vendor": "node scripts/vendor.js",
     "start:dist": "USE_DIST=1 node server/index.js",
     "e2e": "playwright test",
     "test:coverage": "node --experimental-test-coverage --test tests/*.test.js",
@@ -36,6 +40,7 @@
     "multer": "^2.4.0",
     "nodemailer": "^10.0.16",
     "pdfkit": "^0.20.2",
+    "qrcode": "^1.5.4",
     "sharp": "^0.35.5",
     "stripe": "^23.0.0",
     "three": "^0.186.1",
@@ -46,8 +51,11 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.64.0",
     "autocannon": "^8.0.0",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "globals": "^16.5.0"
   }
 }

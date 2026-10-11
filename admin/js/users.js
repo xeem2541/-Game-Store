@@ -44,10 +44,12 @@ async function renderDetail(el, id, alive) {
     <div class="card"><dl class="kv">
       <dt>อีเมล</dt><dd>${esc(u.email)} ${u.emailVerified ? '✓ ยืนยันแล้ว' : '(ยังไม่ยืนยัน)'}</dd>
       <dt>บทบาท</dt><dd>${badge(u.role, u.role === 'user' ? 'ลูกค้า' : u.role)}</dd><dt>สถานะ</dt><dd>${badge(u.status)}</dd>
-      <dt>สมัครเมื่อ</dt><dd>${dt(u.createdAt)}</dd><dt>รีวิว</dt><dd>${reviewCount}</dd></dl>
+      <dt>สมัครเมื่อ</dt><dd>${dt(u.createdAt)}</dd><dt>รีวิว</dt><dd>${reviewCount}</dd>
+      ${u.role !== 'user' ? `<dt>2FA</dt><dd>${u.mfaEnabled ? '✓ เปิดใช้' : 'ยังไม่ได้ตั้ง'}</dd>` : ''}</dl>
       ${self ? '<p class="muted">นี่คือบัญชีของคุณ — เปลี่ยนสิทธิ์/ระงับบัญชีตัวเองไม่ได้</p>' : `<div class="toolbar">
         <button class="btn" data-act="role" type="button">เปลี่ยนบทบาท</button>
-        <button class="btn ${u.status === 'active' ? 'danger' : 'primary'}" data-act="status" type="button">${u.status === 'active' ? 'ระงับบัญชี' : 'เปิดใช้งานบัญชี'}</button></div>`}
+        <button class="btn ${u.status === 'active' ? 'danger' : 'primary'}" data-act="status" type="button">${u.status === 'active' ? 'ระงับบัญชี' : 'เปิดใช้งานบัญชี'}</button>
+        ${u.mfaEnabled ? '<button class="btn danger" data-act="mfa" type="button">ล้าง 2FA</button>' : ''}</div>`}
     </div>
     <h2>ประวัติสั่งซื้อ</h2>
     ${table([
@@ -68,6 +70,11 @@ async function renderDetail(el, id, alive) {
         if (!v) return;
         await api(`/users/${id}/status`, { method: 'PUT', body: { status: suspend ? 'suspended' : 'active', reason: v.reason || undefined } });
         toast('อัปเดตสถานะแล้ว');
+      } else if (act === 'mfa') {
+        const v = await dialog({ title: 'ล้าง 2FA', message: `ใช้เมื่อ ${esc(u.email)} ทำโทรศัพท์หายและไม่มีรหัสกู้คืน — ทุกเซสชันของบัญชีนี้จะถูกออกจากระบบ และต้องตั้ง 2FA ใหม่ตอนเข้าสู่ระบบครั้งถัดไป`, confirmText: 'ล้าง 2FA', danger: true });
+        if (!v) return;
+        await api(`/users/${id}/mfa/reset`, { method: 'POST', body: {} });
+        toast('ล้าง 2FA แล้ว');
       } else return;
       renderDetail(el, id, alive);
     } catch (err) { toast(err.message, true); }

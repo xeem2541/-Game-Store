@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { checkProductionEnv } from './envcheck.js';
+import { checkProductionEnv, resolveAppUrl } from './envcheck.js';
 
 const env = process.env.NODE_ENV || 'development';
 const isProd = env === 'production';
@@ -18,7 +18,16 @@ if (!isProd && stripeSecret && !/^(sk|rk)_test_/.test(stripeSecret)) {
   throw new Error('STRIPE_SECRET_KEY ที่ไม่ใช่โหมดทดสอบ (sk_test_...) ใช้ได้เฉพาะเมื่อ NODE_ENV=production');
 }
 
-const appUrl = (process.env.APP_URL || process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000').replace(/\/$/, '');
+// ความลับต้องตั้งเองเสมอ (ยกเว้นตอนรันเทส) — ไม่มีค่าเริ่มต้นที่ใครก็รู้ ลืมตั้ง NODE_ENV=production บนเซิร์ฟเวอร์จริงก็ปลอม token ไม่ได้
+const isTest = env === 'test';
+function requiredSecret(name, testFallback) {
+  const v = process.env[name];
+  if (v) return v;
+  if (isTest) return testFallback;
+  throw new Error(`ยังไม่ได้ตั้ง ${name} ใน .env (คัดลอกจาก .env.example แล้วใส่ค่าสุ่ม: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")`);
+}
+
+const appUrl = resolveAppUrl(process.env) || 'http://localhost:3000';
 
 // TRUST_PROXY: เว้นว่าง/false = ไม่เชื่อ header จาก proxy | true | จำนวน hop (เช่น 1) | 'loopback' ฯลฯ (รูปแบบเดียวกับ express "trust proxy")
 function parseTrustProxy(v) {
@@ -39,14 +48,22 @@ export const config = {
   appUrl,
   corsOrigins: (process.env.CORS_ORIGINS || appUrl).split(',').map((s) => s.trim().replace(/\/$/, '')).filter(Boolean),
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
-  jwtSecret: process.env.JWT_SECRET || 'dev-only-secret',
-  keySecret: process.env.KEY_ENCRYPTION_SECRET || 'dev-only-key-encryption-secret',
+  jwtSecret: requiredSecret('JWT_SECRET', 'test-only-jwt-secret'),
+  keySecret: requiredSecret('KEY_ENCRYPTION_SECRET', 'test-only-key-encryption-secret'),
+  // 1 = ไม่ยอมเริ่มถ้าไม่พบไฟล์ฐานข้อมูล (กัน disk ไม่ถูก mount แล้วได้ฐานข้อมูลว่างใหม่) — ตั้งหลังติดตั้งครั้งแรก
+  requireExistingDb: process.env.REQUIRE_EXISTING_DB === '1',
   orderExpiryMinutes: Number(process.env.ORDER_EXPIRY_MINUTES) || 30,
-  devPay: !isProd, // ปุ่ม/endpoint จำลองการชำระเงิน เปิดเฉพาะนอก production
+  // ปุ่ม/endpoint จำลองการชำระเงิน: ต้องเปิดเองด้วย DEV_PAY=1 และไม่มีวันเปิดใน production (ลืมตั้งค่า = ปิด)
+  devPay: !isProd && process.env.DEV_PAY === '1',
   logRequests: env !== 'test' && process.env.LOG_REQUESTS !== '0',
   apiRateLimit: Number(process.env.API_RATE_LIMIT) || 300, // คำขอ /api ต่อนาทีต่อ IP
   authRateLimit: Number(process.env.AUTH_RATE_LIMIT) || 20, // ต่อ 15 นาที ต่อ IP
   emailResendLimit: Number(process.env.EMAIL_RESEND_LIMIT) || 5, // ต่อ 10 นาทีต่อผู้ใช้
+  // กันกักสต็อก: ออเดอร์ pending จองโค้ดไว้ → จำกัดจำนวนที่ค้างได้พร้อมกัน และความถี่การสร้างออเดอร์ต่อผู้ใช้
+  // 2FA (TOTP) สำหรับบัญชีหลังบ้าน (staff/admin): ค่าเริ่มต้น = บังคับ ตั้ง 0 เพื่อปิด (production จะเตือน)
+  adminMfaRequired: process.env.ADMIN_MFA_REQUIRED !== '0',
+  maxPendingOrders: Number(process.env.MAX_PENDING_ORDERS) || 3,
+  orderRateLimit: Number(process.env.ORDER_RATE_LIMIT) || 10, // ต่อ 10 นาทีต่อผู้ใช้
   get staffPermissions() { return staffPermissions(); },
   stripe: {
     secretKey: stripeSecret,

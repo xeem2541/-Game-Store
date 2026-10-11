@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit/integration tests + build (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24] # 22 = ขั้นต่ำตาม package.json engines, 24 = เวอร์ชันใน Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build # ล้มเหลวถ้า JS หน้าใดเกินงบ 150 KB gzip
+      - name: Vendor bundles match node_modules
+        run: npm run vendor && git diff --exit-code -- public/js/vendor
+      - name: Production config preflight rejects placeholder secrets
+        run: |
+          cp .env.example .env
+          if NODE_ENV=production node server/scripts/check-env.js; then
+            echo "check-env ต้องไม่ผ่านกับค่าตัวอย่างใน .env.example" >&2; exit 1
+          fi
+
+  # e2e บน 3 เครื่องยนต์เบราว์เซอร์ (Chrome, Firefox, Safari/WebKit) ขนานกัน — ชื่อ "E2E (Chromium)" คงเดิม
+  e2e:
+    name: E2E (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: chromium, label: Chromium }
+          - { project: firefox, label: Firefox }
+          - { project: webkit, label: WebKit }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.project }}
+      - run: npx playwright test --project=${{ matrix.project }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results-${{ matrix.project }}
+          path: e2e/.tmp/results
+          retention-days: 7

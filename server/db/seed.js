@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { db } from './index.js';
 import { addKeys, availableCount } from '../services/keys.js';
+import { slugify } from '../services/text.js';
 
 // [title, genre, platform, price, discount, rating, release, sales, desc]
 const rows = [
@@ -78,7 +79,6 @@ const palette = [
   ['#11998e', '#38ef7d'], ['#cb2d3e', '#ef473a'], ['#2193b0', '#6dd5ed'], ['#fc4a1a', '#f7b733'],
 ];
 
-const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 // upsert ตาม slug เพื่อไม่ลบรีวิว/รายการโปรดที่อ้างอิงเกมอยู่
 export function seedGames() {
@@ -136,10 +136,13 @@ export function seedKeys(perGame = 20) {
 
 // ข้อมูลตัวอย่าง (เกมสมมติ คูปองทดสอบ โค้ดปลอม) ใช้เฉพาะตอนพัฒนา/ทดสอบ — production ไม่ seed อะไรเลย
 // (ต้องการข้อมูลตัวอย่างบน staging ที่ NODE_ENV=production จริง ให้ตั้ง ALLOW_DEMO_SEED=1 เอง)
-const demoAllowed = () => process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEMO_SEED === '1';
+export const demoAllowed = () => process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEMO_SEED === '1';
 
 export function seedIfEmpty() {
   if (!demoAllowed()) return;
+  if (process.env.NODE_ENV === 'production' && db.prepare('SELECT COUNT(*) AS n FROM game_keys').get().n === 0) {
+    console.warn('⚠️  ALLOW_DEMO_SEED=1 ใน production: กำลังใส่ข้อมูลตัวอย่างและโค้ดเกมปลอม (FAKE-...) — ห้ามใช้กับร้านที่ขายจริง');
+  }
   if (db.prepare('SELECT COUNT(*) AS n FROM games').get().n === 0) console.log(`seeded ${seedGames()} games`);
   if (db.prepare('SELECT COUNT(*) AS n FROM coupons').get().n === 0) console.log(`seeded ${seedCoupons()} coupons`);
   if (db.prepare('SELECT COUNT(*) AS n FROM game_keys').get().n === 0) console.log(`seeded ${seedKeys()} FAKE test game keys`);
@@ -152,4 +155,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exit(1);
   }
   console.log(`seeded ${seedGames()} games, ${seedCoupons()} coupons, ${seedKeys()} new FAKE test keys`);
+  const { seedScreenshots } = await import('./demo.js'); // ภาพตัวอย่างของเกม (เฉพาะเกมที่ยังไม่มี)
+  await seedScreenshots();
 }

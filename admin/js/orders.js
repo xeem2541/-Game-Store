@@ -80,7 +80,7 @@ async function renderDetail(el, id, alive) {
     ${table([{ h: 'เกม', f: (k) => esc(k.title) }, { h: 'โค้ด', f: (k) => `<code>${esc(k.masked)}</code>` }, { h: 'สถานะ', f: (k) => badge(k.status) }], d.keys)}
     <h2>การชำระเงิน</h2>
     ${table([
-      { h: 'ช่องทาง', f: (p) => esc(p.provider) }, { h: 'สถานะ', f: (p) => badge(p.status) }, { h: 'ยอด', cls: 'num', f: (p) => `${money(p.amount)} ${esc(p.currency.toUpperCase())}` },
+      { h: 'ช่องทาง', f: (p) => esc(p.provider) }, { h: 'สถานะ', f: (p) => badge(p.status) }, { h: 'ยอด', cls: 'num', f: (p) => `${money(p.amount)} ${esc(p.currency.toUpperCase())}${p.amountRefunded ? `<br><small class="muted">คืนแล้ว ${money(p.amountRefunded)}</small>` : ''}` },
       { h: 'อ้างอิง', f: (p) => `<small>${esc(p.providerRef ?? '-')}<br>${esc(p.paymentIntent ?? '')}</small>` }, { h: 'หมายเหตุ', f: (p) => esc(p.lastError ?? '') }, { h: 'เมื่อ', f: (p) => dt(p.updatedAt) },
     ], d.payments)}
     ${d.refund ? `<h2>การคืนเงิน</h2><div class="card"><dl class="kv"><dt>จำนวน</dt><dd>${money(d.refund.amount)}</dd><dt>เหตุผล</dt><dd>${esc(d.refund.reason)}</dd>

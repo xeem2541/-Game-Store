@@ -35,11 +35,14 @@ export function serializeOrder(o) {
   };
 }
 
+// ปี ค.ศ. ตามเวลาไทย (UTC+7, ไม่มี DST) — ไม่ขึ้นกับ timezone ของเครื่องเซิร์ฟเวอร์ (คอนเทนเนอร์มักเป็น UTC)
+export const bangkokYear = (now = Date.now()) => new Date(now + 7 * 3600_000).getUTCFullYear();
+
 // เลขที่ใบเสร็จรันต่อเนื่องจากตาราง invoices (INV-ปี-000001)
 function issueInvoice(orderId) {
   const { lastInsertRowid } = db.prepare('INSERT INTO invoices (order_id, number) VALUES (?, ?)').run(orderId, `tmp-${orderId}`);
   db.prepare('UPDATE invoices SET number = ? WHERE id = ?')
-    .run(`INV-${new Date().getFullYear()}-${String(lastInsertRowid).padStart(6, '0')}`, lastInsertRowid);
+    .run(`INV-${bangkokYear()}-${String(lastInsertRowid).padStart(6, '0')}`, lastInsertRowid);
 }
 
 export function transition(orderId, to, { reason = null, actorId = null } = {}) {
@@ -78,14 +81,19 @@ export function transition(orderId, to, { reason = null, actorId = null } = {}) 
 }
 
 // ยกเลิกออเดอร์ pending ที่เลยเวลา คืนจำนวนที่หมดอายุ
-export function expirePending(now = Date.now()) {
-  const ids = db.prepare("SELECT id FROM orders WHERE status = 'pending' AND expires_at <= ?").all(now).map((r) => r.id);
+// job ทุก 1 นาทีเรียกแบบทั้งระบบ; หน้าที่ผู้ใช้อ่านออเดอร์ของตัวเองเรียกเฉพาะผู้ใช้นั้น (ใช้ index ไม่สแกนทั้งตาราง)
+// เพื่อไม่ให้เห็นออเดอร์ที่เลยเวลาแล้วยังเป็น "รอชำระ" ระหว่างรอบของ job
+export function expirePending(now = Date.now(), { userId } = {}) {
+  const ids = (userId === undefined
+    ? db.prepare("SELECT id FROM orders WHERE status = 'pending' AND expires_at <= ?").all(now)
+    : db.prepare("SELECT id FROM orders WHERE user_id = ? AND status = 'pending' AND expires_at <= ?").all(userId, now)
+  ).map((r) => r.id);
   for (const id of ids) transition(id, 'cancelled', { reason: 'expired' });
   return ids.length;
 }
 
 export function getOwnOrder(userId, orderId) {
-  expirePending();
+  expirePending(Date.now(), { userId });
   const o = db.prepare('SELECT * FROM orders WHERE id = ? AND user_id = ?').get(orderId, userId);
   if (!o) throw new HttpError(404, 'ไม่พบคำสั่งซื้อ', 'ORDER_NOT_FOUND'); // ของคนอื่นก็ตอบ 404 เหมือนกัน
   return o;
@@ -103,7 +111,8 @@ const ownedGameIds = (userId, status, gameIds) => {
 
 // สรุปราคาตะกร้าของผู้ใช้ (ใช้ทั้งหน้าตะกร้า/checkout) — คำนวณจากฐานข้อมูลเท่านั้น
 export function buildSummary(userId, couponCode) {
-  const games = cartGames(userId).filter((g) => g.active);
+  const all = cartGames(userId);
+  const games = all.filter((g) => g.active);
   const base = priceCart(games);
   let coupon = null;
   let couponError = null;
@@ -114,29 +123,42 @@ export function buildSummary(userId, couponCode) {
   }
   const priced = priceCart(games, coupon);
   const owned = ownedGameIds(userId, 'paid', games.map((g) => g.id));
-  const bySlug = new Map(games.map((g) => [g.id, g]));
+  const byId = new Map(games.map((g) => [g.id, g]));
   return {
     ...priced,
     items: priced.items.map((i) => ({ ...i, cover: coverOf(i.slug), owned: owned.includes(i.gameId) })),
     coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
     couponError,
-    owned: owned.map((id) => bySlug.get(id).slug),
+    owned: owned.map((id) => byId.get(id).slug),
+    // เกมในตะกร้าที่ถูกซ่อน/หยุดขายภายหลัง: ไม่นับในยอด แต่ต้องบอกผู้ใช้ (ไม่งั้นจะงงว่าทำไมสั่งซื้อไม่ได้)
+    unavailable: all.filter((g) => !g.active).map((g) => ({ slug: g.slug, title: g.title })),
     currency: 'THB',
   };
 }
 
+// เกมที่หยุดขายแล้วถูกนำออกจากตะกร้าให้เลย (ผู้ใช้มองไม่เห็นเกมนั้นในหน้าตะกร้า จึงลบเองไม่ได้) แล้วแจ้งให้ตรวจยอดใหม่ก่อนสั่งอีกครั้ง
+function rejectUnavailable(userId, games) {
+  const del = db.prepare('DELETE FROM cart_items WHERE user_id = ? AND game_id = ?');
+  db.transaction(() => { for (const g of games) del.run(userId, g.id); })();
+  const titles = games.map((g) => g.title).join(', ');
+  throw new HttpError(409, `เกมต่อไปนี้หยุดจำหน่ายแล้วและถูกนำออกจากตะกร้า: ${titles} — กรุณาตรวจสอบยอดแล้วสั่งซื้ออีกครั้ง`, 'GAME_UNAVAILABLE', { titles });
+}
+
 export function createOrder(user, { couponCode, idempotencyKey }) {
-  return db.transaction(() => {
+  const result = db.transaction(() => {
     // กันกดซ้ำ: key เดิมของผู้ใช้เดิม → คืนออเดอร์เดิม
     const existing = db.prepare('SELECT * FROM orders WHERE user_id = ? AND idempotency_key = ?').get(user.id, idempotencyKey);
     if (existing) return { order: existing, created: false };
 
     const all = cartGames(user.id);
     if (!all.length) throw new HttpError(400, 'ตะกร้าว่างเปล่า', 'CART_EMPTY');
-    const unavailable = all.filter((g) => !g.active);
-    if (unavailable.length) {
-      throw new HttpError(409, 'มีเกมที่หยุดจำหน่ายแล้ว: ' + unavailable.map((g) => g.title).join(', '), 'GAME_UNAVAILABLE', { titles: unavailable.map((g) => g.title).join(', ') });
+    // ออเดอร์ pending จองโค้ดไว้จนหมดอายุ → จำกัดจำนวนที่ค้างพร้อมกัน (กันบัญชีเดียวสร้างออเดอร์รัว ๆ กักโค้ดให้คนอื่นซื้อไม่ได้)
+    const pendingCount = db.prepare("SELECT COUNT(*) AS n FROM orders WHERE user_id = ? AND status = 'pending' AND expires_at > ?").get(user.id, Date.now()).n;
+    if (pendingCount >= config.maxPendingOrders) {
+      throw new HttpError(409, `มีคำสั่งซื้อที่รอชำระอยู่ ${pendingCount} รายการ กรุณาชำระหรือยกเลิกก่อนสั่งซื้อใหม่`, 'TOO_MANY_PENDING', { n: pendingCount });
     }
+    const unavailable = all.filter((g) => !g.active);
+    if (unavailable.length) return { unavailable }; // ลบออกจากตะกร้านอก transaction นี้ (throw ในนี้จะ rollback การลบไปด้วย)
     const ids = all.map((g) => g.id);
     const owned = ownedGameIds(user.id, 'paid', ids);
     if (owned.length) {
@@ -177,4 +199,6 @@ export function createOrder(user, { couponCode, idempotencyKey }) {
     const order = p.total === 0 ? transition(orderId, 'paid') : db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
     return { order, created: true };
   })();
+  if (result.unavailable) rejectUnavailable(user.id, result.unavailable);
+  return result;
 }

@@ -32,9 +32,35 @@ async function bundleJs(entries, outdir, urlBase, define = {}) {
   for (const [out, info] of Object.entries(r.metafile.outputs)) {
     if (info.entryPoint) map.set(info.entryPoint.startsWith('public/') ? `/${info.entryPoint.slice('public/'.length)}` : `/${info.entryPoint}`, `${urlBase}${path.basename(out)}`);
   }
+  return r.metafile;
 }
 
-await bundleJs(pubJs.map((n) => `public/js/${n}.js`), path.join(DIST, 'public/js'), '/js/', { __I18N_VERSION__: JSON.stringify(i18nVersion) });
+const pubMeta = await bundleJs(pubJs.map((n) => `public/js/${n}.js`), path.join(DIST, 'public/js'), '/js/', { __I18N_VERSION__: JSON.stringify(i18nVersion) });
+
+// ---------- งบขนาด JS ต่อหน้า (gzip) ----------
+// นับเฉพาะ JS ที่หน้าโหลดทันที (entry + chunk ที่ import แบบ static) — chunk ที่โหลดด้วย import() เช่นฉาก 3D ไม่นับ
+const JS_BUDGET_GZ = 150 * 1024;
+const gz = (file) => zlib.gzipSync(fs.readFileSync(path.join(ROOT, file)), { level: 9 }).length;
+const initialJs = (out, seen = new Set()) => {
+  if (seen.has(out)) return seen;
+  seen.add(out);
+  for (const imp of pubMeta.outputs[out].imports) if (imp.kind === 'import-statement') initialJs(imp.path, seen);
+  return seen;
+};
+const lazyJs = Object.keys(pubMeta.outputs).filter((o) => o.endsWith('.js') && Object.values(pubMeta.outputs).some((x) => x.imports.some((i) => i.path === o && i.kind === 'dynamic-import')));
+const overBudget = [];
+console.log('JS ต่อหน้า (gzip, โหลดทันที):');
+for (const [out, info] of Object.entries(pubMeta.outputs)) {
+  if (!info.entryPoint || lazyJs.includes(out)) continue;
+  const size = [...initialJs(out)].reduce((s, f) => s + gz(f), 0);
+  console.log(`  ${path.basename(info.entryPoint, '.js').padEnd(12)} ${(size / 1024).toFixed(1).padStart(6)} KB`);
+  if (size > JS_BUDGET_GZ) overBudget.push(info.entryPoint);
+}
+for (const f of lazyJs) console.log(`  (lazy) ${path.basename(f).padEnd(24)} ${(gz(f) / 1024).toFixed(1).padStart(6)} KB`);
+if (overBudget.length) {
+  console.error(`✘ เกินงบ JS ${JS_BUDGET_GZ / 1024} KB gzip: ${overBudget.join(', ')} — ย้ายโค้ดหนักไปโหลดแบบ import() หรือลดขนาด`);
+  process.exit(1);
+}
 
 // theme-init.js ต้องรันแบบ sync ใน <head> (ไม่ใช่ module) → bundle แยกเป็น iife
 const themeOut = await build({ entryPoints: [path.join(ROOT, 'public/js/theme-init.js')], outdir: path.join(DIST, 'public/js'), bundle: true, format: 'iife', minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning' });
@@ -47,7 +73,9 @@ for (const out of Object.keys(cssOut.metafile.outputs)) map.set('/style.css', `/
 await bundleJs(['admin/js/main.js'], path.join(DIST, 'admin/js'), '/admin/js/');
 const adminLogin = await build({ entryPoints: [path.join(ROOT, 'admin/login.js')], outdir: path.join(DIST, 'admin'), bundle: true, format: 'iife', minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning' });
 for (const out of Object.keys(adminLogin.metafile.outputs)) map.set('/admin/login.js', `/admin/${path.basename(out)}`);
-const adminCss = await build({ entryPoints: [path.join(ROOT, 'admin/admin.css')], outdir: path.join(DIST, 'admin'), bundle: true, minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning', external: ['/fonts/*'] });
+// admin.css import token ของหน้าร้านด้วย URL '/css/tokens.css' (ตอนพัฒนาเบราว์เซอร์โหลดจาก public/ ตรง ๆ) → ตอน build ชี้ไปไฟล์ใน public/
+const publicCss = { name: 'public-css', setup(b) { b.onResolve({ filter: /^\/css\// }, (a) => ({ path: path.join(ROOT, 'public', a.path) })); } };
+const adminCss = await build({ entryPoints: [path.join(ROOT, 'admin/admin.css')], outdir: path.join(DIST, 'admin'), bundle: true, minify: true, entryNames: '[name]-[hash]', metafile: true, logLevel: 'warning', external: ['/fonts/*'], plugins: [publicCss] });
 for (const out of Object.keys(adminCss.metafile.outputs)) map.set('/admin/admin.css', `/admin/${path.basename(out)}`);
 // Chart.js: ใช้ไฟล์ minified ที่โฮสต์เอง (ไม่โหลดจาก CDN)
 const chart = fs.readFileSync(path.join(ROOT, 'node_modules/chart.js/dist/chart.umd.min.js'));
@@ -57,7 +85,7 @@ fs.writeFileSync(path.join(DIST, 'admin/vendor', chartName), chart);
 map.set('/admin/vendor/chart.umd.js', `/admin/vendor/${chartName}`);
 
 // ---------- HTML / JSON / อื่นๆ ----------
-const htmlCopy = (srcDir, dstDir, urlPrefix) => {
+const htmlCopy = (srcDir, dstDir) => {
   fs.mkdirSync(dstDir, { recursive: true });
   for (const f of fs.readdirSync(srcDir).filter((n) => n.endsWith('.html'))) {
     let h = fs.readFileSync(path.join(srcDir, f), 'utf8');
@@ -82,6 +110,11 @@ if (fs.existsSync(path.join(ROOT, 'public/fonts'))) {
     fs.copyFileSync(path.join(ROOT, 'public/fonts', f), path.join(DIST, 'public/fonts', f));
   }
 }
+// ไอคอนเว็บ + ภาพประกอบ (ไฟล์คงที่ ไม่ต้อง hash)
+for (const f of ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png']) {
+  if (fs.existsSync(path.join(ROOT, 'public', f))) fs.copyFileSync(path.join(ROOT, 'public', f), path.join(DIST, 'public', f));
+}
+if (fs.existsSync(path.join(ROOT, 'public/img'))) fs.cpSync(path.join(ROOT, 'public/img'), path.join(DIST, 'public/img'), { recursive: true });
 if (fs.existsSync(path.join(ROOT, 'public/icons.svg'))) {
   fs.copyFileSync(path.join(ROOT, 'public/icons.svg'), path.join(DIST, 'public/icons.svg'));
 }

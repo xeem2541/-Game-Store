@@ -3,12 +3,13 @@ import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { audit } from '../../services/audit.js';
 import { HttpError } from '../../services/errors.js';
+import { resetMfa } from './mfa.js';
 import { idParam, likeArg, pageInfo, paging } from './util.js';
 
 // ทั้ง router เป็น admin เท่านั้น (กำหนดที่ index.js) และไม่เคยส่ง password_hash / token ออกไป
 export const usersAdminRouter = Router();
 
-const PUBLIC_COLS = 'u.id, u.email, u.name, u.role, u.status, u.email_verified AS emailVerified, u.created_at AS createdAt';
+const PUBLIC_COLS = 'u.id, u.email, u.name, u.role, u.status, u.email_verified AS emailVerified, u.totp_enabled AS mfaEnabled, u.created_at AS createdAt';
 
 usersAdminRouter.get('/', (req, res) => {
   const { page, limit, offset } = paging(req.query);
@@ -66,5 +67,13 @@ usersAdminRouter.put('/:id/role', (req, res) => {
   if (t.role === 'admin' && role !== 'admin' && t.status === 'active') assertNotLastAdmin(t.id, 'ลดสิทธิ์');
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, t.id);
   audit(req, 'user.role', 'user', t.id, { before: { role: t.role }, after: { role }, email: t.email });
+  res.json({ ok: true });
+});
+
+// ล้าง 2FA ของบัญชีอื่น (เช่น ทำโทรศัพท์หายและไม่มีรหัสกู้คืน) — ทุกเซสชันของคนนั้นถูกเพิกถอน ล็อกอินครั้งถัดไปต้องตั้ง 2FA ใหม่
+usersAdminRouter.post('/:id/mfa/reset', (req, res) => {
+  const t = loadTarget(req);
+  resetMfa(t.id);
+  audit(req, 'user.mfa_reset', 'user', t.id, { email: t.email });
   res.json({ ok: true });
 });

@@ -5,6 +5,9 @@ const PLACEHOLDER = /change-?me|dev-?(local|only)|xxxx|example|your[-_]?secret|s
 
 const weakSecret = (v) => !v || v.length < 32 || PLACEHOLDER.test(v);
 
+// URL สาธารณะของร้าน: APP_URL ก่อน แล้วค่อย BASE_URL / RENDER_EXTERNAL_URL (Render ตั้งให้อัตโนมัติ) — ใช้ร่วมกับ config.js ให้ตรวจกับค่าที่ใช้จริง
+export const resolveAppUrl = (env = process.env) => (env.APP_URL || env.BASE_URL || env.RENDER_EXTERNAL_URL || '').replace(/\/$/, '');
+
 export function checkProductionEnv(env = process.env) {
   const errors = [];
   const warnings = [];
@@ -20,7 +23,7 @@ export function checkProductionEnv(env = process.env) {
   need(/^(sk|rk)_(live|test)_[A-Za-z0-9]{16,}$/.test(sk) && !PLACEHOLDER.test(sk), 'STRIPE_SECRET_KEY ต้องตั้งค่าเป็นคีย์จริง (sk_live_... หรือ sk_test_... สำหรับ staging)');
   if (/^(sk|rk)_test_/.test(sk)) warnings.push('STRIPE_SECRET_KEY เป็นคีย์โหมดทดสอบ (sk_test_) — ลูกค้าจะจ่ายเงินจริงไม่ได้ ใช้ sk_live_ เมื่อเปิดขายจริง');
 
-  const url = env.APP_URL ?? '';
+  const url = resolveAppUrl(env);
   const insecureOk = env.ALLOW_HTTP_APP_URL === '1';
   if (!/^https?:\/\//.test(url)) errors.push('APP_URL ต้องระบุ เช่น https://shop.example.com');
   else if (!insecureOk) {
@@ -32,5 +35,8 @@ export function checkProductionEnv(env = process.env) {
   if (!env.SHOP_NAME || !env.SHOP_ADDRESS || !env.SHOP_TAX_ID || env.SHOP_TAX_ID === '0000000000000') warnings.push('ข้อมูลร้าน (SHOP_NAME / SHOP_ADDRESS / SHOP_TAX_ID) ยังเป็นค่าตัวอย่าง — จะพิมพ์ลงใบเสร็จ');
   if (!env.TRUST_PROXY) warnings.push('ไม่ได้ตั้ง TRUST_PROXY — ถ้าอยู่หลัง reverse proxy (Caddy/nginx) ให้ตั้ง TRUST_PROXY=1 ไม่งั้น rate limit จะนับ IP ของ proxy แทน IP ลูกค้า');
   if (env.DEV_PAY === '1') errors.push('ห้ามเปิด DEV_PAY ใน production');
+  if (env.ALLOW_DEMO_SEED === '1') warnings.push('เปิด ALLOW_DEMO_SEED=1 อยู่ — ฐานข้อมูลว่างจะถูกใส่เกมสมมติ คูปองทดสอบ และโค้ดเกมปลอม (FAKE-...) ที่ลูกค้าซื้อด้วยเงินจริงได้ ใช้กับ staging เท่านั้น');
+  if (env.ADMIN_MFA_REQUIRED === '0') warnings.push('ปิด 2FA ของหลังบ้านอยู่ (ADMIN_MFA_REQUIRED=0) — บัญชีที่คืนเงินและดูโค้ดเกมได้ป้องกันด้วยรหัสผ่านอย่างเดียว');
+  if (env.RENDER && env.REQUIRE_EXISTING_DB !== '1') warnings.push('ยังไม่ได้ตั้ง REQUIRE_EXISTING_DB=1 — หลัง deploy ครั้งแรกสำเร็จให้ตั้งไว้ ถ้า disk ไม่ถูก mount ระบบจะหยุดแทนที่จะเริ่มด้วยฐานข้อมูลว่าง');
   return { errors, warnings };
 }

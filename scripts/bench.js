@@ -17,7 +17,7 @@ const child = spawn(process.execPath, ['server/index.js'], {
     ...process.env, NODE_ENV: 'development', PORT: String(PORT), APP_URL: base, USE_DIST: '1', LOG_REQUESTS: '0',
     DATABASE_PATH: path.join(tmp, 'bench.db'), API_RATE_LIMIT: '10000000', AUTH_RATE_LIMIT: '1000000',
     JWT_SECRET: 'bench-jwt-secret-0123456789abcdef0123456789', KEY_ENCRYPTION_SECRET: 'bench-key-secret-0123456789abcdef0123456789',
-    STRIPE_WEBHOOK_SECRET: 'whsec_bench_local', STRIPE_SECRET_KEY: '', SMTP_HOST: '',
+    STRIPE_WEBHOOK_SECRET: 'whsec_bench_local', STRIPE_SECRET_KEY: '', SMTP_HOST: '', DEV_PAY: '1',
   },
   stdio: ['ignore', 'ignore', 'inherit'],
 });

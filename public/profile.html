@@ -2,6 +2,8 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="/js/theme-init.js"></script>
   <title data-i18n="profile.title">บัญชีของฉัน</title>
@@ -18,6 +20,9 @@
       <span data-i18n="profile.unverified"></span>
       <button class="btn" id="resendBtn" type="button" data-i18n="profile.resend"></button>
     </div>
+    <section id="stats" class="profile-stats" data-i18n-label="profile.summary" aria-label="สรุปบัญชี" aria-busy="true">
+      <div class="tile sk-tile" aria-hidden="true"></div><div class="tile sk-tile" aria-hidden="true"></div><div class="tile sk-tile" aria-hidden="true"></div><div class="tile sk-tile" aria-hidden="true"></div>
+    </section>
     <div class="chips tabs" role="tablist">
       <button class="chip" role="tab" data-tab="info" data-i18n="profile.tab.info"></button>
       <button class="chip" role="tab" data-tab="password" data-i18n="profile.tab.password"></button>

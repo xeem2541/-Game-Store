@@ -4,40 +4,72 @@
   <link rel="preload" href="/fonts/anuphan-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/anuphan-3.woff2" as="font" type="font/woff2" crossorigin>
   <meta charset="UTF-8">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="/js/theme-init.js"></script>
   <!--SEO-->
   <link rel="stylesheet" href="/style.css">
-  <title>NEXUS - Next Level Gaming</title>
 </head>
 <body data-async>
-  <header class="topbar glass-nav">
-    <a href="/" class="logo">NEXUS<span>.</span></a>
-    <div id="search"></div>
-    <div class="nav">
-      <a href="/games.html">ALL GAMES</a>
-      <a href="/games.html?onSale=1">PROMOS</a>
-    </div>
-    <div id="authNav" class="nav"></div>
-    <div class="cart-btn" id="cartToggle"></div>
-  </header>
+  <header class="topbar"></header>
   <main class="full-width">
-    <!-- Hero section injected by JS -->
-    <div id="hero"></div>
+    <section id="hero" class="hero" aria-labelledby="heroTitle">
+      <div class="hero-bg" id="heroBg" aria-hidden="true"><div class="hero-fallback"><div class="hero-stack" id="heroStack"></div></div></div>
+      <div class="hero-content">
+        <div class="hero-info">
+          <p class="hero-eyebrow" data-i18n="hero.eyebrow">ร้านโค้ดเกมแท้</p>
+          <h1 id="heroTitle" class="hero-title" data-i18n="hero.title">เกมแท้ ราคาโดนใจ</h1>
+          <p class="hero-desc" data-i18n="hero.sub">เลือกเกม ชำระด้วยบัตรหรือ PromptPay แล้วรับโค้ดได้ทันทีในหน้าคำสั่งซื้อและทางอีเมล</p>
+          <div class="hero-actions">
+            <a class="btn primary big" href="/games.html" data-i18n="hero.browse">ดูเกมทั้งหมด</a>
+            <a class="btn big glass" href="/games.html?onSale=1&amp;sort=discount" data-i18n="hero.cta">ดูโปรโมชัน</a>
+          </div>
+          <ul class="hero-points">
+            <li data-i18n="hero.point1">รับโค้ดทันทีหลังชำระเงิน</li>
+            <li data-i18n="hero.point2">บัตรเครดิต/เดบิต และ PromptPay</li>
+            <li data-i18n="hero.point3">มีใบเสร็จ/ใบกำกับภาษีทุกออเดอร์</li>
+          </ul>
+          <p class="hero-featured" id="heroFeatured">&nbsp;</p>
+        </div>
+      </div>
+    </section>
 
     <div class="content-wrapper">
-      <section><h2 class="sec"><span data-i18n="home.featured">FEATURED TITLES</span></h2><div id="featured" class="grid bento" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
+      <section aria-labelledby="discoverTitle"><h2 class="sec" id="discoverTitle"><span data-i18n="home.discover">⭐ เกมแนะนำและทางลัด</span></h2>
+        <!-- bento: ช่องแต่ละช่องมีตำแหน่งคงที่ (area-a … area-g) — skeleton อยู่ตำแหน่งเดียวกับของจริง เนื้อหาเข้ามาแล้วไม่ขยับ -->
+        <div id="featured" class="grid bento-home" aria-busy="true"><div class="tile sk-tile area-a" aria-hidden="true"></div><div class="tile sk-tile area-b" aria-hidden="true"></div><div class="tile sk-tile area-c" aria-hidden="true"></div><div class="tile sk-tile area-d" aria-hidden="true"></div><div class="tile sk-tile area-e" aria-hidden="true"></div><div class="tile sk-tile area-f" aria-hidden="true"></div><div class="tile sk-tile area-g" aria-hidden="true"></div></div>
+      </section>
+
+      <!-- ซื้อยังไง 3 ขั้น (scrollytelling): desktop ภาพด้านซ้ายติดอยู่กับที่และเปลี่ยนตามขั้นที่เลื่อนถึง / มือถือเรียงเป็นการ์ดธรรมดา
+           เนื้อหาจริงอยู่ใน <ol> (screen reader อ่านตามลำดับ) ภาพประกอบเป็น aria-hidden -->
+      <section class="howto" id="howto" aria-labelledby="howtoTitle">
+        <h2 class="sec" id="howtoTitle"><span data-i18n="howto.title">ซื้อง่ายใน 3 ขั้น</span></h2>
+        <div class="howto-layout">
+          <div class="howto-stage" aria-hidden="true">
+            <div class="howto-visual" data-step="1">
+              <div class="hv hv-1"><div class="hv-covers"><span></span><span></span><span></span></div><div class="hv-cart"><span class="hv-cart-icon">🛒</span><b>1</b></div></div>
+              <div class="hv hv-2"><div class="hv-pay"><div class="hv-methods"><span class="on" data-i18n="howto.v.card">บัตร</span><span>PromptPay</span></div><div class="hv-qr"></div><div class="hv-amount"><span data-i18n="howto.v.total">ยอดชำระ</span><b>฿890</b></div></div></div>
+              <div class="hv hv-3"><div class="hv-key"><span class="hv-key-label" data-i18n="howto.v.key">โค้ดเกมของคุณ</span><code>7KQ2X-M9PLA-4WZ8R</code><span class="hv-key-ok" data-i18n="howto.v.ready">✓ พร้อมใช้งาน</span></div></div>
+            </div>
+            <div class="howto-progress"><span></span></div>
+          </div>
+          <ol class="howto-steps">
+            <li class="howto-step" data-step="1"><span class="howto-num">01</span><h3 data-i18n="howto.s1">เลือกเกมที่ใช่</h3><p data-i18n="howto.s1d">ค้นหาตามชื่อ แนวเกม แพลตฟอร์ม หรืองบที่มี แล้วกดเพิ่มลงตะกร้า</p></li>
+            <li class="howto-step" data-step="2"><span class="howto-num">02</span><h3 data-i18n="howto.s2">ชำระเงินอย่างปลอดภัย</h3><p data-i18n="howto.s2d">จ่ายด้วยบัตรเครดิต/เดบิต หรือสแกน PromptPay ระบบไม่เก็บข้อมูลบัตรของคุณ</p></li>
+            <li class="howto-step" data-step="3"><span class="howto-num">03</span><h3 data-i18n="howto.s3">รับโค้ดแล้วเล่นได้เลย</h3><p data-i18n="howto.s3d">โค้ดแสดงในหน้าคำสั่งซื้อและส่งไปที่อีเมลทันที พร้อมใบเสร็จทุกออเดอร์</p><a class="btn primary" href="/games.html" data-i18n="howto.cta">เริ่มเลือกเกม</a></li>
+          </ol>
+        </div>
+      </section>
       
-      <section><h2 class="sec"><span data-i18n="home.best">TRENDING NOW</span> <a href="/games.html?sort=bestseller" data-i18n="home.all">VIEW ALL</a></h2><div id="bestsellers" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
+      <section><h2 class="sec"><span data-i18n="home.best">TRENDING NOW</span> <a href="/games.html?sort=bestseller" data-i18n="home.all">VIEW ALL</a></h2><div id="bestsellers" class="grid row-scroll" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
       
-      <section><h2 class="sec"><span data-i18n="home.new">NEW ARRIVALS</span> <a href="/games.html?sort=newest" data-i18n="home.all">VIEW ALL</a></h2><div id="newest" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
+      <section><h2 class="sec"><span data-i18n="home.new">NEW ARRIVALS</span> <a href="/games.html?sort=newest" data-i18n="home.all">VIEW ALL</a></h2><div id="newest" class="grid row-scroll" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
       
-      <section><h2 class="sec"><span data-i18n="home.sale">SPECIAL OFFERS</span> <a href="/games.html?onSale=1&sort=discount" data-i18n="home.all">VIEW ALL</a></h2><div id="onSale" class="grid" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
+      <section><h2 class="sec"><span data-i18n="home.sale">SPECIAL OFFERS</span> <a href="/games.html?onSale=1&sort=discount" data-i18n="home.all">VIEW ALL</a></h2><div id="onSale" class="grid row-scroll" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
     </div>
   </main>
-  <footer>
-    <div>NEXUS GAME STORE &copy; 2026. CREATING DIGITAL WORLDS.</div>
-  </footer>
+  <footer></footer>
   <script type="module" src="/js/home.js"></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 import { t, toast } from './common.js';
+import { flash } from './motion.js';
 
 // แสดงโค้ดเกม: ซ่อนไว้เป็นค่าเริ่มต้น กด "แสดง" เพื่อเปิดดู และ "คัดลอก" ลงคลิปบอร์ด
 // สร้างด้วย DOM API + textContent (ไม่ใส่โค้ดลงใน HTML string / attribute)
@@ -36,7 +37,7 @@ export function renderKeys(container, keys) {
     copy.className = 'btn';
     copy.textContent = t('order.copy');
     copy.onclick = async () => {
-      try { await navigator.clipboard.writeText(k.code); toast(t('order.copied')); } catch { toast(t('common.error')); }
+      try { await navigator.clipboard.writeText(k.code); flash(copy, 'is-done', 1500); toast(t('order.copied')); } catch { toast(t('common.error')); }
     };
 
     row.append(info, show, copy);

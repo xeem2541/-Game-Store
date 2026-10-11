@@ -10,6 +10,7 @@ const { seedCoupons } = await import('../server/db/seed.js');
 const { setStripeClient } = await import('../server/services/stripe.js');
 const { expirePending } = await import('../server/services/orders.js');
 const { processEmailQueue } = await import('../server/services/emailQueue.js');
+const { processAutoRefunds } = await import('../server/services/autoRefunds.js');
 const { failNextMails } = await import('../server/services/mail.js');
 const { addKeys } = await import('../server/services/keys.js');
 const { encrypt, decrypt, keyHash } = await import('../server/services/crypto.js');
@@ -26,6 +27,7 @@ const fakeStripe = {
   checkout: {
     sessions: {
       async create(params, opts) {
+        if (fakeStripe.failCreate) throw Object.assign(new Error('No such customer: cus_SECRET_acct_123'), { type: 'StripeInvalidRequestError' });
         const id = `cs_test_${++sessionN}`;
         calls.create.push({ params, opts, id });
         return { id, url: `https://checkout.stripe.test/c/${id}`, payment_intent: null };
@@ -334,13 +336,28 @@ test('คืนเงิน (แอดมิน): refunded, เพิกถอ�
   assert.equal((await c.post('/api/orders', { idempotencyKey: key() })).status, 201);
 });
 
-test('คืนเงินจาก Stripe Dashboard (webhook charge.refunded): เพิกถอนโค้ด; คืนบางส่วนแค่แจ้งเตือน', async () => {
+test('คืนเงินจาก Stripe Dashboard (webhook charge.refunded): เพิกถอนโค้ด; คืนบางส่วนบันทึกยอด + แจ้งเตือน แต่ยังเป็น paid', async () => {
   const c = await makeUser(srv.url);
   const { order, sessionId } = await paidViaWebhook(c, ['island-tycoon']);
-  const partial = await webhook('charge.refunded', { id: 'ch_p', payment_intent: `pi_${sessionId}`, amount: order.total, amount_refunded: 100 });
+  const partial = await webhook('charge.refunded', { id: 'ch_p', payment_intent: `pi_${sessionId}`, amount: order.total, amount_refunded: 10000 });
   assert.equal(partial.status, 200);
   assert.equal((await c.get(`/api/orders/${order.id}`)).data.order.status, 'paid');
-  assert.ok(alerts('PARTIAL_REFUND').some((a) => a.order_id === order.id));
+  assert.equal((await c.get('/api/me/library')).data.items.length, 1, 'โค้ดยังใช้ได้');
+  const partialAlerts = () => alerts('PARTIAL_REFUND').filter((a) => a.order_id === order.id);
+  assert.equal(partialAlerts().length, 1);
+  assert.match(partialAlerts()[0].detail, /฿100 จาก/);
+  const admin = await makeAdmin();
+  const detail = (await admin.get(`/api/admin/orders/${order.id}`)).data;
+  assert.equal(detail.payments.find((p) => p.status === 'succeeded').amountRefunded, 10000);
+  const csv = (await admin.raw(`/api/admin/reports/orders.csv?status=paid`)).buf.toString('utf8');
+  assert.ok(csv.includes('refunded_via_stripe_thb'));
+  assert.ok(csv.split('\r\n').some((l) => l.startsWith(`${order.id},`) && l.includes(',100,')));
+  // Stripe ส่ง event เดิมซ้ำ/ยอดเท่าเดิม → ไม่แจ้งซ้ำ; คืนเพิ่ม → อัปเดตยอดสะสม
+  await webhook('charge.refunded', { id: 'ch_p', payment_intent: `pi_${sessionId}`, amount: order.total, amount_refunded: 10000 });
+  assert.equal(partialAlerts().length, 1);
+  await webhook('charge.refunded', { id: 'ch_p', payment_intent: `pi_${sessionId}`, amount: order.total, amount_refunded: 25000 });
+  assert.equal(partialAlerts().length, 2);
+  assert.equal(db.prepare("SELECT amount_refunded FROM payments WHERE order_id = ? AND status = 'succeeded'").get(order.id).amount_refunded, 25000);
 
   await webhook('charge.refunded', { id: 'ch_f', payment_intent: `pi_${sessionId}`, amount: order.total, amount_refunded: order.total });
   assert.equal((await c.get(`/api/orders/${order.id}`)).data.order.status, 'refunded');
@@ -392,6 +409,23 @@ test('ใบเสร็จ PDF: เฉพาะเจ้าของ + paid, �
   const admin = await makeAdmin();
   await admin.post(`/api/admin/orders/${a.order.id}/refund`, { confirmOrderId: a.order.id, reason: 'ทดสอบใบเสร็จหลังคืนเงิน' });
   assert.equal((await c.req('GET', `/api/orders/${a.order.id}/receipt.pdf`)).status, 409); // คืนเงินแล้วไม่ออกใบเสร็จ
+});
+
+test('ใบเสร็จ PDF รายการยาว: ขึ้นหน้าใหม่ (ไม่ล้นขอบกระดาษ) และมีเลขหน้า; สร้างไม่สำเร็จ = error ก่อนส่งข้อมูล', async () => {
+  const { renderReceipt } = await import('../server/services/receipt.js');
+  const c = await makeUser(srv.url);
+  const { order } = await paidViaWebhook(c, ['cyber-samurai']);
+  const pages = (buf) => (buf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length;
+  assert.equal(pages(await renderReceipt(order.id)), 1);
+
+  const ins = db.prepare(`INSERT INTO order_items (order_id, game_id, slug, title, platform, list_price, discount_percent, unit_price)
+    SELECT order_id, game_id, slug, ?, platform, list_price, discount_percent, unit_price FROM order_items WHERE order_id = ? LIMIT 1`);
+  for (let i = 0; i < 70; i += 1) ins.run(i % 5 ? `เกมทดสอบ ${i}` : `เกมชื่อยาวมาก ${i} `.repeat(6), order.id);
+  const long = await renderReceipt(order.id);
+  assert.ok(pages(long) >= 3, `ได้ ${pages(long)} หน้า`);
+  db.prepare('DELETE FROM order_items WHERE order_id = ? AND id NOT IN (SELECT MIN(id) FROM order_items WHERE order_id = ?)').run(order.id, order.id);
+
+  await assert.rejects(renderReceipt(999_999_999));
 });
 
 test('อีเมลหลังซื้อ: ส่งล้มเหลวแล้ว retry (backoff), ไม่ทำให้ออเดอร์พัง, ครบกำหนดแล้วแจ้งแอดมิน', async () => {
@@ -486,4 +520,178 @@ test('production: ไม่มี route จำลองชำระเงิน 
   const env = validProdEnv();
   const out = JSON.parse(execFileSync(process.execPath, ['-e', script], { env, cwd: process.cwd() }).toString().trim().split('\n').pop());
   assert.deepEqual(out, { devPay: false, hasDevPay: false, hasPay: true });
+});
+
+// ---------- M3: อายุออเดอร์ต้องครอบคลุม Checkout Session ----------
+test('เริ่มชำระช่วงท้ายของออเดอร์: ต่ออายุออเดอร์ให้ครอบคลุม session + เวลาเผื่อ (ไม่ถูกยกเลิกระหว่างจ่าย)', async () => {
+  const c = await makeUser(srv.url);
+  const order = await buy(c, ['retro-arcade-pack']);
+  db.prepare('UPDATE orders SET expires_at = ? WHERE id = ?').run(Date.now() + 60_000, order.id); // เหลือ 1 นาที
+  const t0 = Date.now();
+  assert.equal((await c.post(`/api/orders/${order.id}/pay`, {})).status, 200);
+  const sessionExpiresMs = calls.create.at(-1).params.expires_at * 1000;
+  assert.ok(sessionExpiresMs >= t0 + 30 * 60_000, 'Stripe ต้องการอายุ session อย่างน้อย 30 นาที');
+  const expiresAt = db.prepare('SELECT expires_at FROM orders WHERE id = ?').get(order.id).expires_at;
+  assert.ok(expiresAt >= sessionExpiresMs, 'ออเดอร์ต้องหมดอายุหลัง session');
+  // เงื่อนไขเดียวกับ expirePending() แต่เฉพาะออเดอร์นี้ (ไม่ไปยกเลิกออเดอร์ของเทสอื่น)
+  const wouldExpire = db.prepare("SELECT COUNT(*) AS n FROM orders WHERE id = ? AND status = 'pending' AND expires_at <= ?").get(order.id, sessionExpiresMs - 1000).n;
+  assert.equal(wouldExpire, 0, 'ระหว่างที่ session ยังจ่ายได้ ออเดอร์ต้องไม่ถูกยกเลิก');
+  assert.equal((await c.get(`/api/orders/${order.id}`)).data.order.expiresAt, expiresAt);
+});
+
+test('ออเดอร์ที่เปิดไว้นานเกิน 2 ชั่วโมง: ไม่สร้าง session ใหม่ (กันกดชำระวนเพื่อกักโค้ด)', async () => {
+  const c = await makeUser(srv.url);
+  const order = await buy(c, ['island-tycoon']);
+  db.prepare("UPDATE orders SET created_at = datetime('now', '-100 minutes'), expires_at = ? WHERE id = ?").run(Date.now() + 10 * 60_000, order.id);
+  const before = calls.create.length;
+  const r = await c.post(`/api/orders/${order.id}/pay`, {});
+  assert.equal(r.status, 409);
+  assert.equal(r.data.code, 'ORDER_TOO_OLD');
+  assert.equal(calls.create.length, before, 'ต้องไม่เรียก Stripe');
+});
+
+test('webhook คืนเงินเฉพาะงานของการชำระในเหตุการณ์นั้น (ไม่รองานเก่าที่ค้างในคิว)', async () => {
+  db.prepare("INSERT INTO auto_refunds (payment_intent, order_id, reason, next_attempt_at) VALUES ('pi_unrelated_old', NULL, 'duplicate', ?)").run(Date.now() - 1000);
+  try {
+    const c = await makeUser(srv.url);
+    const { order, sessionId } = await startPay(c, ['chef-rush']);
+    const before = calls.refunds.length;
+    assert.equal((await webhook('checkout.session.completed', completed(order, sessionId, { amount_total: 1 }))).status, 200);
+    assert.deepEqual(calls.refunds.slice(before).map((x) => x.params.payment_intent), [`pi_${sessionId}`], 'เรียก Stripe เฉพาะของเหตุการณ์นี้');
+    assert.equal(db.prepare("SELECT attempts FROM auto_refunds WHERE payment_intent = 'pi_unrelated_old'").get().attempts, 0, 'งานอื่นรอรอบตั้งเวลา');
+  } finally {
+    db.prepare("DELETE FROM auto_refunds WHERE payment_intent = 'pi_unrelated_old'").run();
+  }
+});
+
+// ---------- M4: คืนเงินอัตโนมัติผ่านคิว (outbox) ----------
+test('คืนเงินอัตโนมัติล้มเหลว: อยู่ในคิวและ retry จนสำเร็จ, webhook ไม่ล้ม, แจ้งแอดมินตอนล้มเหลวครั้งแรก', async () => {
+  const c = await makeUser(srv.url);
+  const { order, sessionId } = await startPay(c, ['basketball-star']);
+  const pi = `pi_${sessionId}`;
+  fakeStripe.failRefund = true;
+  try {
+    const w = await webhook('checkout.session.completed', completed(order, sessionId, { amount_total: 1 }));
+    assert.equal(w.status, 200, 'webhook ต้องตอบ 200 แม้ Stripe คืนเงินไม่สำเร็จ (ไม่งั้น Stripe ส่งซ้ำไม่จบ)');
+    let job = db.prepare('SELECT * FROM auto_refunds WHERE payment_intent = ?').get(pi);
+    assert.equal(job.status, 'pending');
+    assert.equal(job.attempts, 1);
+    assert.equal(job.reason, 'amount_mismatch');
+    assert.ok(job.next_attempt_at > Date.now(), 'รอ backoff ก่อนลองใหม่');
+    assert.ok(alerts('REFUND_FAILED').some((a) => a.order_id === order.id && a.detail.includes('ลองใหม่อัตโนมัติ')));
+    assert.equal(db.prepare('SELECT status FROM payments WHERE provider_ref = ?').get(sessionId).status, 'needs_review');
+
+    assert.equal(await processAutoRefunds(Date.now()), 0, 'ยังไม่ถึงเวลา retry');
+    fakeStripe.failRefund = false;
+    const n = calls.refunds.length;
+    assert.equal(await processAutoRefunds(job.next_attempt_at), 1);
+    job = db.prepare('SELECT * FROM auto_refunds WHERE payment_intent = ?').get(pi);
+    assert.equal(job.status, 'done');
+    assert.equal(calls.refunds.at(-1).opts.idempotencyKey, `auto-refund-${pi}`, 'retry ใช้ key เดิม → Stripe ไม่คืนเงินซ้ำ');
+    assert.equal(calls.refunds.length, n + 1);
+    assert.equal(db.prepare('SELECT status FROM payments WHERE provider_ref = ?').get(sessionId).status, 'refunded');
+    assert.equal(await processAutoRefunds(Date.now() + 86_400_000), 0, 'งานที่สำเร็จแล้วไม่ถูกทำซ้ำ');
+  } finally {
+    fakeStripe.failRefund = false;
+  }
+});
+
+test('คืนเงินอัตโนมัติ: งานที่ค้างจากโปรเซสล่มถูกทำต่อ; ล้มเหลวครบกำหนดแล้วหยุดและแจ้งให้คืนเงินด้วยตนเอง', async () => {
+  // จำลองโปรเซสล่มหลัง commit webhook: มีงานในคิวแต่ยังไม่ได้เรียก Stripe
+  db.prepare("INSERT INTO auto_refunds (payment_intent, order_id, reason, next_attempt_at) VALUES ('pi_crashed_1', NULL, 'unknown_order', ?)").run(Date.now());
+  assert.ok(await processAutoRefunds() >= 1);
+  assert.equal(db.prepare("SELECT status FROM auto_refunds WHERE payment_intent = 'pi_crashed_1'").get().status, 'done');
+
+  db.prepare("INSERT INTO auto_refunds (payment_intent, order_id, reason, next_attempt_at) VALUES ('pi_never_1', NULL, 'duplicate', ?)").run(Date.now());
+  fakeStripe.failRefund = true;
+  try {
+    let t = Date.now();
+    for (let i = 0; i < 10; i += 1) { await processAutoRefunds(t); t += 7 * 3600_000; }
+  } finally {
+    fakeStripe.failRefund = false;
+  }
+  const job = db.prepare("SELECT * FROM auto_refunds WHERE payment_intent = 'pi_never_1'").get();
+  assert.equal(job.status, 'failed');
+  assert.equal(job.attempts, 6);
+  assert.match(job.last_error, /stripe down/);
+  assert.ok(alerts('REFUND_FAILED').some((a) => a.detail.includes('pi_never_1') && a.detail.includes('ด้วยตนเอง')));
+});
+
+// ---------- M10: กรณี webhook ที่ยังไม่มีเทส ----------
+test('PromptPay (ยืนยันทีหลัง): session.completed แบบ unpaid ยังไม่ให้โค้ด → async_payment_succeeded แล้วจึง paid', async () => {
+  const c = await makeUser(srv.url);
+  const { order, sessionId } = await startPay(c, ['forest-spirit']);
+  await webhook('checkout.session.completed', completed(order, sessionId, { payment_status: 'unpaid' }));
+  assert.equal((await c.get(`/api/orders/${order.id}`)).data.order.status, 'pending');
+  assert.equal(soldKeys(order.id), 0);
+  const w = await webhook('checkout.session.async_payment_succeeded', completed(order, sessionId));
+  assert.equal(w.data.result, 'processed');
+  const o = (await c.get(`/api/orders/${order.id}`)).data.order;
+  assert.equal(o.status, 'paid');
+  assert.equal(o.keys.length, 1);
+  assert.equal(db.prepare('SELECT status FROM payments WHERE provider_ref = ?').get(sessionId).status, 'succeeded');
+});
+
+test('PromptPay ล้มเหลว (async_payment_failed) และ session หมดอายุ: บันทึกสถานะ, ออเดอร์ยังรอชำระ', async () => {
+  const c = await makeUser(srv.url);
+  const { order, sessionId } = await startPay(c, ['vampire-castle']);
+  await webhook('checkout.session.async_payment_failed', completed(order, sessionId, { payment_status: 'unpaid' }));
+  const pay = db.prepare('SELECT * FROM payments WHERE provider_ref = ?').get(sessionId);
+  assert.equal(pay.status, 'failed');
+  assert.match(pay.last_error, /async payment failed/);
+  assert.equal((await c.get(`/api/orders/${order.id}`)).data.order.status, 'pending');
+
+  const c2 = await makeUser(srv.url);
+  const p2 = await startPay(c2, ['ninja-dash']);
+  await webhook('checkout.session.expired', { id: p2.sessionId, object: 'checkout.session', metadata: { order_id: String(p2.order.id) } });
+  assert.equal(db.prepare('SELECT status FROM payments WHERE provider_ref = ?').get(p2.sessionId).status, 'expired');
+  assert.equal((await c2.get(`/api/orders/${p2.order.id}`)).data.order.status, 'pending');
+  const before = calls.create.length;
+  assert.equal((await c2.post(`/api/orders/${p2.order.id}/pay`, {})).status, 200);
+  assert.equal(calls.create.length, before + 1, 'session หมดอายุแล้ว → สร้างใหม่ ไม่ใช้ซ้ำ');
+});
+
+test('ได้เงินแต่ไม่พบออเดอร์: คืนเงินอัตโนมัติและแจ้งแอดมิน', async () => {
+  const n = calls.refunds.length;
+  const w = await webhook('payment_intent.succeeded', { id: 'pi_orphan_1', object: 'payment_intent', amount_received: 5000, currency: 'thb', metadata: { order_id: '999999' } });
+  assert.equal(w.status, 200);
+  assert.equal(calls.refunds.length, n + 1);
+  assert.equal(calls.refunds.at(-1).params.payment_intent, 'pi_orphan_1');
+  assert.ok(alerts('PAYMENT_UNKNOWN_ORDER').some((a) => a.detail.includes('999999')));
+});
+
+test('payment_intent.succeeded มาก่อน session.completed: paid ครั้งเดียว; จ่ายซ้ำด้วย payment อื่น → คืนเงินอัตโนมัติ', async () => {
+  const c = await makeUser(srv.url);
+  const { order, sessionId } = await startPay(c, ['galaxy-commanders']);
+  const pi = `pi_${sessionId}`;
+  await webhook('payment_intent.succeeded', { id: pi, object: 'payment_intent', amount_received: order.total, currency: 'thb', metadata: { order_id: String(order.id) } });
+  assert.equal((await c.get(`/api/orders/${order.id}`)).data.order.status, 'paid');
+  const n = calls.refunds.length;
+  await webhook('checkout.session.completed', completed(order, sessionId));
+  assert.equal(calls.refunds.length, n, 'event ของการจ่ายเดิมต้องไม่ถูกมองเป็นการจ่ายซ้ำ');
+  assert.equal(soldKeys(order.id), 1);
+
+  await webhook('payment_intent.succeeded', { id: 'pi_second_payment', object: 'payment_intent', amount_received: order.total, currency: 'thb', metadata: { order_id: String(order.id) } });
+  assert.equal(calls.refunds.length, n + 1);
+  assert.equal(calls.refunds.at(-1).params.payment_intent, 'pi_second_payment');
+  assert.ok(alerts('DUPLICATE_PAYMENT').some((a) => a.order_id === order.id));
+  assert.equal(soldKeys(order.id), 1, 'ไม่ให้โค้ดเพิ่ม');
+});
+
+test('webhook ชนิดที่ไม่ได้ใช้: ตอบ 200 (ignored) ไม่มีผลใด ๆ', async () => {
+  const w = await webhook('customer.created', { id: 'cus_1', object: 'customer' });
+  assert.equal(w.status, 200);
+  assert.equal(w.data.result, 'ignored');
+});
+
+test('สร้าง Checkout Session ไม่สำเร็จ: ลูกค้าได้ข้อความทั่วไป ไม่เห็นรายละเอียดจาก Stripe', async () => {
+  const c = await makeUser(srv.url);
+  const order = await buy(c, ['dragon-realm']);
+  fakeStripe.failCreate = true;
+  const r = await c.post(`/api/orders/${order.id}/pay`, {});
+  fakeStripe.failCreate = false;
+  assert.equal(r.status, 502);
+  assert.equal(r.data.code, 'PAYMENT_PROVIDER_ERROR');
+  assert.ok(!JSON.stringify(r.data).includes('cus_SECRET'), 'ห้ามส่งข้อความจาก Stripe ให้ลูกค้า');
+  assert.equal((await c.post(`/api/orders/${order.id}/pay`, {})).status, 200, 'ลองใหม่ได้');
 });

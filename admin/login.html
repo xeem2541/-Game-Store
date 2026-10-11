@@ -2,21 +2,30 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <script src="/js/theme-init.js"></script>
   <title>เข้าสู่ระบบหลังบ้าน</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="preload" href="/fonts/anuphan-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/admin/admin.css">
 </head>
-<body>
+<body class="auth-page">
   <main class="card auth-box">
-    <h1>🎮 Game Store — หลังบ้าน</h1>
+    <h1>🎮 Game Store <span>Admin</span></h1>
+    <p class="lead">เข้าสู่ระบบหลังบ้าน</p>
     <form id="form" novalidate>
       <label class="f">อีเมล<input name="email" type="email" required autocomplete="username"></label>
       <label class="f">รหัสผ่าน<input name="password" type="password" required autocomplete="current-password"></label>
       <p class="msg" id="msg" role="alert"></p>
       <button class="btn primary" type="submit">เข้าสู่ระบบ</button>
+    </form>
+    <form id="mfaForm" novalidate hidden>
+      <p class="muted">เปิดแอป Authenticator แล้วกรอกรหัส 6 หลัก (หรือรหัสกู้คืน เช่น ABCDE-FGHIJ)</p>
+      <label class="f">รหัสยืนยัน<input name="code" required autocomplete="one-time-code" inputmode="numeric" maxlength="20" autocapitalize="characters"></label>
+      <p class="msg" id="mfaMsg" role="alert"></p>
+      <button class="btn primary" type="submit">ยืนยัน</button>
+      <button class="btn" id="mfaBack" type="button">← ใช้บัญชีอื่น</button>
     </form>
   </main>
   <script src="/admin/login.js"></script>

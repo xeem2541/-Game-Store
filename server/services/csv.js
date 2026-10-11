@@ -31,7 +31,7 @@ export function parseKeyCsv(text) {
   let duplicatesInFile = 0;
   let rows = 0;
   let first = true;
-  text.replace(/^﻿/, '').split(/\r?\n/).forEach((raw, i) => {
+  text.replace(/^\uFEFF/, '').split(/\r?\n/).forEach((raw, i) => {
     const v = raw.split(',')[0].trim().replace(/^"(.*)"$/, '$1').trim();
     if (!v) return;
     if (first) { first = false; if (v.toLowerCase() === 'code') return; } // หัวตาราง ไม่นับเป็นข้อมูล

@@ -10,6 +10,6 @@ export function validProdEnv(extra = {}) {
     JWT_SECRET: rand(), KEY_ENCRYPTION_SECRET: rand(),
     STRIPE_SECRET_KEY: `sk_test_${rand(16)}`, STRIPE_WEBHOOK_SECRET: `whsec_${rand(16)}`,
     SMTP_HOST: 'smtp.mail.invalid', SHOP_NAME: 'Test Shop Co', SHOP_ADDRESS: '1 Test Rd', SHOP_TAX_ID: '1234567890123', TRUST_PROXY: '1',
-    LOG_REQUESTS: '0', ...extra,
+    LOG_REQUESTS: '0', DEV_PAY: '', ...extra, // DEV_PAY ของ process เทสต้องไม่หลุดเข้า production
   };
 }

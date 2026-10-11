@@ -4,9 +4,7 @@ import cors from 'cors';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
-import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { ZodError } from 'zod';
 import { HttpError } from './services/errors.js';
 import { stripeConfigured, webhookConfigured } from './services/stripe.js';
@@ -26,8 +24,6 @@ import { adminRouter } from './routes/admin/index.js';
 import { stripeWebhook } from './routes/webhooks.js';
 import { reviewsRouter } from './routes/reviews.js';
 import { wishlistRouter } from './routes/wishlist.js';
-
-const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 
 export function createApp() {
   const app = express();
@@ -110,11 +106,9 @@ export function createApp() {
 
   mountWeb(app); // หน้าเว็บ, SEO, ไฟล์สถิต, แอดมิน, 404 (ดู web.js)
 
-  // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, _next) => {
     if (err instanceof ZodError) {
-      const first = err.issues[0];
-      return res.status(400).json({ error: first?.message && !first.message.startsWith('Invalid') ? first.message : 'ข้อมูลไม่ถูกต้อง', details: err.issues });
+      return res.status(400).json({ error: err.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง', details: err.issues });
     }
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, code: err.code, params: err.params });
     if (err.name === 'MulterError') {

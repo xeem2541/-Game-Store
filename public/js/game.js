@@ -1,4 +1,7 @@
 import { markReady, api, descOf, cart, cardHtml, remember, priceHtml, esc, $, t, user, loginUrl, genreName, heartHtml, renderHearts, toast, lang } from './common.js';
+import { initScrollFx } from './scroll-fx.js';
+
+initScrollFx(); // parallax / ค่อย ๆ ปรากฏ สำรองสำหรับเบราว์เซอร์ที่ไม่รองรับ CSS scroll-driven animation
 
 const slug = $('#detail').dataset.slug;
 const stars = (n) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
@@ -16,10 +19,10 @@ if (game) {
   remember([g, ...g.related]);
   const specsContent = g.spec_min || g.spec_rec ? `
     <div class="bento-card sys-req">
-      <div class="bento-label">SYSTEM REQUIREMENTS</div>
+      <div class="bento-label">${t('game.specs')}</div>
       <div class="specs">
-        ${g.spec_min ? `<div><strong>MINIMUM</strong><p>${esc(g.spec_min)}</p></div>` : ''}
-        ${g.spec_rec ? `<div><strong>RECOMMENDED</strong><p>${esc(g.spec_rec)}</p></div>` : ''}
+        ${g.spec_min ? `<div><strong>${t('game.min')}</strong><p>${esc(g.spec_min)}</p></div>` : ''}
+        ${g.spec_rec ? `<div><strong>${t('game.rec')}</strong><p>${esc(g.spec_rec)}</p></div>` : ''}
       </div>
     </div>` : '';
 
@@ -28,7 +31,7 @@ if (game) {
 
   $('#detail').innerHTML = `
     <div class="game-backdrop" id="gameBackdrop"></div>
-    <div class="detail-hero reveal-scroll">
+    <div class="detail-hero">
       <div class="detail-cover-wrap">
         <img class="detail-cover" src="${esc(g.cover)}" alt="${esc(g.title)}" width="400" height="300">
         ${heartHtml(g.id)}
@@ -38,38 +41,38 @@ if (game) {
         <div class="price-row big-price">
           <span class="price">${priceHtml(g)}${g.discount ? ` <span class="badge inline">-${g.discount}%</span>` : ''}</span>
         </div>
-        <button class="btn primary big" id="addBtn" type="button">ADD TO CART</button>
+        <button class="btn primary big" id="addBtn" type="button">${t('game.add')}</button>
       </div>
     </div>
 
-    <!-- The Bento Grid -->
+    <!-- bento: ภาพรวม (2×2) + คะแนน วางจำหน่าย แนวเกม แพลตฟอร์ม + สเปก/การรับโค้ด -->
     <div class="game-bento-grid reveal-scroll">
       <div class="bento-card overview">
-        <div class="bento-label">GAME OVERVIEW</div>
+        <div class="bento-label">${t('game.overview')}</div>
         <p>${esc(descOf(g))}</p>
       </div>
-      
-      <div class="bento-card rating">
-        <div class="bento-label">RATING</div>
+      <a class="bento-card rating" href="#reviews">
+        <div class="bento-label">${t('game.rating')}</div>
         <div class="bento-val">⭐ <span id="ratingNow">${g.rating}</span> <small id="ratingCount"></small></div>
-      </div>
-      
+        <span class="bento-hint">${t('game.toReviews')}</span>
+      </a>
       <div class="bento-card release">
-        <div class="bento-label">RELEASE DATE</div>
+        <div class="bento-label">${t('game.release')}</div>
         <div class="bento-val">${esc(g.release_date)}</div>
       </div>
-      
-      <div class="bento-card genre">
-        <div class="bento-label">GENRE</div>
+      <a class="bento-card genre" href="/games.html?genre=${encodeURIComponent(g.genre)}">
+        <div class="bento-label">${t('game.genre')}</div>
         <div class="bento-val">${esc(genreName(g.genre))}</div>
-      </div>
-      
-      <div class="bento-card dev">
-        <div class="bento-label">PLATFORM</div>
+      </a>
+      <a class="bento-card dev" href="/games.html?platform=${encodeURIComponent(g.platform)}">
+        <div class="bento-label">${t('game.platform')}</div>
         <div class="bento-val">${esc(g.platform)}</div>
-      </div>
-      
+      </a>
       ${specsContent}
+      <div class="bento-card delivery">
+        <div class="bento-label">${t('game.delivery')}</div>
+        <ul><li>${t('game.delivery1')}</li><li>${t('game.delivery2')}</li><li>${t('game.delivery3', { platform: esc(g.platform) })}</li></ul>
+      </div>
     </div>
 
     ${trailer}
@@ -91,17 +94,7 @@ if (game) {
   if (stickyBtn) stickyBtn.onclick = (e) => cart.add(g, e);
   $('#gameBackdrop').style.backgroundImage = `url('${g.cover}')`;
 
-  if (!CSS.supports('animation-timeline: view()')) {
-    const obs = new IntersectionObserver((ents) => {
-      ents.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add('visible');
-          obs.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.1 });
-    document.querySelectorAll('.reveal-scroll').forEach(el => obs.observe(el));
-  }
+  // .reveal-scroll ค่อย ๆ ปรากฏตามการเลื่อนด้วย CSS (story.css) — เบราว์เซอร์ที่ไม่รองรับแสดงทันที ไม่ต้องใช้ JS
   renderHearts();
   initReviews(g);
 }
@@ -111,16 +104,18 @@ async function initReviews(g) {
   const base = `/games/${g.id}/reviews`;
   let page = 1;
   let mine = null;
+  let canReview = false;
 
   const reviewHtml = (r) => `
     <article class="review ${r.mine ? 'mine' : ''}">
-      <div class="review-head"><strong>${esc(r.name)}</strong>${r.mine ? ` <span class="tag">${t('reviews.mine')}</span>` : ''}
+      <div class="review-head"><strong>${esc(r.name)}</strong>${r.verified ? ` <span class="tag">✓ ${t('reviews.verified')}</span>` : ''}${r.mine ? ` <span class="tag">${t('reviews.mine')}</span>` : ''}
         <span class="stars" aria-label="${r.rating}/5">${stars(r.rating)}</span><small>${fmtDate(r.updated_at)}</small></div>
       ${r.body ? `<p>${esc(r.body)}</p>` : ''}
     </article>`;
 
   function formHtml() {
     if (!user) return `<p><a class="btn" href="${esc(loginUrl())}">${t('reviews.loginToReview')}</a></p>`;
+    if (!mine && !canReview) return `<p class="meta">${t('reviews.purchaseRequired')}</p>`; // รีวิวได้เฉพาะผู้ที่ซื้อแล้ว (มีรีวิวเดิมอยู่ยังแก้/ลบได้)
     return `
     <form id="reviewForm" class="review-form">
       <label>${t('reviews.yourRating')}
@@ -140,7 +135,7 @@ async function initReviews(g) {
   async function load(reset = true) {
     if (reset) page = 1;
     const data = await api(`${base}?page=${page}`);
-    if (reset) mine = data.mine;
+    if (reset) { mine = data.mine; canReview = data.canReview; }
     if (reset) {
       root.innerHTML = `
         <h2 class="sec">${t('reviews.title')} <small id="revSummary"></small></h2>

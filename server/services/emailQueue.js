@@ -4,6 +4,7 @@ import { maskKey } from './crypto.js';
 import { adminAlert } from './audit.js';
 import { keysForOrder } from './keys.js';
 import { sendMail } from './mail.js';
+import { formatBaht as baht } from './pricing.js';
 
 // คิวอีเมลแบบเบา ๆ ในฐานข้อมูล: ส่งล้มเหลวจะ retry แบบ backoff และไม่ทำให้ออเดอร์พัง
 const BACKOFF_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 3600_000, 6 * 3600_000];
@@ -11,7 +12,6 @@ const MAX_ATTEMPTS = BACKOFF_MS.length;
 let running = false;
 export const isEmailQueueBusy = () => running;
 
-const baht = (satang) => '฿' + (satang / 100).toLocaleString('en-US', { minimumFractionDigits: satang % 100 ? 2 : 0, maximumFractionDigits: 2 });
 
 export function enqueueEmail(kind, orderId) {
   db.prepare('INSERT INTO email_queue (kind, order_id, next_attempt_at) VALUES (?, ?, ?)').run(kind, orderId, Date.now());

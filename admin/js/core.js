@@ -15,16 +15,19 @@ export const STATUS_TH = { pending: 'รอชำระ', paid: 'ชำระแ
 export const badge = (v, label) => `<span class="badge ${esc(v)}">${esc(label ?? STATUS_TH[v] ?? v)}</span>`;
 
 export const state = { me: null, perms: [] };
-const csrf = () => (document.cookie.split('; ').find((c) => c.startsWith('csrf=')) || '').slice(5);
+// คุกกี้ csrf หรือค่าจาก header ของคำตอบล่าสุด (Safari อาจยังไม่เห็นคุกกี้ที่เพิ่งตั้งใน document.cookie)
+let lastCsrf = '';
+const csrf = () => (document.cookie.split('; ').find((c) => c.startsWith('csrf=')) || '').slice(5) || lastCsrf;
 
 // body = object (JSON) หรือ FormData (อัปโหลดไฟล์)
 export async function api(path, { method = 'GET', body } = {}) {
-  if (method !== 'GET' && !csrf()) await fetch('/api/health');
+  if (method !== 'GET' && !csrf()) lastCsrf = (await fetch('/api/health')).headers.get('x-csrf-token') || '';
   const opts = { method, credentials: 'same-origin', headers: {} };
   if (method !== 'GET') opts.headers['x-csrf-token'] = csrf();
   if (body instanceof FormData) opts.body = body;
   else if (body !== undefined) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
   const r = await fetch('/api/admin' + path, opts);
+  lastCsrf = r.headers.get('x-csrf-token') || lastCsrf;
   const data = await r.json().catch(() => ({}));
   if (r.status === 401) { location.href = '/admin/login'; throw new Error('หมดเวลาเข้าสู่ระบบ'); }
   if (!r.ok) { const e = new Error(data.error || r.statusText); e.status = r.status; e.code = data.code; throw e; }
@@ -36,13 +39,28 @@ export const isAdmin = () => state.me?.role === 'admin';
 // สิทธิ์เสริมของ staff (ตั้งที่ STAFF_PERMISSIONS ใน .env) — admin มี '*' เสมอ; เซิร์ฟเวอร์ตรวจซ้ำทุก endpoint
 export const hasPerm = (p) => !!state.perms && (state.perms.includes('*') || state.perms.includes(p));
 
+// toast อยู่ในกล่อง aria-live ที่มีอยู่แล้วในหน้า (#toasts) — screen reader อ่านข้อความที่เพิ่มเข้าไปทุกครั้ง
+// (เดิมสร้าง element role=status ใหม่ทุกครั้ง ซึ่ง screen reader หลายตัวไม่อ่าน และถูก CSS ของหน้าร้านซ่อนไว้)
 export function toast(msg, isError = false) {
+  let box = document.getElementById('toasts');
+  if (!box) {
+    box = Object.assign(document.createElement('div'), { id: 'toasts', className: 'toasts' });
+    box.setAttribute('aria-live', 'polite');
+    document.body.append(box);
+  }
   const el = document.createElement('div');
   el.className = 'toast' + (isError ? ' error' : '');
-  el.setAttribute('role', 'status');
   el.textContent = msg;
-  document.body.append(el);
+  box.append(el);
   setTimeout(() => el.remove(), isError ? 6000 : 3000);
+}
+
+// ปุ่มแสดงสถานะกำลังทำงาน (วงหมุน + กดซ้ำไม่ได้) ระหว่างรอ fn เสร็จ
+export async function busy(btn, fn) {
+  if (!btn) return fn();
+  btn.disabled = true;
+  btn.setAttribute('aria-busy', 'true');
+  try { return await fn(); } finally { btn.disabled = false; btn.removeAttribute('aria-busy'); }
 }
 
 export const loading = (el) => { el.innerHTML = '<div class="state"><div class="spinner"></div>กำลังโหลด...</div>'; };
@@ -65,8 +83,18 @@ export function dialog({ title, message = '', fields = [], confirmText = 'ยื
       <h3>${esc(title)}</h3>${message ? `<p>${message}</p>` : ''}<div class="form-grid">${fieldHtml}</div>
       <p class="msg" role="alert"></p>
       <div class="actions"><button type="button" class="btn" data-cancel>ยกเลิก</button><button type="submit" class="btn ${danger ? 'danger' : 'primary'}">${esc(confirmText)}</button></div></form>`;
-    const close = (v) => { bg.remove(); resolve(v); };
+    const opener = document.activeElement;
+    const close = (v) => { bg.remove(); opener?.focus?.(); resolve(v); }; // คืนโฟกัสให้ปุ่มที่เปิดกล่อง
     bg.addEventListener('click', (e) => { if (e.target === bg || e.target.dataset.cancel !== undefined) close(null); });
+    // Esc ปิด, Tab วนอยู่ในกล่อง (ไม่หลุดไปเนื้อหาด้านหลัง)
+    bg.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); close(null); return; }
+      if (e.key !== 'Tab') return;
+      const items = [...bg.querySelectorAll('input, select, textarea, button:not(:disabled)')];
+      const [first, last] = [items[0], items[items.length - 1]];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
     bg.querySelector('form').addEventListener('submit', (e) => {
       e.preventDefault();
       const vals = {};
@@ -85,9 +113,10 @@ export function dialog({ title, message = '', fields = [], confirmText = 'ยื
 export const confirmBox = async (title, message, confirmText = 'ยืนยัน', danger = false) => (await dialog({ title, message, confirmText, danger })) !== null;
 
 // ตารางพร้อมสถานะ empty — cols = [{ h, f: (row) => html, cls }]
-export function table(cols, rows, { rowAttr } = {}) {
+// กรอบตารางเลื่อนแนวนอนได้บนจอเล็ก → ต้องโฟกัสด้วยคีย์บอร์ดได้ (tabindex) เพื่อใช้ลูกศรเลื่อน แม้ในตารางไม่มีลิงก์
+export function table(cols, rows, { rowAttr, label = 'ตารางข้อมูล' } = {}) {
   if (!rows.length) return empty();
-  return `<div class="table-wrap"><table><thead><tr>${cols.map((c) => `<th class="${c.cls || ''}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>
+  return `<div class="table-wrap" tabindex="0" role="region" aria-label="${esc(label)}"><table><thead><tr>${cols.map((c) => `<th class="${c.cls || ''}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>
     ${rows.map((r) => `<tr ${rowAttr ? rowAttr(r) : ''}>${cols.map((c) => `<td class="${c.cls || ''}">${c.f(r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 

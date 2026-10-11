@@ -21,7 +21,8 @@ export async function refundOrder(orderId, admin, reason) {
       providerRefundId = refund.id;
     } catch (e) {
       if (e instanceof HttpError) throw e;
-      // Stripe ปฏิเสธ/ล่ม: ยังไม่แตะสถานะออเดอร์ ให้แอดมินลองใหม่ได้
+      // Stripe ปฏิเสธ/ล่ม: ยังไม่แตะสถานะออเดอร์ ให้แอดมินลองใหม่ได้ (เส้นทางนี้มีแค่แอดมินเรียก จึงแสดงเหตุผลจาก Stripe ให้แก้ปัญหาได้)
+      console.error(`คืนเงินออเดอร์ #${orderId} ผ่าน Stripe ไม่สำเร็จ:`, e.type ?? '', e.message);
       throw new HttpError(502, `คืนเงินผ่าน Stripe ไม่สำเร็จ: ${e.message}`, 'REFUND_PROVIDER_ERROR');
     }
   } // dev / free: ไม่มีเงินจริงให้คืน

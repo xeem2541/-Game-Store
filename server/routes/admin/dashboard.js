@@ -12,10 +12,10 @@ export const dashboardRouter = Router();
 const TODAY = "date('now', '+7 hours')";
 
 export function lowStockGames() {
-  return db.prepare(`SELECT g.id, g.title, g.low_stock_threshold AS threshold,
-      (SELECT COUNT(*) FROM game_keys k WHERE k.game_id = g.id AND k.status = 'available') AS available
-    FROM games g WHERE g.active = 1
-      AND (SELECT COUNT(*) FROM game_keys k WHERE k.game_id = g.id AND k.status = 'available') < g.low_stock_threshold
+  return db.prepare(`SELECT g.id, g.title, g.low_stock_threshold AS threshold, COUNT(k.id) AS available
+    FROM games g LEFT JOIN game_keys k ON k.game_id = g.id AND k.status = 'available'
+    WHERE g.active = 1
+    GROUP BY g.id HAVING available < threshold
     ORDER BY available, g.title`).all();
 }
 

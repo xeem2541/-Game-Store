@@ -10,6 +10,9 @@ export function csrf(req, res, next) {
     res.cookie('csrf', token, { sameSite: 'lax', secure: config.isProd, httpOnly: false, path: '/' });
     req.cookies.csrf = token;
   }
+  // ส่งค่าเดียวกันใน header ด้วย: Safari/WebKit อาจยังไม่เห็นคุกกี้ที่เพิ่งตั้งใน document.cookie ทันทีหลัง fetch จบ
+  // (คุกกี้อยู่ใน network process แล้ว แต่ JS ยังอ่านไม่ได้) — เว็บอื่นอ่าน header นี้ไม่ได้ (ไม่มี CORS) จึงปลอดภัยเท่าคุกกี้
+  res.set('X-CSRF-Token', token);
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   const sent = req.get('x-csrf-token') || '';
   const a = Buffer.from(sent);

@@ -26,7 +26,16 @@ function orderWithKeys(req, order) {
   return out;
 }
 
-ordersRouter.post('/', (req, res) => {
+const createLimiter = rateLimit({
+  windowMs: 10 * 60_000, limit: config.orderRateLimit, standardHeaders: true, legacyHeaders: false,
+  keyGenerator: (req) => `user-${req.user.id}`,
+  // กดซ้ำด้วย idempotency key เดิม (ได้ออเดอร์เดิมคืน 200) ไม่กินโควตา — ครั้งที่สร้างใหม่หรือล้มเหลวยังนับ (กันการยิงถี่)
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: (_req, res) => res.statusCode === 200,
+  message: { error: 'สร้างคำสั่งซื้อบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่', code: 'ORDER_RATE_LIMIT' },
+});
+
+ordersRouter.post('/', createLimiter, (req, res) => {
   const body = z.object({
     couponCode: z.string().trim().max(40).optional(),
     idempotencyKey: z.string().trim().min(8).max(100),
@@ -53,16 +62,16 @@ ordersRouter.post('/:id/pay', async (req, res) => {
   res.json(await createCheckout(req.user, order));
 });
 
-ordersRouter.get('/:id/receipt.pdf', (req, res) => {
+ordersRouter.get('/:id/receipt.pdf', async (req, res) => {
   const order = getOwnOrder(req.user.id, idParam.parse(req.params.id)); // ของคนอื่น → 404
   if (order.status !== 'paid') throw new HttpError(409, 'ออกใบเสร็จได้เฉพาะคำสั่งซื้อที่ชำระแล้ว', 'RECEIPT_NOT_AVAILABLE');
   const number = serializeOrder(order).invoiceNumber ?? `order-${order.id}`;
+  const pdf = await renderReceipt(order.id); // สร้างเสร็จก่อนค่อยส่ง header
   res.set({
     'Content-Type': 'application/pdf',
     'Content-Disposition': `attachment; filename="receipt-${number}.pdf"`,
     'Cache-Control': 'private, no-store',
-  });
-  renderReceipt(order.id, res);
+  }).send(pdf);
 });
 
 const resendLimiter = rateLimit({

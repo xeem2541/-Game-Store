@@ -1,84 +1,137 @@
-import { api, cardHtml, remember, $, markReady, genreName, money, esc, applyI18n } from './common.js';
-import { initThreeHero } from './three-hero.js';
-import { gsap, ScrollTrigger } from './vendor.bundle.js';
+import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml, lang } from './common.js';
+import { canRender3D, prefersReducedMotion, whenIdle } from './motion.js';
+import { splitWords } from './kinetic.js';
+import { initScrollFx } from './scroll-fx.js';
+import { gsap, ScrollTrigger } from './vendor/gsap.js';
 
 gsap.registerPlugin(ScrollTrigger);
+initScrollFx(); // parallax สำรองสำหรับเบราว์เซอร์ที่ไม่รองรับ CSS scroll-driven animation
 
-const data = await api('/games/home');
-const featuredGame = data.featured[0];
+// หัวข้อ hero แยกเป็นคำ (ทำก่อนรอ API เพื่อให้เปลี่ยนเร็วที่สุดหลังแสดงผลแรก) — ขนาดและตำแหน่งข้อความไม่เปลี่ยน แค่ห่อคำด้วย span
+const heroWords = splitWords($('#heroTitle'), { locale: lang });
 
-const heroHtml = `
-  <div class="hero-bg" id="heroBg">
-    <!-- 3D Canvas will be injected here -->
-  </div>
-  <div class="hero-content cinematic-content">
-    <div class="hero-info">
-      <div class="tag-group">
-        <span class="tag">NEXUS EXCLUSIVE</span>
-        <span class="tag outline">${esc(featuredGame ? genreName(featuredGame.genre) : 'NEW ARRIVALS')}</span>
-      </div>
-      <h1 class="kinetic-text">
-        <span class="line-1" data-i18n="hero.title">เกมแท้ ราคาโดนใจ</span><br>
-      </h1>
-      <p class="hero-desc">Discover your next obsession. Explore worlds, unlock adventures, and find your next favorite game. ${featuredGame ? `Featured: <strong>${esc(featuredGame.title)}</strong>` : ''}</p>
-      
-      <div class="hero-actions">
-        <a class="btn primary big" href="${featuredGame ? `/game/${esc(featuredGame.slug)}` : '/games.html'}">
-          EXPLORE GAMES
-        </a>
-        <a class="btn big glass" href="/games.html?onSale=1">
-          VIEW DEALS
-        </a>
-      </div>
-      
-      <div class="hero-stats">
-        <div class="stat"><span class="val">2K+</span><span class="lbl">GAMES</span></div>
-        <div class="stat"><span class="val">24/7</span><span class="lbl">SUPPORT</span></div>
-        <div class="stat"><span class="val">INSTANT</span><span class="lbl">DELIVERY</span></div>
-      </div>
-    </div>
-  </div>
-`;
-$('#hero').innerHTML = heroHtml;
-$('#hero').className = 'hero futuristic-hero';
-applyI18n($('#hero'));
-
-// Initialize 3D Hero
-initThreeHero('heroBg');
-
-// GSAP Animations for Hero
-const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-if (!mql.matches) {
-  const tl = gsap.timeline();
-  tl.fromTo('.tag-group', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', delay: 0.2 })
-    .fromTo('.kinetic-text span', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.8, stagger: 0.2, ease: 'power3.out' }, '-=0.4')
-    .fromTo('.hero-desc', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.4')
-    .fromTo('.hero-actions .btn', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out' }, '-=0.4')
-    .fromTo('.hero-stats .stat', { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.4, stagger: 0.1, ease: 'back.out(1.5)' }, '-=0.2');
+// hero อยู่ใน index.html แล้ว (แสดงผลทันทีไม่ต้องรอ API) — ที่นี่เติมแค่ลิงก์เกมแนะนำ
+const [data, facets] = await Promise.all([api('/games/home'), api('/games/facets').catch(() => ({ genres: [], platforms: [] }))]);
+const heroGame = data.featured[0];
+if (heroGame) {
+  $('#heroFeatured').innerHTML = `${t('hero.featured')} <a href="/game/${esc(heroGame.slug)}">${esc(heroGame.title)}</a>`; // บรรทัดนี้จองที่ไว้ใน HTML แล้ว
 }
+// ภาพปกเกมแนะนำ 3 เกม: ใช้ทั้งในฉาก 3D และภาพนิ่งสำรอง (.hero-stack) สำหรับเครื่องที่ไม่แสดง 3D
+const heroCovers = data.featured.slice(0, 3).map((g) => g.cover);
+$('#heroStack').innerHTML = heroCovers.map((src) => `<img src="${esc(src)}" alt="" width="400" height="300" decoding="async">`).join('');
 
-for (const key of ['featured', 'bestsellers', 'newest', 'onSale']) {
-  let items = data[key];
-  if (key === 'featured') items = items.slice(1); // skip the hero one
-  remember(items);
-  $('#' + key).innerHTML = items.map(cardHtml).join('');
+// ---- bento เกมแนะนำ + ทางลัด: ช่อง a = เกมเด่น, b = ดีลลดแรงสุด, c = ตามงบ, d = แพลตฟอร์ม, e/f = เกมแนะนำ, g = แนวเกม ----
+const links = (items) => `<ul class="tile-links">${items.map(([href, label]) => `<li><a href="${esc(href)}">${esc(label)}</a></li>`).join('')}</ul>`;
+const linkTile = (area, id, title, items) => `<nav class="tile tile-links-wrap area-${area}" aria-labelledby="${id}"><h3 class="tile-label" id="${id}">${title}</h3>${links(items)}</nav>`;
+function bentoHtml() {
+  const [, big, ...more] = data.featured; // เกมแรกอยู่ใน hero แล้ว
+  const deal = data.onSale[0]; // API เรียงตามส่วนลดมากสุด
+  const gameTile = (area, g) => (g ? `<div class="area-${area}">${cardHtml(g)}</div>` : '');
+  return [
+    gameTile('a', big),
+    deal ? `<a class="tile tile-deal area-b" href="/game/${esc(deal.slug)}">
+        <img class="tile-bg" src="${esc(deal.cover)}?size=sm" alt="" loading="lazy" decoding="async" width="400" height="300">
+        <span class="tile-label">${t('home.deal')}</span>
+        <strong class="deal-pct">-${deal.discount}%</strong>
+        <span class="deal-title">${esc(deal.title)}</span>
+        <span class="price">${priceHtml(deal)}</span>
+      </a>` : '',
+    linkTile('c', 'tileBudget', t('home.budget'), [
+      ['/games.html?maxPrice=500&sort=priceAsc', t('home.budget1')],
+      ['/games.html?minPrice=500&maxPrice=1000&sort=priceAsc', t('home.budget2')],
+      ['/games.html?minPrice=1000&sort=priceAsc', t('home.budget3')],
+    ]),
+    linkTile('d', 'tilePlatforms', t('home.platforms'), facets.platforms.map((p) => [`/games.html?platform=${encodeURIComponent(p)}`, p])),
+    gameTile('e', more[0]),
+    gameTile('f', more[1]),
+    linkTile('g', 'tileGenres', t('home.genres'), facets.genres.map((g) => [`/games.html?genre=${encodeURIComponent(g)}`, genreName(g)])),
+  ].join('');
+}
+remember(data.featured.slice(1, 4));
+$('#featured').innerHTML = bentoHtml();
+$('#featured').removeAttribute('aria-busy');
+
+for (const key of ['bestsellers', 'newest', 'onSale']) {
+  remember(data[key]);
+  const grid = $('#' + key);
+  grid.innerHTML = data[key].map(cardHtml).join('');
+  grid.removeAttribute('aria-busy');
 }
 markReady();
 
-// GSAP Scroll Animations for Cards
-if (!mql.matches) {
-  document.querySelectorAll('.sec').forEach(sec => {
-    gsap.fromTo(sec, 
-      { opacity: 0, x: -30 },
-      { opacity: 1, x: 0, duration: 0.6, ease: 'power2.out', scrollTrigger: { trigger: sec, start: 'top 85%' } }
-    );
-  });
+// ---- ซื้อยังไง 3 ขั้น: ขั้นที่อยู่กลางจอเป็นขั้นปัจจุบัน → ภาพด้านซ้ายเปลี่ยนตาม (ทำงานแม้ขอลดการเคลื่อนไหว เพราะเป็นข้อมูล แค่ไม่มีแอนิเมชัน) ----
+const visual = $('.howto-visual');
+const progress = $('.howto-progress');
+const covers = $('.hv-covers').children;
+data.featured.slice(1, 4).forEach((g, i) => { if (covers[i]) covers[i].style.backgroundImage = `url('${g.cover}?size=sm')`; });
+const steps = [...document.querySelectorAll('.howto-step')];
+function setStep(el) {
+  for (const s of steps) s.classList.toggle('is-active', s === el);
+  visual.dataset.step = el.dataset.step;
+  if (!progress.classList.contains('scrub')) progress.style.setProperty('--p', el.dataset.step / steps.length);
+}
+// ขั้นปัจจุบัน = ขั้นที่ครอบกลางจอ (หรือใกล้กลางจอที่สุด) — คำนวณทันทีตอนเลื่อน (อ่านตำแหน่งแค่ 3 กล่อง ไม่แพง)
+// ไม่ใช้ IntersectionObserver แถบบาง ๆ กลางจอ หรือรอ requestAnimationFrame: Safari/WebKit พลาดการแจ้งเมื่อเลื่อนข้ามขั้นแบบทันที
+const pickStep = () => {
+  const mid = innerHeight / 2;
+  let best = steps[0];
+  let bestDist = Infinity;
+  for (const s of steps) {
+    const r = s.getBoundingClientRect();
+    const dist = r.top <= mid && r.bottom >= mid ? 0 : Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid));
+    if (dist < bestDist) { bestDist = dist; best = s; }
+  }
+  if (best.dataset.step !== visual.dataset.step) setStep(best);
+};
+setStep(steps[0]);
+addEventListener('scroll', pickStep, { passive: true });
+// เนื้อหาด้านบนโหลดทีหลังแล้วดันส่วนนี้ลง (Safari ไม่มี scroll anchoring → ไม่มี scroll event) ให้เลือกขั้นใหม่ด้วย
+new ResizeObserver(pickStep).observe(document.body);
+// สำรอง: ขั้นใดเข้า/ออกจอหรือเปลี่ยนสัดส่วนที่เห็น → คำนวณใหม่ (กรณีเบราว์เซอร์ไม่ส่ง scroll event ตอนเลื่อนแบบทันที)
+const stepIo = new IntersectionObserver(pickStep, { threshold: [0, 0.25, 0.5, 0.75, 1] });
+for (const s of steps) stepIo.observe(s);
+pickStep();
 
-  document.querySelectorAll('.grid').forEach(grid => {
-    const cards = grid.querySelectorAll('.card');
-    gsap.fromTo(cards,
-      { opacity: 0, y: 40 },
-      { opacity: 1, y: 0, duration: 0.6, stagger: 0.05, ease: 'power2.out', scrollTrigger: { trigger: grid, start: 'top 85%' } }
-    );
+if (!prefersReducedMotion()) {
+  // หัวข้อ hero ไม่เริ่มจากโปร่งใส (เป็น LCP element — ถ้าซ่อนไว้ LCP จะช้าตามแอนิเมชัน) ขยับเฉพาะองค์ประกอบรอง
+  // fromTo + ค่าปลายทางชัดเจน + clearProps: ไม่อ่านค่าจาก CSS ระหว่าง transition และคืน style ให้ CSS (hover) เมื่อจบ
+  const done = { opacity: 1, y: 0, clearProps: 'opacity,transform' };
+  gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.6 } })
+    // kinetic: คำในหัวข้อลอยขึ้นทีละคำ (แสดงผลแรกเห็นหัวข้อเต็มแล้ว LCP จึงไม่รอแอนิเมชันนี้)
+    .fromTo(heroWords, { yPercent: 60, rotate: 4, opacity: 0 }, { yPercent: 0, rotate: 0, opacity: 1, duration: 0.7, stagger: 0.07, clearProps: 'opacity,transform' })
+    .fromTo('.hero-eyebrow', { y: 12, opacity: 0 }, { ...done }, 0)
+    .fromTo('.hero-actions .btn', { y: 16, opacity: 0 }, { ...done, stagger: 0.08 }, '-=0.35')
+    .fromTo('.hero-points li', { y: 12, opacity: 0 }, { ...done, stagger: 0.06 }, '-=0.35');
+
+  // หัวข้อ "ซื้อง่ายใน 3 ขั้น" แยกคำแล้วลอยขึ้นตอนเลื่อนถึง
+  const howtoTitle = $('#howtoTitle > span');
+  gsap.fromTo(splitWords(howtoTitle, { locale: lang }), { yPercent: 80, opacity: 0 }, {
+    yPercent: 0, opacity: 1, duration: 0.6, stagger: 0.06, ease: 'power3.out', clearProps: 'opacity,transform',
+    scrollTrigger: { trigger: howtoTitle, start: 'top 85%', once: true },
+  });
+  // แถบความคืบหน้าเลื่อนตามจริง (scrub) แทนการกระโดดทีละขั้น — desktop เท่านั้น (มือถือไม่มีภาพประกอบ)
+  if (matchMedia('(min-width: 901px)').matches) {
+    progress.classList.add('scrub');
+    gsap.fromTo(progress.firstElementChild, { scaleX: 0 }, { scaleX: 1, ease: 'none', scrollTrigger: { trigger: '.howto-steps', start: 'top center', end: 'bottom center', scrub: true } });
+  }
+
+  for (const grid of document.querySelectorAll('.content-wrapper .grid')) {
+    gsap.fromTo(grid.querySelectorAll(':scope > .tile, .card'), { y: 32, opacity: 0 }, {
+      ...done, duration: 0.6, stagger: 0.05, ease: 'power2.out',
+      scrollTrigger: { trigger: grid, start: 'top 88%', once: true },
+    });
+  }
+}
+
+// ฉาก 3D: โหลดแบบ lazy หลังหน้าแสดงผลแล้ว และเฉพาะเครื่องที่รองรับ — ไม่งั้นใช้ภาพนิ่ง (.hero-fallback / .hero-stack) ต่อไป
+// เฉพาะจอกว้าง: จอเล็กฉากจะอยู่หลังข้อความแบบจาง ๆ คุ้มน้อยกว่าแบตและเน็ตที่เสีย (131 KB) — ใช้พื้นหลังนิ่งแทน
+if (canRender3D() && matchMedia('(min-width: 901px)').matches) {
+  whenIdle(async () => {
+    try {
+      const { mountHeroScene } = await import('./three-hero.js');
+      mountHeroScene($('#heroBg'), { covers: heroCovers });
+    } catch (e) {
+      console.warn('ไม่สามารถแสดงฉาก 3D:', e.message); // เช่น WebGL context สร้างไม่ได้ → ยังเห็นพื้นหลังนิ่ง
+    }
   });
 }

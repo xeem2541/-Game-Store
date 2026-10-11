@@ -240,6 +240,33 @@ CREATE TABLE IF NOT EXISTS email_queue (
 );
 CREATE INDEX IF NOT EXISTS idx_email_queue_due ON email_queue(status, next_attempt_at);
 
+-- รหัสกู้คืน 2FA ของหลังบ้าน (ใช้ได้ครั้งเดียว เก็บเฉพาะแฮช) — ออกใหม่ทั้งชุดทุกครั้งที่เปิด 2FA
+CREATE TABLE IF NOT EXISTS admin_recovery_codes (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL UNIQUE,
+  used_at   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_admin_recovery_codes_user ON admin_recovery_codes(user_id);
+
+-- คืนเงินอัตโนมัติ (outbox): บันทึกใน transaction เดียวกับ webhook แล้วค่อยเรียก Stripe หลัง commit + retry จนสำเร็จ
+-- โปรเซสล่มระหว่างทางก็ไม่หาย (เดิมเก็บในหน่วยความจำ ถ้าล่มหลัง commit Stripe จะไม่ส่ง event ซ้ำ เงินค้างโดยไม่มีใครรู้)
+-- order_id ไม่ผูก FK เพราะกรณี "ได้เงินแต่ไม่พบออเดอร์" ก็ต้องคืนเงิน
+CREATE TABLE IF NOT EXISTS auto_refunds (
+  id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+  payment_intent     TEXT NOT NULL UNIQUE,
+  order_id           INTEGER,
+  reason             TEXT NOT NULL,
+  status             TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'done', 'failed')),
+  attempts           INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at    INTEGER NOT NULL, -- epoch ms
+  last_error         TEXT,
+  provider_refund_id TEXT,
+  created_at         TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  done_at            TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_auto_refunds_due ON auto_refunds(status, next_attempt_at);
+
 -- ===== เฟส 5: Admin Panel =====
 -- (คอลัมน์ที่เพิ่มให้ตารางเดิมอยู่ใน migrations.js เพราะ SQLite ไม่มี ADD COLUMN IF NOT EXISTS)
 

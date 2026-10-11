@@ -59,7 +59,7 @@ ordersAdminRouter.get('/:id', (req, res) => {
   res.json({
     order: serializeOrder(o),
     user,
-    payments: db.prepare(`SELECT id, provider, provider_ref AS providerRef, payment_intent AS paymentIntent, amount, currency, status, last_error AS lastError,
+    payments: db.prepare(`SELECT id, provider, provider_ref AS providerRef, payment_intent AS paymentIntent, amount, amount_refunded AS amountRefunded, currency, status, last_error AS lastError,
       created_at AS createdAt, updated_at AS updatedAt FROM payments WHERE order_id = ? ORDER BY id`).all(o.id),
     events: db.prepare(`SELECT e.from_status AS fromStatus, e.to_status AS toStatus, e.reason, e.created_at AS createdAt, u.name AS actor
       FROM order_events e LEFT JOIN users u ON u.id = e.actor_id WHERE e.order_id = ? ORDER BY e.id`).all(o.id),

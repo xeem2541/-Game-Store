@@ -1,11 +1,11 @@
-import { markReady, api, cart, user, loginUrl, money, priceText, summaryHtml, esc, $, t, toast } from './common.js';
+import { markReady, api, cart, user, loginUrl, money, priceText, summaryHtml, unavailableHtml, bindRemoveUnavailable, esc, $, t, toast, emptyArt } from './common.js';
 
 const view = $('#view');
 const getCoupon = () => { try { return sessionStorage.getItem('coupon') || ''; } catch { return ''; } };
 const setCoupon = (c) => { try { c ? sessionStorage.setItem('coupon', c) : sessionStorage.removeItem('coupon'); } catch {} };
 let couponMsg = null; // { text, ok }
 
-const emptyHtml = () => `<div class="empty"><p>${t('cartpage.empty')}</p><p><a class="btn primary big" href="/games.html">${t('cartpage.browse')}</a></p></div>`;
+const emptyHtml = () => `<div class="empty">${emptyArt('empty-cart')}<p>${t('cartpage.empty')}</p><p><a class="btn primary big" href="/games.html">${t('cartpage.browse')}</a></p></div>`;
 
 // ผู้เยี่ยมชม (ยังไม่ล็อกอิน): แสดงรายการจาก localStorage ราคาจริงจะคำนวณที่เซิร์ฟเวอร์หลังล็อกอิน
 function renderGuest() {
@@ -37,9 +37,10 @@ async function renderUser() {
     setCoupon('');
     s = await api('/cart/summary');
   }
-  if (!s.items.length) { view.innerHTML = emptyHtml(); return; }
+  if (!s.items.length) { view.innerHTML = unavailableHtml(s.unavailable) + emptyHtml(); bindRemoveUnavailable(renderUser); return; }
   const blocked = s.items.some((i) => i.owned);
   view.innerHTML = `
+    ${unavailableHtml(s.unavailable)}
     <div class="cart-layout">
       <div class="lines">${s.items.map((i) => `
         <div class="line ${i.owned ? 'owned' : ''}">
@@ -63,6 +64,7 @@ async function renderUser() {
       </aside>
     </div>`;
   couponMsg = null;
+  bindRemoveUnavailable(renderUser);
   $('#couponForm').onsubmit = async (e) => {
     e.preventDefault();
     const v = $('#couponInput').value.trim();

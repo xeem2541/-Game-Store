@@ -4,34 +4,34 @@ import { PUBLIC_PAGES } from './pages.js';
 
 test.setTimeout(240_000);
 
-// ตรวจ accessibility ด้วย axe (WCAG 2 A/AA: alt, label, คอนทราสต์สี, ชื่อปุ่ม ฯลฯ) ทุกหน้า × 2 ภาษา × 2 ธีม
+// ตรวจ accessibility ด้วย axe (WCAG 2 A/AA: alt, label, คอนทราสต์สี, ชื่อปุ่ม ฯลฯ) ทุกหน้า × 2 ภาษา (ธีมมืดอย่างเดียว)
 const serious = (r) => r.violations.filter((v) => ['serious', 'critical'].includes(v.impact));
 const fmt = (vs) => vs.map((v) => `${v.id} (${v.impact}):\n${v.nodes.slice(0, 4).map((n) => `   ${n.target.join(' ')} — ${(n.any[0]?.message ?? n.failureSummary ?? '').replace(/\s+/g, ' ').slice(0, 150)}`).join('\n')}`).join('\n');
 
 for (const lang of ['th', 'en']) {
-  for (const theme of ['dark', 'light']) {
-    test(`a11y: ${lang} / ${theme}`, async ({ page }) => {
-      await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.addInitScript(([l, t]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', t); }, [lang, theme]);
-      for (const [name, url] of PUBLIC_PAGES) {
-        await page.goto(url);
-        await page.waitForLoadState('networkidle');
-        await page.waitForSelector('body.ready, body:not([data-async])', { state: 'attached' });
-        const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-        const bad = serious(res);
-        if (bad.length) throw new Error(`${name} [${lang}/${theme}]\n${fmt(bad)}`);
-        expect(await page.evaluate(() => document.documentElement.lang)).toBe(lang);
-      }
-    });
-  }
+  test(`a11y: ${lang}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.addInitScript((l) => { localStorage.setItem('lang', l); }, lang);
+    for (const [name, url] of PUBLIC_PAGES) {
+      await page.goto(url);
+      await page.waitForLoadState('networkidle');
+      await page.waitForSelector('body.ready, body:not([data-async])', { state: 'attached' });
+      const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+      const bad = serious(res);
+      if (bad.length) throw new Error(`${name} [${lang}]\n${fmt(bad)}`);
+      expect(await page.evaluate(() => document.documentElement.lang)).toBe(lang);
+    }
+  });
 }
 
-test('การใช้คีย์บอร์ด: Tab ไปถึงปุ่มสำคัญและเห็นกรอบ focus', async ({ page }) => {
+test('การใช้คีย์บอร์ด: Tab ไปถึงปุ่มสำคัญและเห็นกรอบ focus', async ({ page, browserName }) => {
+  // Safari/WebKit: Tab ข้ามลิงก์โดยค่าตั้งต้น ผู้ใช้คีย์บอร์ดบน Safari ใช้ Option+Tab เพื่อไปทุกจุด
+  const tab = browserName === 'webkit' ? 'Alt+Tab' : 'Tab';
   await page.goto('/');
   await page.waitForSelector('body.ready', { state: 'attached' });
   const seen = new Set();
   for (let i = 0; i < 14; i += 1) {
-    await page.keyboard.press('Tab');
+    await page.keyboard.press(tab);
     const info = await page.evaluate(() => {
       const el = document.activeElement;
       const cs = el ? getComputedStyle(el) : null;
@@ -66,4 +66,53 @@ test('ภาษา/ธีม: ไม่มี key แปลหลุดเป็
   await p2.reload();
   await expect(p2.locator('h1').first()).toContainText('Genuine games');
   expect(await p2.evaluate(() => document.documentElement.lang)).toBe('en');
+});
+
+test('Kinetic typography: screen reader อ่านหัวข้อเต็มประโยค และคำไทยไม่ถูกตัดกลางคำ', async ({ page }) => {
+  await page.addInitScript(() => { localStorage.setItem('lang', 'th'); });
+  await page.goto('/');
+  await page.waitForSelector('body.ready', { state: 'attached' });
+  await expect(page.getByRole('heading', { level: 1, name: 'เกมแท้ ราคาโดนใจ', exact: true })).toBeVisible();
+  const words = await page.locator('#heroTitle .kt-word').allTextContents();
+  expect(words.length).toBeGreaterThan(1);
+  expect(words.join('')).toBe('เกมแท้ราคาโดนใจ');
+  // คำต้องไม่ขึ้นต้นด้วยสระบน/ล่าง/วรรณยุกต์ (แปลว่าถูกตัดกลางพยางค์)
+  for (const w of words) expect(w, `ตัดคำผิด: "${w}"`).not.toMatch(/^[ัิ-ฺ็-๎]/);
+  await expect(page.locator('#heroTitle .kt')).toHaveAttribute('aria-hidden', 'true');
+});
+
+test('ซื้อยังไง 3 ขั้น: ภาพประกอบเปลี่ยนตามขั้นที่เลื่อนถึง (desktop) และทำงานเมื่อขอลดการเคลื่อนไหว', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  // บันทึกไว้ช่วยวิเคราะห์เมื่อเทสต์ล้ม: จำนวน scroll event ที่หน้าได้รับ และประวัติค่า data-step ของภาพประกอบ
+  await page.addInitScript(() => {
+    window.__scrolls = 0;
+    window.__steps = [];
+    addEventListener('scroll', () => { window.__scrolls += 1; }, { passive: true });
+    new MutationObserver((ms) => { for (const m of ms) window.__steps.push(m.target.dataset.step); })
+      .observe(document, { subtree: true, attributes: true, attributeFilter: ['data-step'] });
+  });
+  await page.goto('/');
+  await page.waitForSelector('body.ready', { state: 'attached' });
+  const visual = page.locator('.howto-visual');
+  for (const n of ['1', '2', '3']) {
+    // เลื่อนซ้ำจนกว่าจะตรง: รายการเกมด้านบนอาจโหลดเสร็จทีหลังแล้วดันตำแหน่งลง (Safari ไม่ยึดตำแหน่งการเลื่อนไว้)
+    await expect(async () => {
+      await page.locator(`.howto-step[data-step="${n}"]`).evaluate((el) => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' }));
+      // WebKit แบบ headless ไม่วาดหน้าใหม่เมื่อหน้านิ่งและไม่มีแอนิเมชัน (ขอลดการเคลื่อนไหว) แม้สคริปต์เลื่อนหน้าแล้ว → scroll event
+      // และ IntersectionObserver ที่ส่งตอนวาดหน้าไม่มาเลย (บันทึกจาก CI: scrollY เลื่อนแล้ว แต่ได้ scroll event ครั้งเดียวทั้งเทสต์,
+      // จับภาพหน้าจอก็ไม่ช่วย) — เปลี่ยนสีจุด 1px ที่มุมจอให้หน้าต้องวาดใหม่ เหมือน Safari บนจอจริงที่วาดหน้าทุกครั้งที่เลื่อน
+      await page.evaluate(() => {
+        const dot = document.getElementById('e2e-paint') || Object.assign(document.body.appendChild(document.createElement('div')), { id: 'e2e-paint' });
+        Object.assign(dot.style, { position: 'fixed', left: '0', top: '0', width: '1px', height: '1px', pointerEvents: 'none' });
+        dot.style.background = dot.style.background === 'red' ? 'blue' : 'red';
+      });
+      await page.waitForTimeout(100);
+      const state = await page.evaluate(() => JSON.stringify({ y: scrollY, scrolls: window.__scrolls, history: window.__steps,
+        steps: [...document.querySelectorAll('.howto-step')].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }) }));
+      await expect(visual, `ขั้น ${n}: ${state}`).toHaveAttribute('data-step', n, { timeout: 1000 });
+    }).toPass({ timeout: 10000 });
+    await expect(page.locator(`.howto-step[data-step="${n}"]`)).toHaveClass(/is-active/);
+  }
+  await expect(page.getByRole('link', { name: 'เริ่มเลือกเกม' })).toBeVisible();
 });

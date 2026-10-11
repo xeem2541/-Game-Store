@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // e2e: เริ่มเซิร์ฟเวอร์ทดสอบ (พอร์ต 3199, ฐานข้อมูลชั่วคราว, ไฟล์ที่ build แล้วใน dist/) แล้วรันเบราว์เซอร์จริง
-// รัน: npm run e2e   (ต้องติดตั้งเบราว์เซอร์ก่อน 1 ครั้ง: npx playwright install chromium firefox)
+// รัน: npm run e2e   (ต้องติดตั้งเบราว์เซอร์ก่อน 1 ครั้ง: npx playwright install chromium firefox webkit)
+// เฉพาะเบราว์เซอร์เดียว: npx playwright test --project=firefox
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.js',
@@ -16,6 +17,7 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
   webServer: {
     command: 'node scripts/build.js && node e2e/server.mjs',

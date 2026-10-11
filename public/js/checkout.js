@@ -1,4 +1,4 @@
-import { markReady, api, user, loginUrl, money, summaryHtml, esc, $, t, toast } from './common.js';
+import { markReady, api, cart, user, loginUrl, money, summaryHtml, unavailableHtml, bindRemoveUnavailable, esc, $, t, toast } from './common.js';
 
 if (!user) { location.replace(loginUrl()); throw new Error('redirect'); }
 
@@ -20,11 +20,17 @@ async function load() {
   const code = getCoupon();
   let s = await api('/cart/summary' + (code ? '?coupon=' + encodeURIComponent(code) : ''));
   if (s.couponError) { try { sessionStorage.removeItem('coupon'); } catch {} s = await api('/cart/summary'); }
-  if (!s.items.length) { view.innerHTML = `<p class="empty">${t('checkout.empty')} <a href="/games.html">${t('cartpage.browse')}</a></p>`; return; }
+  if (!s.items.length) {
+    view.innerHTML = `${unavailableHtml(s.unavailable)}<p class="empty">${t('checkout.empty')} <a href="/games.html">${t('cartpage.browse')}</a></p>`;
+    bindRemoveUnavailable(load);
+    return;
+  }
 
-  const blocked = s.items.some((i) => i.owned);
+  // มีเกมที่หยุดขายค้างในตะกร้า → ให้นำออกก่อน (ยอดที่เห็นไม่รวมเกมนั้น จะได้ไม่สั่งซื้อโดยไม่รู้ตัว)
+  const blocked = s.items.some((i) => i.owned) || s.unavailable?.length > 0;
   const needVerify = !user.emailVerified;
   view.innerHTML = `
+    ${unavailableHtml(s.unavailable)}
     ${needVerify ? `<div class="banner"><span>${t('checkout.verifyNeeded')}</span><button class="btn" id="resendBtn" type="button">${t('profile.resend')}</button></div>` : ''}
     <div class="cart-layout">
       <div>
@@ -47,6 +53,7 @@ async function load() {
       </aside>
     </div>`;
 
+  bindRemoveUnavailable(load);
   $('#resendBtn')?.addEventListener('click', async () => {
     await api('/auth/resend', { method: 'POST', body: {} }).catch(() => {});
     toast(t('profile.resent'));
@@ -55,6 +62,7 @@ async function load() {
   $('#placeBtn').onclick = async (e) => {
     const btn = e.currentTarget;
     btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true'); // วงหมุนแทนข้อความ (CSS) — ข้อความยังอยู่ให้ screen reader อ่าน
     btn.textContent = t('checkout.placing');
     const sig = s.items.map((i) => i.slug).join(',') + '|' + (s.coupon?.code ?? '');
     try {
@@ -64,8 +72,15 @@ async function load() {
       try { sessionStorage.removeItem('coupon'); sessionStorage.removeItem('idem'); } catch {}
       location.href = '/order/' + order.id;
     } catch (err) {
+      if (err.code === 'GAME_UNAVAILABLE') { // เกมถูกหยุดขายระหว่างอยู่หน้านี้: เซิร์ฟเวอร์นำออกจากตะกร้าแล้ว → โหลดยอดใหม่ให้ตรวจก่อนสั่งอีกครั้ง
+        await cart.refresh();
+        await load();
+        $('#msg').textContent = err.message;
+        return;
+      }
       $('#msg').textContent = err.message;
       btn.disabled = false;
+      btn.removeAttribute('aria-busy');
       btn.textContent = t('checkout.confirm');
     }
   };

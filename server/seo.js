@@ -3,10 +3,12 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { config } from './config.js';
 import { db } from './db/index.js';
+import { coverSvg, sceneSvg } from './services/coverArt.js';
 import { UPLOAD_DIR } from './services/images.js';
+import { finalPrice, formatBaht } from './services/pricing.js';
+import { escHtml as esc } from './services/text.js';
 
 // หน้า HTML ที่ต้องมี meta SEO จริง (เซิร์ฟเวอร์ใส่แทน <!--SEO--> ในเทมเพลต) — อ่านเทมเพลตจากโฟลเดอร์ที่ใช้งานอยู่ (public หรือ dist/public)
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const SITE = 'Game Store';
 const DEFAULT_DESC = 'Game Store ร้านขายเกมออนไลน์ PC, PS5, Switch รับโค้ดเกมทันทีหลังชำระเงิน ราคาโดนใจ ลดสูงสุด 50%';
 
@@ -49,7 +51,6 @@ function template(name) {
 }
 export const renderTemplate = (name, meta) => template(name).replace('<!--SEO-->', seoTags(meta));
 
-export const finalPrice = (g) => Math.round((g.price * (100 - g.discount)) / 100);
 
 export function homeMeta() {
   return {
@@ -117,35 +118,47 @@ function wrap(text, maxChars) {
   if (lines.length > 3) { lines.length = 3; lines[2] = lines[2].replace(/.{1}$/, '…'); }
   return lines;
 }
-const xmlEsc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-async function buildOg({ title, subtitle, color1, color2, coverFile }) {
+async function buildOg({ title, subtitle, color1, color2, coverFile, scene, showcase = [] }) {
   const lines = wrap(title, 16);
-  const text = lines.map((l, i) => `<text x="70" y="${330 - (lines.length - 1) * 40 + i * 92}" font-size="84" font-weight="800" fill="#fff" font-family="${FONT}">${xmlEsc(l)}</text>`).join('');
+  const text = lines.map((l, i) => `<text x="70" y="${330 - (lines.length - 1) * 40 + i * 92}" font-size="84" font-weight="800" fill="#fff" font-family="${FONT}">${esc(l)}</text>`).join('');
   const overlay = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
     <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".15"/><stop offset="1" stop-color="#000" stop-opacity=".78"/></linearGradient></defs>
     <rect width="1200" height="630" fill="url(#g)"/>${text}
-    <text x="70" y="520" font-size="40" fill="#fff" fill-opacity=".92" font-family="${FONT}">${xmlEsc(subtitle)}</text>
-    <text x="70" y="585" font-size="34" font-weight="700" fill="#00d4ff" font-family="${FONT}">🎮 Game Store</text></svg>`;
-  const bg = coverFile
-    ? sharp(coverFile).resize(1200, 630, { fit: 'cover' })
+    <text x="70" y="520" font-size="40" fill="#fff" fill-opacity=".92" font-family="${FONT}">${esc(subtitle)}</text>
+    <text x="70" y="585" font-size="34" font-weight="700" fill="#ff7645" font-family="${FONT}">🎮 Game Store</text></svg>`;
+  // พื้นหลัง: รูปปกที่อัปโหลด → ฉากตามแนวเกม (เหมือนภาพปกอัตโนมัติ แต่ไม่มีชื่อซ้อน) → สีไล่ระดับ (หน้าแรก)
+  const bg = coverFile ? sharp(coverFile).resize(1200, 630, { fit: 'cover' })
+    : scene ? sharp(Buffer.from(sceneSvg(scene, { shade: false }))).resize(1200, 630, { fit: 'cover' })
     : sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${color1}"/><stop offset="1" stop-color="${color2}"/></linearGradient></defs><rect width="1200" height="630" fill="url(#b)"/></svg>`));
-  return bg.composite([{ input: Buffer.from(overlay) }]).png({ compressionLevel: 9 }).toBuffer();
+  // หน้าแรก: ปกเกมแนะนำ 3 ใบวางเอียงด้านขวา (แบบเดียวกับ hero ของหน้าเว็บ) ใต้ชั้นข้อความ
+  const cards = await Promise.all(showcase.map(async (g, i) => {
+    const src = g.cover_image ? sharp(path.join(UPLOAD_DIR, g.cover_image)) : sharp(Buffer.from(coverSvg(g)));
+    const angle = [-8, 6, -3][i];
+    const input = await src.resize(320, 240, { fit: 'cover' }).rotate(angle, { background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
+    return { input, left: [800, 650, 860][i], top: [40, 150, 230][i] }; // ด้านขวาบน ไม่ทับข้อความด้านล่าง
+  }));
+  return bg.composite([...cards.reverse(), { input: Buffer.from(overlay) }]).png({ compressionLevel: 9 }).toBuffer();
 }
 
 export async function ogImage(slug) {
   let spec;
-  if (slug === 'default') spec = { title: 'Game Store', subtitle: 'ร้านขายเกมออนไลน์ เกมแท้ ราคาโดนใจ', color1: '#3b2a9e', color2: '#0a7fa8' };
+  if (slug === 'default') {
+    const showcase = db.prepare(`SELECT slug, title, genre, color1, color2, cover_image FROM games
+      WHERE active = 1 ORDER BY featured DESC, sales DESC LIMIT 3`).all();
+    spec = { title: 'Game Store', subtitle: 'ร้านขายเกมออนไลน์ เกมแท้ ราคาโดนใจ', color1: '#1a1033', color2: '#ff5a1f', showcase };
+  }
   else {
-    const g = db.prepare('SELECT title, genre, platform, price, discount, color1, color2, cover_image FROM games WHERE slug = ? AND active = 1').get(slug);
+    const g = db.prepare('SELECT slug, title, genre, platform, price, discount, color1, color2, cover_image FROM games WHERE slug = ? AND active = 1').get(slug);
     if (!g) return null;
     const p = finalPrice(g);
-    spec = { title: g.title, subtitle: `${g.platform} • ${g.genre} • ${p === 0 ? 'ฟรี' : `฿${(p / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}`, color1: g.color1, color2: g.color2, coverFile: g.cover_image ? path.join(UPLOAD_DIR, g.cover_image) : null };
+    spec = { title: g.title, subtitle: `${g.platform} • ${g.genre} • ${p === 0 ? 'ฟรี' : formatBaht(p)}`, color1: g.color1, color2: g.color2, coverFile: g.cover_image ? path.join(UPLOAD_DIR, g.cover_image) : null,
+      scene: { slug: g.slug, genre: g.genre, color1: g.color1, color2: g.color2 } };
   }
   const key = JSON.stringify(spec);
   if (!og.has(key)) {
     if (og.size >= 300) og.delete(og.keys().next().value); // จำกัดขนาดแคช
-    og.set(key, await buildOg(spec).catch(() => buildOg({ ...spec, coverFile: null })));
+    og.set(key, await buildOg(spec).catch(() => buildOg({ ...spec, coverFile: null, showcase: [] })));
   }
   return og.get(key);
 }
