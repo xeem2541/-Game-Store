@@ -1,5 +1,6 @@
 // โค้ดที่ใช้ร่วมกันทุกหน้า: API, ผู้ใช้, ตะกร้า, wishlist, header/footer, การ์ดเกม
 import { t, applyI18n, lang, setLang, genreName, errText, descOf } from './i18n.js';
+import { flash, prefersReducedMotion, replay } from './motion.js';
 export { t, applyI18n, lang, genreName, descOf };
 
 export const $ = (s, r = document) => r.querySelector(s);
@@ -64,6 +65,7 @@ export const cart = {
     cartItems = [...cartItems, slim(game)];
     this.save();
     if (e) flyToCart(e, game);
+    flash(e?.target?.closest?.('.btn'), 'is-done', 1200); // ปุ่มที่กดเป็นสีเขียวชั่วครู่ (ข้อความแจ้งผ่าน toast ที่ screen reader อ่าน)
     toast(t('cart.added'));
   },
   remove(slug) { cartItems = cartItems.filter((i) => i.slug !== slug); return this.save(); },
@@ -105,6 +107,7 @@ async function toggleWish(id) {
   const on = wishIds.has(id);
   on ? wishIds.delete(id) : wishIds.add(id);
   paintHearts();
+  if (!on) document.querySelectorAll(`[data-wish="${id}"]`).forEach((b) => replay(b, 'pop'));
   try {
     if (on) await api('/wishlist/' + id, { method: 'DELETE' });
     else await api('/wishlist', { method: 'POST', body: { gameId: id } });
@@ -161,16 +164,7 @@ export function cardHtml(g) {
 }
 
 function flyToCart(e, game) {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const badge = $('#cartCount');
-    badge.style.transition = 'none';
-    badge.style.transform = 'scale(1.5)';
-    setTimeout(() => {
-      badge.style.transition = 'transform var(--dur-2) var(--ease-out)';
-      badge.style.transform = '';
-    }, 150);
-    return;
-  }
+  if (prefersReducedMotion()) return; // ไม่มีภาพบิน — ตัวเลขตะกร้าเปลี่ยน + toast บอกผลแทน
   const btn = e?.target?.closest('button') || e?.target;
   if (!btn) return;
   const rect = btn.getBoundingClientRect();
@@ -237,9 +231,12 @@ function mountLayout() {
     </div>
   </aside>`);
 
+  let shownCount = cart.get().length;
   const renderCart = () => {
     const items = cart.get();
     $('#cartCount').textContent = items.length;
+    if (items.length > shownCount) replay($('#cartCount'), 'bump');
+    shownCount = items.length;
     $('#cartTotal').textContent = priceText(items.reduce((s, i) => s + i.finalPrice, 0)).replace(t('price.free'), '฿0');
     $('#cartItems').innerHTML = items.length
       ? items.map((i) => `
@@ -320,29 +317,28 @@ applyI18n();
 export const markReady = () => document.body.classList.add('ready');
 if (!document.body.hasAttribute('data-async')) markReady();
 
-// Premium 3D subtle tilt for all game cards globally
-const mqlTilt = window.matchMedia('(prefers-reduced-motion: reduce)');
-if (!mqlTilt.matches) {
-  document.addEventListener('mousemove', (e) => {
-    const card = e.target.closest('.card');
+// การ์ดเกมเอียงตามเมาส์ + แสงสะท้อน: เฉพาะอุปกรณ์ที่มีเมาส์ และไม่ได้ขอลดการเคลื่อนไหว
+// ตั้งแค่ตัวแปร CSS (--rx --ry --mx --my) แล้วให้ CSS ทำ transform/transition — คำนวณไม่เกินเฟรมละครั้ง
+if (window.matchMedia('(hover: hover) and (pointer: fine)').matches && !prefersReducedMotion()) {
+  let frame = 0;
+  let last = null;
+  const applyTilt = () => {
+    frame = 0;
+    const card = last?.target?.closest?.('.card:not(.sk)');
     if (!card) return;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const rotateX = ((rect.height / 2 - y) / (rect.height / 2)) * 4;
-    const rotateY = ((x - rect.width / 2) / (rect.width / 2)) * 4;
-    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-    card.style.transition = 'none';
-    card.style.zIndex = '10';
-  }, { passive: true });
-  
-  document.addEventListener('mouseout', (e) => {
-    const card = e.target.closest('.card');
-    if (!card) return;
-    if (card.contains(e.relatedTarget)) return;
-    card.style.transform = '';
-    card.style.transition = 'all var(--dur-3) var(--ease-out)';
-    card.style.zIndex = '';
+    const r = card.getBoundingClientRect();
+    const x = (last.clientX - r.left) / r.width;
+    const y = (last.clientY - r.top) / r.height;
+    card.style.setProperty('--rx', `${((0.5 - y) * 6).toFixed(2)}deg`);
+    card.style.setProperty('--ry', `${((x - 0.5) * 6).toFixed(2)}deg`);
+    card.style.setProperty('--mx', `${(x * 100).toFixed(1)}%`);
+    card.style.setProperty('--my', `${(y * 100).toFixed(1)}%`);
+  };
+  document.addEventListener('pointermove', (e) => { last = e; frame ||= requestAnimationFrame(applyTilt); }, { passive: true });
+  document.addEventListener('pointerout', (e) => {
+    const card = e.target.closest?.('.card');
+    if (!card || card.contains(e.relatedTarget)) return;
+    for (const v of ['--rx', '--ry', '--mx', '--my']) card.style.removeProperty(v);
   }, { passive: true });
 }
 

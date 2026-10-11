@@ -43,8 +43,12 @@
   --surface-3: rgb(var(--rgb-surface) / 0.95);  /* dropdown ที่ต้องอ่านง่ายที่สุด */
   --surface-tint: rgb(var(--rgb-white) / 0.04); /* ปุ่ม/ชิปแบบโปร่ง */
   --surface-hover: rgb(var(--rgb-white) / 0.08);
-  --glass-blur: 12px;
-  --glass-blur-strong: 20px;
+  --glass-bg: rgb(var(--rgb-surface) / 0.62);         /* แผงกระจกทั่วไป: header แผงสรุปยอด ตัวกรอง */
+  --glass-bg-strong: rgb(var(--rgb-surface) / 0.86);  /* กระจกที่ลอยทับเนื้อหา: drawer เมนู dropdown toast — ต้องอ่านง่าย */
+  --glass-border: rgb(var(--rgb-white) / 0.12);
+  --glass-highlight: inset 0 1px 0 rgb(var(--rgb-white) / 0.06); /* ขอบบนสว่างเล็กน้อยให้ดูเป็นแผ่นกระจก */
+  --glass-blur: 14px;
+  --glass-blur-strong: 22px;
   --scrim: rgb(var(--rgb-black) / 0.6);
 
   /* ---- เส้นขอบ ---- */
@@ -97,6 +101,11 @@
   --hover: var(--c-surface-2);
   --danger: var(--c-err);
   --neu-bg: rgb(var(--rgb-surface) / 0.6);
+}
+
+/* มือถือ: blur น้อยลง (backdrop-filter กิน GPU) แต่พื้นทึบขึ้น อ่านง่ายเท่าเดิม */
+@media (max-width: 640px) {
+  :root { --glass-blur: 8px; --glass-blur-strong: 12px; --glass-bg: rgb(var(--rgb-surface) / 0.78); --glass-bg-strong: rgb(var(--rgb-surface) / 0.92); }
 }
 
 @media (prefers-reduced-motion: reduce) {

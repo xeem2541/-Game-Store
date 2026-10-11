@@ -33,3 +33,20 @@ export function canRender3D() {
     return false;
   }
 }
+
+// เล่นแอนิเมชันของ class ซ้ำได้ทุกครั้ง (เช่น ตัวเลขตะกร้าเด้งทุกครั้งที่เพิ่มของ) แล้วเอา class ออกเมื่อจบ
+export function replay(el, cls) {
+  if (!el) return;
+  el.classList.remove(cls);
+  void el.offsetWidth; // บังคับให้เบราว์เซอร์เริ่มแอนิเมชันใหม่
+  el.classList.add(cls);
+  el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+}
+
+// ใส่ class ชั่วคราว (เช่น สถานะ "สำเร็จ" ของปุ่ม) แล้วถอดออกหลัง ms มิลลิวินาที
+export function flash(el, cls, ms = 1200) {
+  if (!el) return;
+  el.classList.add(cls);
+  clearTimeout(el._flashTimer);
+  el._flashTimer = setTimeout(() => el.classList.remove(cls), ms);
+}

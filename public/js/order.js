@@ -67,11 +67,13 @@ function render(o) {
   }
 
   $('#payBtn')?.addEventListener('click', async (e) => {
-    e.currentTarget.disabled = true;
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
     try {
       const { url } = await api(`/orders/${o.id}/pay`, { method: 'POST', body: {} });
       location.href = url; // ไปหน้าชำระเงินของ Stripe (บัตร / PromptPay QR)
-    } catch (err) { toast(err.message); e.currentTarget.disabled = false; }
+    } catch (err) { toast(err.message); btn.disabled = false; btn.removeAttribute('aria-busy'); }
   });
   $('#cancelBtn')?.addEventListener('click', async () => {
     if (!confirm(t('order.confirmCancel'))) return;

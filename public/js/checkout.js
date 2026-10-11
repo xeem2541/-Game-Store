@@ -62,6 +62,7 @@ async function load() {
   $('#placeBtn').onclick = async (e) => {
     const btn = e.currentTarget;
     btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true'); // วงหมุนแทนข้อความ (CSS) — ข้อความยังอยู่ให้ screen reader อ่าน
     btn.textContent = t('checkout.placing');
     const sig = s.items.map((i) => i.slug).join(',') + '|' + (s.coupon?.code ?? '');
     try {
@@ -79,6 +80,7 @@ async function load() {
       }
       $('#msg').textContent = err.message;
       btn.disabled = false;
+      btn.removeAttribute('aria-busy');
       btn.textContent = t('checkout.confirm');
     }
   };

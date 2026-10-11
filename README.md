@@ -31,7 +31,9 @@ server/
   services/           ธุรกิจหลัก: orders, payments, refunds, keys, crypto, coupons, receipt, emailQueue, images ...
   scripts/            check-env, backup, restore, make-role
 public/               หน้าร้าน (HTML/CSS/JS ธรรมดา ไม่มี framework) + i18n/th.json, en.json
+  style.css           จุดรวม CSS: css/tokens.css → components.css → layout.css → effects.css
   css/tokens.css      design tokens (สี ฟอนต์ ระยะ เงา กระจก การเคลื่อนไหว) — ใช้ทั้งหน้าร้านและหลังบ้าน
+  css/effects.css     glassmorphism + micro-interactions
   js/motion.js        ตัวช่วยแอนิเมชัน (reduced-motion, ตรวจการอยู่ในจอ, ตรวจว่าเครื่องแสดง 3D ได้)
   js/vendor/          GSAP / three.js ที่ build จาก node_modules แล้ว (`npm run vendor`)
 admin/                หลังบ้าน (SPA แบบ ES modules)
@@ -64,6 +66,9 @@ npm run dev                 # http://localhost:3000   (แอดมิน: http:
 - `npm run build` ล้มเหลวถ้า JS ที่หน้าใดโหลดทันทีเกิน **150 KB gzip** — ของหนัก (เช่น ฉาก 3D) ให้โหลดด้วย `import()`
 - ฉาก 3D หน้าแรกโหลดแบบ lazy เฉพาะเครื่องที่มี WebGL และไม่ได้ขอลดการเคลื่อนไหว/ประหยัดเน็ต และหยุด render เมื่อออกนอกจอ
 - header จองความสูงคงที่ทุกขนาดจอ และข้อความที่รอไฟล์แปลจองที่ 1 บรรทัด (กัน layout shift)
+- กระจก (backdrop-filter) ใช้เฉพาะชิ้นที่ลอยเหนือเนื้อหา: header, drawer ตะกร้า, เมนู, dropdown ค้นหา, toast, แผงสรุปยอด, ตัวกรอง — การ์ดไม่ใช้ (ไม่มีอะไรให้เบลอ)
+- สถานะปุ่ม: `aria-busy="true"` = วงหมุน, class `is-done` = สำเร็จชั่วครู่ (ใช้ `flash()` / `replay()` ใน `motion.js`)
+- การ์ดเกมของหน้าร้านอยู่ใน `.grid` เสมอ — สไตล์ใช้ `.grid .card` เพราะหลังบ้านใช้ `.card` เป็นกล่องธรรมดา
 
 ## ติดตั้งด้วย Docker
 
