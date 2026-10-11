@@ -1,30 +1,27 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { PUBLIC_PAGES } from './pages.js';
+import { eachPage } from './pages.js';
 
 test.setTimeout(240_000);
 
 // ตรวจ accessibility ด้วย axe (WCAG 2 A/AA: alt, label, คอนทราสต์สี, ชื่อปุ่ม ฯลฯ) ทุกหน้า × 2 ภาษา (ธีมมืดอย่างเดียว)
-// พิมพ์หน้าที่กำลังเปิดลง log ของ CI: WebKit บน CI เคยทำ runner ดับกลางเทสที่วนหลายหน้า (ไม่มีข้อความผิดพลาด) — บอกได้ว่าค้างที่หน้าไหน
-const trace = (testName, page) => console.log(`[trace] ${new Date().toISOString().slice(11, 19)} ${testName} → ${page}`);
-
 const serious = (r) => r.violations.filter((v) => ['serious', 'critical'].includes(v.impact));
 const fmt = (vs) => vs.map((v) => `${v.id} (${v.impact}):\n${v.nodes.slice(0, 4).map((n) => `   ${n.target.join(' ')} — ${(n.any[0]?.message ?? n.failureSummary ?? '').replace(/\s+/g, ' ').slice(0, 150)}`).join('\n')}`).join('\n');
 
 for (const lang of ['th', 'en']) {
-  test(`a11y: ${lang}`, async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.addInitScript((l) => { localStorage.setItem('lang', l); }, lang);
-    for (const [name, url] of PUBLIC_PAGES) {
-      trace(`a11y ${lang}`, name);
-      await page.goto(url);
+  test(`a11y: ${lang}`, async ({ context }) => {
+    const setup = async (page) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.addInitScript((l) => { localStorage.setItem('lang', l); }, lang);
+    };
+    await eachPage(context, { setup, label: `a11y ${lang}` }, async (page, name) => {
       await page.waitForLoadState('networkidle');
       await page.waitForSelector('body.ready, body:not([data-async])', { state: 'attached' });
       const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
       const bad = serious(res);
       if (bad.length) throw new Error(`${name} [${lang}]\n${fmt(bad)}`);
       expect(await page.evaluate(() => document.documentElement.lang)).toBe(lang);
-    }
+    });
   });
 }
 
@@ -48,17 +45,15 @@ test('การใช้คีย์บอร์ด: Tab ไปถึงปุ�
   expect([...seen].some((s) => s.includes('#langBtn') || s.includes('#cartBtn') || s.includes('#search'))).toBe(true);
 });
 
-test('ภาษา/ธีม: ไม่มี key แปลหลุดเป็นข้อความดิบ และสลับภาษาได้', async ({ page }) => {
+test('ภาษา/ธีม: ไม่มี key แปลหลุดเป็นข้อความดิบ และสลับภาษาได้', async ({ page, context }) => {
   const RAW = /\b(?:nav|cart|cartpage|order|profile|auth|home|hero|filter|sort|game|reviews|catalog|common|footer|header|checkout|coupon|summary|nf|wish)\.[A-Za-z][A-Za-z.]*\b/;
   for (const lang of ['th', 'en']) {
-    await page.addInitScript((l) => localStorage.setItem('lang', l), lang);
-    for (const [name, url] of PUBLIC_PAGES) {
-      trace(`i18n ${lang}`, name);
-      await page.goto(url);
-      await page.waitForLoadState('networkidle');
-      const text = await page.evaluate(() => document.body.innerText);
+    const setup = (p) => p.addInitScript((l) => localStorage.setItem('lang', l), lang);
+    await eachPage(context, { setup, label: `i18n ${lang}` }, async (p, name) => {
+      await p.waitForLoadState('networkidle');
+      const text = await p.evaluate(() => document.body.innerText);
       expect(text.match(RAW)?.[0] ?? null, `${name} [${lang}] มี key แปลหลุด`).toBeNull();
-    }
+    });
   }
   // หน้าใหม่ (ไม่มี init script ที่บังคับภาษา): เริ่มที่ไทย → กดปุ่มภาษา → เป็นอังกฤษและจำค่าไว้หลังรีโหลด
   const p2 = await page.context().newPage();
