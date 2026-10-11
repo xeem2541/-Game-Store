@@ -40,7 +40,7 @@ test('Desktop: CLS < 0.1 (header จองที่ไว้ก่อน JS เ�
   }
 });
 
-test('ฉาก 3D หน้าแรก: โหลดแบบ lazy, หยุด render เมื่อเลื่อนออกนอกจอ, ไม่โหลดเลยเมื่อขอลดการเคลื่อนไหว', async ({ browser }) => {
+test('ฉาก 3D หน้าแรก: โหลดแบบ lazy, หยุด render เมื่อเลื่อนออกนอกจอ, ไม่โหลดเมื่อขอลดการเคลื่อนไหวหรือบนมือถือ', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
   const scripts = [];
@@ -65,6 +65,20 @@ test('ฉาก 3D หน้าแรก: โหลดแบบ lazy, หยุ�
   await p2.waitForTimeout(2500);
   await expect(p2.locator('#heroBg canvas')).toHaveCount(0);
   await expect(p2.locator('#heroBg .hero-fallback')).toBeVisible();
+  await expect(p2.locator('#heroStack img'), 'ภาพนิ่งสำรอง: ปกเกม 3 ใบ').toHaveCount(3);
+  await expect(p2.locator('#heroStack img').first()).toBeVisible();
   expect(scripts2.some((u) => /three/.test(u)), 'ไม่ควรดาวน์โหลดไฟล์ 3D').toBe(false);
   await reduced.close();
+
+  // จอมือถือ: ไม่โหลดฉาก 3D (ประหยัดแบตและเน็ต) ใช้พื้นหลังนิ่ง
+  const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const p3 = await mobile.newPage();
+  const scripts3 = [];
+  p3.on('request', (r) => { if (r.resourceType() === 'script') scripts3.push(r.url()); });
+  await p3.goto('/');
+  await p3.waitForLoadState('networkidle');
+  await p3.waitForTimeout(2500);
+  await expect(p3.locator('#heroBg canvas')).toHaveCount(0);
+  expect(scripts3.some((u) => /three/.test(u)), 'มือถือไม่ควรดาวน์โหลดไฟล์ 3D').toBe(false);
+  await mobile.close();
 });

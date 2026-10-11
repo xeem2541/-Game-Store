@@ -13,9 +13,8 @@ const OUT = path.join(ROOT, 'public/js/vendor');
 const ENTRIES = {
   gsap: `export { gsap } from 'gsap';\nexport { ScrollTrigger } from 'gsap/ScrollTrigger';\n`,
   three: `export {
-  Scene, PerspectiveCamera, WebGLRenderer, Clock, Group, Mesh,
-  TorusKnotGeometry, IcosahedronGeometry, MeshPhysicalMaterial, MeshBasicMaterial,
-  AmbientLight, DirectionalLight,
+  Scene, PerspectiveCamera, WebGLRenderer, Timer, Group, Mesh,
+  BoxGeometry, PlaneGeometry, MeshBasicMaterial, CanvasTexture, SRGBColorSpace, AdditiveBlending,
 } from 'three';\n`,
 };
 

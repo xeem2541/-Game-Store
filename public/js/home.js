@@ -14,6 +14,9 @@ const heroGame = data.featured[0];
 if (heroGame) {
   $('#heroFeatured').innerHTML = `${t('hero.featured')} <a href="/game/${esc(heroGame.slug)}">${esc(heroGame.title)}</a>`; // บรรทัดนี้จองที่ไว้ใน HTML แล้ว
 }
+// ภาพปกเกมแนะนำ 3 เกม: ใช้ทั้งในฉาก 3D และภาพนิ่งสำรอง (.hero-stack) สำหรับเครื่องที่ไม่แสดง 3D
+const heroCovers = data.featured.slice(0, 3).map((g) => g.cover);
+$('#heroStack').innerHTML = heroCovers.map((src) => `<img src="${esc(src)}" alt="" width="400" height="300" decoding="async">`).join('');
 
 // ---- bento เกมแนะนำ + ทางลัด: ช่อง a = เกมเด่น, b = ดีลลดแรงสุด, c = ตามงบ, d = แพลตฟอร์ม, e/f = เกมแนะนำ, g = แนวเกม ----
 const links = (items) => `<ul class="tile-links">${items.map(([href, label]) => `<li><a href="${esc(href)}">${esc(label)}</a></li>`).join('')}</ul>`;
@@ -102,12 +105,13 @@ if (!prefersReducedMotion()) {
   }
 }
 
-// ฉาก 3D: โหลดแบบ lazy หลังหน้าแสดงผลแล้ว และเฉพาะเครื่องที่รองรับ — ไม่งั้นใช้พื้นหลังนิ่ง (.hero-fallback) ต่อไป
-if (canRender3D()) {
+// ฉาก 3D: โหลดแบบ lazy หลังหน้าแสดงผลแล้ว และเฉพาะเครื่องที่รองรับ — ไม่งั้นใช้ภาพนิ่ง (.hero-fallback / .hero-stack) ต่อไป
+// เฉพาะจอกว้าง: จอเล็กฉากจะอยู่หลังข้อความแบบจาง ๆ คุ้มน้อยกว่าแบตและเน็ตที่เสีย (131 KB) — ใช้พื้นหลังนิ่งแทน
+if (canRender3D() && matchMedia('(min-width: 901px)').matches) {
   whenIdle(async () => {
     try {
       const { mountHeroScene } = await import('./three-hero.js');
-      mountHeroScene($('#heroBg'));
+      mountHeroScene($('#heroBg'), { covers: heroCovers });
     } catch (e) {
       console.warn('ไม่สามารถแสดงฉาก 3D:', e.message); // เช่น WebGL context สร้างไม่ได้ → ยังเห็นพื้นหลังนิ่ง
     }
