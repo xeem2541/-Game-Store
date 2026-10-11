@@ -9,12 +9,12 @@ const serious = (r) => r.violations.filter((v) => ['serious', 'critical'].includ
 const fmt = (vs) => vs.map((v) => `${v.id} (${v.impact}):\n${v.nodes.slice(0, 4).map((n) => `   ${n.target.join(' ')} — ${(n.any[0]?.message ?? n.failureSummary ?? '').replace(/\s+/g, ' ').slice(0, 150)}`).join('\n')}`).join('\n');
 
 for (const lang of ['th', 'en']) {
-  test(`a11y: ${lang}`, async ({ context }) => {
+  test(`a11y: ${lang}`, async ({ browser }) => {
     const setup = async (page) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.addInitScript((l) => { localStorage.setItem('lang', l); }, lang);
     };
-    await eachPage(context, { setup, label: `a11y ${lang}` }, async (page, name) => {
+    await eachPage(browser, { setup, label: `a11y ${lang}` }, async (page, name) => {
       await page.waitForLoadState('networkidle');
       await page.waitForSelector('body.ready, body:not([data-async])', { state: 'attached' });
       const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
@@ -45,11 +45,11 @@ test('การใช้คีย์บอร์ด: Tab ไปถึงปุ�
   expect([...seen].some((s) => s.includes('#langBtn') || s.includes('#cartBtn') || s.includes('#search'))).toBe(true);
 });
 
-test('ภาษา/ธีม: ไม่มี key แปลหลุดเป็นข้อความดิบ และสลับภาษาได้', async ({ page, context }) => {
+test('ภาษา/ธีม: ไม่มี key แปลหลุดเป็นข้อความดิบ และสลับภาษาได้', async ({ page, browser }) => {
   const RAW = /\b(?:nav|cart|cartpage|order|profile|auth|home|hero|filter|sort|game|reviews|catalog|common|footer|header|checkout|coupon|summary|nf|wish)\.[A-Za-z][A-Za-z.]*\b/;
   for (const lang of ['th', 'en']) {
     const setup = (p) => p.addInitScript((l) => localStorage.setItem('lang', l), lang);
-    await eachPage(context, { setup, label: `i18n ${lang}` }, async (p, name) => {
+    await eachPage(browser, { setup, label: `i18n ${lang}` }, async (p, name) => {
       await p.waitForLoadState('networkidle');
       const text = await p.evaluate(() => document.body.innerText);
       expect(text.match(RAW)?.[0] ?? null, `${name} [${lang}] มี key แปลหลุด`).toBeNull();

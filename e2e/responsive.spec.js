@@ -11,8 +11,8 @@ const settle = async (page) => { await page.waitForLoadState('networkidle'); awa
 
 test.describe('responsive (375 / 768 / 1280)', () => {
   for (const [w, h] of VIEWPORTS) {
-    test(`ร้านค้าที่ ${w}px: ไม่มีแถบเลื่อนแนวนอน + จับภาพหน้าจอ`, async ({ context }, info) => {
-      await eachPage(context, { setup: (p) => p.setViewportSize({ width: w, height: h }), label: `responsive ${w}` }, async (page, name) => {
+    test(`ร้านค้าที่ ${w}px: ไม่มีแถบเลื่อนแนวนอน + จับภาพหน้าจอ`, async ({ browser }, info) => {
+      await eachPage(browser, { setup: (p) => p.setViewportSize({ width: w, height: h }), label: `responsive ${w}` }, async (page, name) => {
         await settle(page);
         expect(await noOverflow(page), `${name} @${w}px มีแถบเลื่อนแนวนอน`).toBe(true);
         await page.screenshot({ path: path.join(shotDir(info.project.name), `${name}-${w}.png`), fullPage: name !== 'games' });
