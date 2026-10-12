@@ -69,6 +69,8 @@
 .hv-covers span { aspect-ratio: 4 / 3; border-radius: var(--r-md); border: var(--border-thin); background: var(--c-surface-2) center / cover no-repeat; box-shadow: var(--shadow-1); }
 .hv-covers span:nth-child(2) { transform: scale(1.15); border-color: var(--c-accent); box-shadow: var(--shadow-2), var(--glow-accent); }
 .hv-cart { display: inline-flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-radius: var(--r-pill); border: 1px solid var(--glass-border); background: var(--glass-bg-strong); font-weight: var(--fw-bold); }
+/* ไอคอนตะกร้าเดียวกับปุ่มใน header (เดิมเป็น emoji 🛒 ที่หน้าตาต่างกันไปแต่ละระบบ — บน Windows เป็นขาวดำเอียง ๆ) */
+.hv-cart .hv-cart-icon { width: 20px; height: 20px; color: var(--c-text); }
 .hv-cart b { display: grid; place-items: center; min-width: 24px; height: 24px; border-radius: var(--r-pill); background: var(--c-accent); color: var(--c-on-accent); font-size: var(--fs-xs); }
 .howto-visual[data-step="1"] .hv-cart b { animation: bump var(--dur-4) var(--ease-spring) var(--dur-3) backwards; }
 
