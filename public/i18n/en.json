@@ -380,5 +380,8 @@
   "home.recent": "Recently viewed",
   "home.recentClear": "Clear history",
   "home.recentCleared": "Viewing history cleared",
-  "home.becauseGenre": "Because you like {genre}"
+  "home.becauseGenre": "Because you like {genre}",
+  "filter.title": "Filters",
+  "filter.done": "Show results",
+  "filter.show": "Show {n} games"
 }

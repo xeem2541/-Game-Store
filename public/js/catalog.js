@@ -102,14 +102,63 @@ function renderChips(p) {
   $('#filtersCount').textContent = chips.length ? String(chips.length) : '';
 }
 
-// มือถือ: แถบตัวกรองยาวเกือบเต็มจอ → พับไว้หลังปุ่ม (ตัวกรองที่ใช้อยู่ยังเห็นเป็นป้าย และกรองแนวเกมได้จากช่องแนวเกม)
+// มือถือ: ตัวกรองเป็นแผงเลื่อนขึ้นจากล่างจอ (<dialog> modal — เบราว์เซอร์กักโฟกัส/Esc ปิด/คืนโฟกัสให้เอง)
+// ฟอร์มเดียวกับจอกว้าง ปรับค่าแล้วกรองทันที ปุ่มล่างบอกจำนวนเกมที่เจอ; ปิดได้ด้วย ✕ / ปุ่มล่าง / กดพื้นหลัง / ลากลงด้วยนิ้ว
+const sheet = $('#filterSheet');
 const toggle = $('#filtersToggle');
+const done = $('#filtersDone');
+const mobile = matchMedia('(max-width: 640px)');
+function finishClose() {
+  sheet.classList.remove('is-closing');
+  sheet.style.removeProperty('transform');
+  sheet.style.removeProperty('transition');
+  sheet.close();
+}
+function closeSheet({ instant = false } = {}) {
+  if (!sheet.open || sheet.classList.contains('is-closing')) return;
+  if (instant || prefersReducedMotion()) { finishClose(); return; }
+  sheet.classList.add('is-closing');
+  let ended = false;
+  const end = (e) => { if (ended || (e && e.target !== sheet)) return; ended = true; sheet.removeEventListener('animationend', end); finishClose(); };
+  sheet.addEventListener('animationend', end);
+  setTimeout(end, 400); // สำรอง: ไม่มี animationend (แท็บอยู่เบื้องหลัง ฯลฯ)
+}
 toggle.addEventListener('click', () => {
-  const open = toggle.getAttribute('aria-expanded') !== 'true';
-  toggle.setAttribute('aria-expanded', String(open));
-  form.classList.toggle('is-open', open);
-  if (open) form.elements.genre.focus();
+  if (!mobile.matches) return;
+  document.documentElement.classList.add('sheet-open');
+  sheet.showModal();
+  form.elements.genre.focus();
 });
+$('#filtersClose').addEventListener('click', () => closeSheet());
+done.addEventListener('click', () => closeSheet());
+sheet.addEventListener('click', (e) => { if (e.target === sheet) closeSheet(); }); // กดพื้นหลังนอกแผง
+sheet.addEventListener('close', () => document.documentElement.classList.remove('sheet-open'));
+mobile.addEventListener('change', () => { if (!mobile.matches) closeSheet({ instant: true }); }); // หมุนจอ/ขยายหน้าต่างจนเป็นจอกว้าง: ฟอร์มกลับไปอยู่ในหน้า
+// ลากแถบจับ/หัวแผงลง (นิ้วเท่านั้น): เกิน 25% ของความสูง = ปิด ไม่ถึง = เด้งกลับ
+let drag = null;
+for (const handle of sheet.querySelectorAll('.fs-grip, .fs-head')) {
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch' || e.target.closest('.fs-close')) return;
+    drag = { y: e.clientY, dy: 0, id: e.pointerId };
+    handle.setPointerCapture?.(e.pointerId);
+    sheet.style.transition = 'none';
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag.dy = Math.max(0, e.clientY - drag.y);
+    sheet.style.transform = `translateY(${drag.dy}px)`;
+  });
+  const release = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const far = drag.dy > sheet.offsetHeight * 0.25;
+    drag = null;
+    if (far) { finishClose(); return; }
+    sheet.style.removeProperty('transition'); // กลับมาใช้ transition ของแผง → เด้งกลับที่เดิม
+    sheet.style.removeProperty('transform');
+  };
+  handle.addEventListener('pointerup', release);
+  handle.addEventListener('pointercancel', release);
+}
 chipsBox.addEventListener('click', (e) => {
   const chip = e.target.closest('.filter-chip');
   if (!chip) return;
@@ -157,6 +206,7 @@ async function load() {
   const q = p.get('q');
   setHeading(q);
   $('#count').textContent = t('catalog.count', { n: data.total });
+  done.textContent = t('filter.show', { n: data.total }); // ปุ่มล่างของแผงตัวกรองมือถือ
   const paint = () => paintResults(data, q);
   if (!firstLoad && canMorph()) await document.startViewTransition(paint).updateCallbackDone;
   else paint();

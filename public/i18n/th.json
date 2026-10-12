@@ -336,5 +336,8 @@
   "home.recent": "เกมที่คุณเพิ่งดู",
   "home.recentClear": "ล้างประวัติ",
   "home.recentCleared": "ล้างประวัติการดูแล้ว",
-  "home.becauseGenre": "เพราะคุณสนใจแนว {genre}"
+  "home.becauseGenre": "เพราะคุณสนใจแนว {genre}",
+  "filter.title": "ตัวกรอง",
+  "filter.done": "ดูผลลัพธ์",
+  "filter.show": "แสดง {n} เกม"
 }

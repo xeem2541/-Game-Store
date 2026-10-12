@@ -67,16 +67,41 @@ body.is-search .genre-bento, .genre-bento[hidden] { display: none; }
   /* ใต้ header: top ของ header (16) + สูง (44 + 32 + 2) + ช่องว่าง 12 */
   .filters.filter-bar { position: sticky; top: 106px; z-index: calc(var(--z-nav) - 1); box-shadow: var(--shadow-2); }
 }
+/* ---- ตัวกรองอยู่ใน <dialog>: จอกว้าง = กล่องเปล่า (display: contents) แถบกระจกอยู่ในหน้าตามเดิม; มือถือ = แผงเลื่อนขึ้นจากล่างจอ (UI เฟส 21) ---- */
+.filter-sheet { display: contents; }
+.fs-grip, .fs-head, .fs-foot { display: none; }
 .filters-toggle { display: none; }
+html.sheet-open { overflow: hidden; }
 @media (max-width: 640px) {
-  .filters.filter-bar { display: none; grid-template-columns: 1fr 1fr; }
-  .filters.filter-bar.is-open { display: grid; animation: chip-in 0.2s var(--ease-out) both; }
-  .filter-bar .price-pair, .filter-bar .reset-btn { grid-column: 1 / -1; }
   .filters-toggle { display: inline-flex; align-items: center; gap: var(--sp-2); width: 100%; justify-content: center; margin-bottom: var(--sp-3); }
-  .filters-toggle::after { content: '▾'; transition: transform var(--dur-2) var(--ease-out); }
-  .filters-toggle[aria-expanded="true"]::after { transform: rotate(180deg); }
   .filters-count:not(:empty) { min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--r-pill); background: var(--c-accent); color: var(--c-on-accent); font-size: var(--fs-xs); display: inline-grid; place-items: center; }
+
+  .filter-sheet:not([open]) { display: none; }
+  .filter-sheet[open] {
+    position: fixed; inset: auto 0 0 0; display: flex; flex-direction: column; width: 100%; max-width: none; height: auto; max-height: min(88dvh, 720px);
+    margin: 0; padding: 0; overflow: hidden;
+    border: var(--border-thick); border-bottom: 0; border-radius: var(--r-xl) var(--r-xl) 0 0; background: var(--c-surface); color: var(--c-text); box-shadow: var(--shadow-3);
+    transition: transform var(--dur-3) var(--ease-out); animation: fs-up var(--dur-4) var(--ease-out);
+  }
+  .filter-sheet.is-closing { animation: fs-down var(--dur-3) ease-in forwards; }
+  .filter-sheet::backdrop { background: rgb(var(--rgb-bg) / 0.82); }
+  .filter-sheet[open]::backdrop { animation: sd-fade var(--dur-3) var(--ease-out); }
+  .fs-grip { display: block; flex-shrink: 0; width: 44px; height: 5px; margin: 10px auto 0; border-radius: 3px; background: var(--c-border-strong); touch-action: none; }
+  .fs-head { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; padding: var(--sp-1) var(--sp-3) var(--sp-2) var(--sp-4); touch-action: none; }
+  .fs-head h2 { margin: 0; font-size: var(--fs-lg); }
+  .fs-close { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--surface-tint); color: var(--c-text-2); cursor: pointer; }
+  .fs-close:hover { color: var(--c-text); }
+  .fs-close .icon { width: 16px; height: 16px; }
+  .filters.filter-bar {
+    position: static; display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 0; margin: 0; padding: var(--sp-2) var(--sp-4) var(--sp-4);
+    overflow-y: auto; overscroll-behavior: contain; border: 0; border-radius: 0; background: none; box-shadow: none;
+  }
+  .filter-bar .price-pair, .filter-bar .reset-btn { grid-column: 1 / -1; }
+  .fs-foot { display: block; flex-shrink: 0; padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom)); border-top: var(--border-thin); background: var(--c-surface); }
+  .fs-foot .btn { width: 100%; }
 }
+@keyframes fs-up { from { transform: translateY(100%); } }
+@keyframes fs-down { to { transform: translateY(100%); } }
 
 /* ---- ป้ายตัวกรองที่ใช้อยู่ ---- */
 .active-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0 0 var(--sp-5); }

@@ -92,10 +92,10 @@ test('มือถือ: ช่องแนวเกมเป็นแถวป
   expect(await bento.evaluate((el) => getComputedStyle(el).overflowX)).toBe('auto');
   expect(await bento.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  // แถบตัวกรองพับไว้หลังปุ่ม (ไม่ให้ฟอร์มยาวดันการ์ดเกมพ้นจอแรก) — เปิดแล้วโฟกัสช่องแรก
+  // ตัวกรองอยู่ในแผงที่เลื่อนขึ้นจากล่างจอ (ไม่ให้ฟอร์มยาวดันการ์ดเกมพ้นจอแรก; รายละเอียดใน filter-sheet.spec.js) — เปิดแล้วโฟกัสช่องแรก
   await expect(page.locator('#filters')).toBeHidden();
   await page.locator('#filtersToggle').click();
-  await expect(page.locator('#filtersToggle')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#filterSheet')).toHaveAttribute('open', '');
   await expect(page.locator('#filters')).toBeVisible();
   await expect(page.locator('#genre')).toBeFocused();
   await expect(page.locator('#catalogTitle')).not.toHaveClass(/kt-in/);
