@@ -5,6 +5,8 @@ import AxeBuilder from '@axe-core/playwright';
 const ready = (page) => page.waitForSelector('body.ready', { state: 'attached' });
 // รอเฉพาะแอนิเมชันที่ผูกกับเวลา (แบบผูกกับการเลื่อนหน้าไม่มีวัน "จบ")
 const serious = async (page) => {
+  // แอนิเมชัน "จางเข้า" ของการ์ด/ช่องทางลัดหน้าแรกทำด้วย GSAP (ไม่ใช่ Web Animations) → รอจนทึบเต็มก่อน ไม่งั้นตรวจสีกลางทาง (WebKit เจอ)
+  await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('.tile, .card')].every((el) => getComputedStyle(el).opacity === '1'))).toBe(true);
   await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline && a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished.catch(() => {}))));
   const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   return res.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`);
