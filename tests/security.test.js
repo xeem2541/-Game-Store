@@ -244,7 +244,9 @@ function runProd(extra, { port, wait = true } = {}) {
   };
   return { child, out: () => out, ready: wait ? ready : null };
 }
-const freePort = () => 41000 + Math.floor(Math.random() * 2000);
+// พอร์ตไม่ซ้ำกันในรอบเดียวกัน (ก้าวละ 13 จาก 2000 ช่อง ไม่วนซ้ำ) และต่างกันตามโปรเซส — การสุ่มเดิมชนกันได้ (EADDRINUSE)
+let portStep = 0;
+const freePort = () => 41000 + ((process.pid * 7 + portStep++ * 13) % 2000);
 
 test('production: HSTS, cookie Secure+HttpOnly, CORS allowlist, ไม่มีบัญชี/คีย์/คูปองทดสอบ, ไม่มี dev-pay', async () => {
   const port = freePort();
