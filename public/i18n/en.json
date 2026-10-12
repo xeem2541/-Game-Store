@@ -345,5 +345,16 @@
   "tabbar.search": "Search",
   "tabbar.account": "Account",
   "hero.deckLabel": "Featured games, swipe to see more",
-  "hero.deckPos": "Game {n} of {total}"
+  "hero.deckPos": "Game {n} of {total}",
+  "search.dlgTitle": "Search games",
+  "search.keySelect": "select",
+  "search.keyOpen": "open",
+  "search.allN": "See all {n} results for “{q}” →",
+  "search.found": "{n} games found",
+  "search.none": "No games match “{q}”. Try another word or pick a genre below",
+  "search.recent": "Recent searches",
+  "search.clearRecent": "Clear",
+  "search.genres": "Genres",
+  "search.trending": "Best sellers",
+  "search.hint": "Press / or Ctrl+K for full-screen search"
 }

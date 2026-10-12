@@ -16,6 +16,9 @@ try {
   $('#detail').innerHTML = `<p class="empty">${t('game.notfound')} <a href="/games.html">${t('game.back')}</a></p>`;
 }
 
+// มาจากการกดการ์ดเกม (view transition ข้ามหน้า): รอภาพปกขยายเสร็จก่อนแทนที่ skeleton ไม่งั้นภาพที่กำลังขยายจะหายกลางทาง
+if (game && window.__revealTransition) await window.__revealTransition.finished.catch(() => {});
+
 if (game) {
   const g = game;
   remember([g, ...g.related]);

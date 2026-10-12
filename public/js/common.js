@@ -225,6 +225,7 @@ function mountLayout() {
     <nav class="nav" aria-label="main"><a href="/games.html">${t('nav.games')}</a><a href="/games.html?onSale=1">${t('nav.promo')}</a></nav>
     <form class="search" action="/games.html" autocomplete="off" role="search">
       <input id="search" name="q" type="search" placeholder="${t('search.placeholder')}" aria-label="${t('search.placeholder')}">
+      <kbd class="search-kbd" title="${t('search.hint')}" aria-hidden="true">/</kbd>
       <ul id="suggest" class="suggest" hidden></ul>
     </form>
     <div class="actions">
@@ -264,11 +265,8 @@ function mountLayout() {
       ${tab('account', user ? '/profile' : '/login', 'user', user ? t('tabbar.account') : t('header.login'))}
     </nav>`);
     document.body.classList.add('has-tabbar');
-    // ค้นหา: ขึ้นไปบนสุดแล้วโฟกัสช่องค้นหาใน header (คีย์บอร์ดเปิดเพราะอยู่ใน event ของการแตะ)
-    $('#tabSearch').addEventListener('click', () => {
-      scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-      $('#search')?.focus({ preventScroll: true });
-    });
+    // ค้นหา: เปิดหน้าค้นหาเต็มจอ (search-dialog.js)
+    $('#tabSearch').addEventListener('click', () => openSearchDialog());
     // คีย์บอร์ดบนจอเปิดอยู่ (โฟกัสช่องพิมพ์) → ซ่อนแถบ ไม่ให้ลอยขึ้นมาทับช่องที่กำลังพิมพ์
     const typing = (el) => el?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, select');
     document.addEventListener('focusin', (e) => document.body.classList.toggle('is-typing', typing(e.target)));
@@ -412,6 +410,26 @@ export function highlight(text, q) {
 
 mountLayout();
 applyI18n();
+
+// ค้นหาเต็มจอ: "/" (ตอนไม่ได้พิมพ์อยู่) หรือ Ctrl/⌘+K — โหลดโค้ดตอนเปิดครั้งแรก
+export const openSearchDialog = (q) => import('./search-dialog.js').then((m) => m.openSearch(q)).catch(() => $('#search')?.focus());
+document.addEventListener('keydown', (e) => {
+  const typing = e.target.closest?.('input, textarea, select, [contenteditable="true"]');
+  if ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey) && !e.altKey) { e.preventDefault(); openSearchDialog(); }
+  else if (e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey && !document.querySelector('dialog[open]')) { e.preventDefault(); openSearchDialog(); }
+});
+
+// เปลี่ยนหน้าแบบ view transition (css/transitions.css): กดการ์ด/ลิงก์เกม → ภาพปกที่กดขยายไปเป็นภาพปกในหน้าเกม
+// จำลิงก์ที่กดล่าสุด แล้วตอนออกจากหน้า (pageswap) ตั้งชื่อ game-cover ให้ภาพปกของลิงก์นั้น ถ้าปลายทางเป็นหน้าเกมเดียวกัน
+let lastGameLink = null;
+document.addEventListener('click', (e) => { lastGameLink = e.target.closest?.('a[href^="/game/"]') ?? null; }, true);
+window.addEventListener('pageswap', (e) => {
+  if (!e.viewTransition || !lastGameLink) return;
+  const to = e.activation?.entry?.url;
+  if (!to || new URL(to).pathname !== new URL(lastGameLink.href).pathname) return;
+  const img = lastGameLink.querySelector('img') ?? lastGameLink.closest('.card, .tile')?.querySelector('.cover img, img');
+  if (img?.getClientRects().length) img.style.viewTransitionName = 'game-cover';
+});
 
 // footer ซ่อนอยู่จนกว่าหน้าจะโหลดข้อมูลเสร็จ (body[data-async]) — ไม่ให้ footer ถูกดันลงมา (layout shift) ตอนเนื้อหาเข้ามา
 export const markReady = () => document.body.classList.add('ready');

@@ -1,0 +1,29 @@
+/* ==========================================================================
+   เปลี่ยนหน้าแบบลื่น (UI เฟส 18) — cross-document View Transitions (Chrome/Edge 126+, Safari 18.2+; เบราว์เซอร์อื่นเปลี่ยนหน้าตามปกติ)
+   - ทั้งหน้า: จางเข้าหากันสั้น ๆ, header และแถบเมนูล่างจออยู่กับที่
+   - กดการ์ดเกม: ภาพปกขยายไปเป็นภาพปกในหน้าเกม (ชื่อ game-cover ตั้งให้ภาพที่กดตอน pageswap ใน common.js
+     และให้ภาพปกใน skeleton ของหน้าเกม)
+   ========================================================================== */
+@view-transition { navigation: auto; }
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+}
+
+.topbar { view-transition-name: topbar; }
+.tabbar { view-transition-name: tabbar; }
+.sk-hero-cover { view-transition-name: game-cover; }
+
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 220ms; }
+::view-transition-group(game-cover) { animation-duration: 420ms; animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); z-index: 10; }
+::view-transition-old(game-cover), ::view-transition-new(game-cover) { height: 100%; object-fit: cover; border-radius: var(--r-md); overflow: hidden; }
+/* header/แถบเมนูไม่ต้องจางซ้อน (เหมือนกันทั้งสองหน้า) */
+::view-transition-old(topbar), ::view-transition-old(tabbar) { display: none; }
+::view-transition-new(topbar), ::view-transition-new(tabbar) { animation: none; }
+
+/* skeleton หน้าเกม: ภาพปกจริงตำแหน่งเดียวกับกล่องเกม (ยังไม่เอียง) */
+.detail-sk .sk-hero-cover { width: 100%; border: 1px solid rgb(var(--rgb-white) / 0.14); border-radius: var(--r-md); }
+.detail-sk .sk-cover.sk-hero-cover { aspect-ratio: 4 / 3; }
+.detail-sk .detail-hero-content { align-self: stretch; justify-content: center; }
+.detail-sk .sk-line { width: 100%; }
+.detail-sk .sk-line.w60 { width: 60%; height: 48px; }
+.detail-sk .sk-line.w40 { width: 40%; }

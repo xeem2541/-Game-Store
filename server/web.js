@@ -59,7 +59,12 @@ export function mountWeb(app) {
   app.get(['/games.html', '/games'], (_req, res) => res.set('Cache-Control', 'no-cache').type('html').send(renderTemplate('games.html', gamesMeta())));
   app.get('/game/:slug', (req, res) => {
     const { found, meta } = gameMeta(req.params.slug);
-    const html = renderTemplate('game.html', meta).replaceAll('{{SLUG}}', found ? escHtml(req.params.slug) : '');
+    // skeleton มีภาพปกจริงอยู่ตำแหน่งเดียวกับกล่องเกม: แสดงทันทีก่อนข้อมูลเกมมา และเป็นปลายทางที่ภาพปกจากการ์ด
+    // หน้าก่อนหน้าขยายมาหา (cross-document view transition — ดู css/transitions.css)
+    const cover = found
+      ? `<img class="detail-cover sk-hero-cover" src="/api/games/${escHtml(req.params.slug)}/cover.svg" alt="" width="400" height="300" fetchpriority="high">`
+      : '<div class="sk-cover sk-hero-cover"></div>';
+    const html = renderTemplate('game.html', meta).replaceAll('{{SLUG}}', found ? escHtml(req.params.slug) : '').replace('{{COVER_IMG}}', cover);
     res.status(found ? 200 : 404).set('Cache-Control', 'no-cache').type('html').send(html);
   });
   app.get('/sitemap.xml', (_req, res) => res.set('Cache-Control', 'public, max-age=3600').type('application/xml').send(sitemapXml()));

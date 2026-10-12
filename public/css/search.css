@@ -1,0 +1,78 @@
+/* ==========================================================================
+   ค้นหาเต็มจอ (UI เฟส 18) — <dialog> แบบ modal จาก search-dialog.js
+   จอกว้าง: กล่องกลางจอด้านบน / มือถือ: เต็มจอ — พื้นหลังทึบ (ไม่ใช้ backdrop-filter)
+   ========================================================================== */
+html.search-open { overflow: hidden; }
+.search-dlg {
+  width: min(720px, calc(100% - 32px)); max-width: none; max-height: min(80vh, 760px); margin: 10vh auto auto; padding: 0;
+  display: flex; flex-direction: column; overflow: hidden;
+  border: var(--border-thick); border-radius: var(--r-xl); background: var(--c-surface); color: var(--c-text); box-shadow: var(--shadow-3);
+}
+.search-dlg:not([open]) { display: none; }
+.search-dlg::backdrop { background: rgb(var(--rgb-bg) / 0.82); }
+.search-dlg[open]:not(.no-anim) { animation: sd-in var(--dur-3) var(--ease-out); }
+.search-dlg[open]:not(.no-anim)::backdrop { animation: sd-fade var(--dur-3) var(--ease-out); }
+@keyframes sd-in { from { opacity: 0; transform: translateY(-12px) scale(0.98); } }
+@keyframes sd-fade { from { opacity: 0; } }
+
+.sd-head { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-bottom: var(--border-thin); }
+.sd-icon { width: 22px; height: 22px; flex-shrink: 0; color: var(--c-text-2); }
+.sd-head input {
+  flex: 1; min-width: 0; height: 52px; padding: 0; border: 0; background: none; box-shadow: none; color: var(--c-text);
+  font-size: var(--fs-lg); outline: none;
+}
+.sd-head input::-webkit-search-cancel-button { display: none; }
+.sd-head:focus-within { box-shadow: inset 0 -2px 0 var(--c-accent); }
+.sd-close { flex-shrink: 0; min-width: 44px; height: 32px; padding: 0 var(--sp-2); border: var(--border-thin); border-radius: var(--r-md); background: var(--surface-tint); color: var(--c-text-2); font: inherit; font-size: var(--fs-xs); font-weight: var(--fw-bold); cursor: pointer; }
+.sd-close:hover { color: var(--c-text); border-color: var(--c-border-strong); }
+
+.sd-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+.sd-status { margin: var(--sp-1) 0 var(--sp-2); color: var(--c-text-2); font-size: var(--fs-sm); }
+.sd-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.sd-item, .sd-all { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2); border-radius: var(--r-md); cursor: pointer; }
+.sd-item img { width: 64px; height: 48px; flex-shrink: 0; object-fit: cover; border-radius: var(--r-sm); }
+.sd-item-text { flex: 1; min-width: 0; display: grid; }
+.sd-item-title { overflow: hidden; font-weight: var(--fw-bold); text-overflow: ellipsis; white-space: nowrap; }
+.sd-item-title mark { background: none; color: var(--c-accent); }
+.sd-item-meta { color: var(--c-text-2); font-size: var(--fs-sm); }
+.sd-item-price { display: flex; flex-direction: column; align-items: flex-end; font-weight: var(--fw-bold); white-space: nowrap; }
+.sd-item-price .old { color: var(--c-text-2); font-size: var(--fs-xs); }
+.sd-all { justify-content: center; margin-top: var(--sp-2); color: var(--c-accent); font-weight: var(--fw-bold); }
+.sd-item:hover, .sd-all:hover, .sd-list [aria-selected="true"] { background: var(--surface-hover); box-shadow: inset 3px 0 0 var(--c-accent); }
+
+.sd-idle[hidden] { display: none; }
+.sd-sec + .sd-sec { margin-top: var(--sp-5); }
+.sd-sec-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--sp-2); }
+.sd-sec h3 { margin: 0; color: var(--c-text-2); font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; }
+.sd-link { border: 0; background: none; color: var(--c-accent); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+.sd-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.sd-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--sp-3); border: var(--border-thin); border-radius: var(--r-pill);
+  background: var(--surface-tint); color: var(--c-text); font: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-decoration: none; cursor: pointer;
+}
+.sd-chip small { color: var(--c-text-2); }
+.sd-chip:hover { border-color: var(--c-accent); }
+.sd-top { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
+.sd-top-card { display: grid; gap: 6px; color: var(--c-text); font-size: var(--fs-sm); font-weight: var(--fw-bold); text-decoration: none; }
+.sd-top-card img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--r-md); border: var(--border-thin); transition: transform var(--dur-2) var(--ease-out); }
+.sd-top-card:hover img { transform: translateY(-2px); border-color: var(--c-accent); }
+.sd-top-card span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.sd-foot { display: flex; align-items: center; gap: 6px; margin: 0; padding: var(--sp-2) var(--sp-4); border-top: var(--border-thin); color: var(--c-text-2); font-size: var(--fs-xs); }
+.sd-foot kbd, .search-kbd {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border: var(--border-thick); border-radius: 5px;
+  background: var(--surface-tint); color: var(--c-text-2); font-family: var(--font-mono); font-size: 11px;
+}
+.sd-foot kbd + kbd { margin-left: -2px; }
+
+/* ปุ่มลัด "/" ในช่องค้นหาของ header (จอกว้าง, ซ่อนเมื่อพิมพ์อยู่) */
+.topbar .search .search-kbd { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); pointer-events: none; }
+.topbar .search:focus-within .search-kbd, .topbar .search input:not(:placeholder-shown) ~ .search-kbd { display: none; }
+@media (max-width: 900px), (hover: none) { .topbar .search .search-kbd { display: none; } }
+
+/* มือถือ: เต็มจอ */
+@media (max-width: 640px) {
+  .search-dlg { width: 100vw; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; }
+  .sd-foot { display: none; }
+  .sd-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

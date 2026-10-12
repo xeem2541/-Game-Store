@@ -9,7 +9,7 @@ const serious = async (page) => {
   return res.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`);
 };
 
-test('แถบเมนูล่างจอ: 5 ปุ่ม, บอกหน้าปัจจุบัน, ปุ่มซ้ำใน header ซ่อน, ค้นหาโฟกัสช่องค้นหาและแถบหลบคีย์บอร์ด; จอกว้างไม่มีแถบ', async ({ page }) => {
+test('แถบเมนูล่างจอ: 5 ปุ่ม, บอกหน้าปัจจุบัน, ปุ่มซ้ำใน header ซ่อน, แถบหลบคีย์บอร์ด, ปุ่มค้นหาเปิดค้นหาเต็มจอ; จอกว้างไม่มีแถบ', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
   await ready(page);
@@ -22,11 +22,14 @@ test('แถบเมนูล่างจอ: 5 ปุ่ม, บอกหน�
   const box = await bar.boundingBox();
   expect(Math.round(box.y + box.height)).toBe(812);
 
-  await page.locator('#tabSearch').click();
-  await expect(page.locator('#search')).toBeFocused();
-  await expect(bar).toBeHidden(); // คีย์บอร์ดเปิด → แถบซ่อน
+  await page.locator('#search').focus();
+  await expect(bar).toBeHidden(); // พิมพ์อยู่ (คีย์บอร์ดเปิด) → แถบซ่อน
   await page.locator('#search').blur();
   await expect(bar).toBeVisible();
+  await page.locator('#tabSearch').click(); // ปุ่มค้นหา → ค้นหาเต็มจอ (search-dialog.spec.js)
+  await expect(page.locator('#sdInput')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#tabSearch')).toBeFocused(); // ปิดแล้วโฟกัสกลับปุ่มเดิม
 
   await bar.locator('[data-nav="games"]').click();
   await expect(page).toHaveURL(/\/games\.html$/);

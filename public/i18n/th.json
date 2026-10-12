@@ -301,5 +301,16 @@
   "tabbar.search": "ค้นหา",
   "tabbar.account": "บัญชี",
   "hero.deckLabel": "เกมแนะนำ ปัดซ้าย-ขวาเพื่อดูเกมอื่น",
-  "hero.deckPos": "เกมที่ {n} จาก {total}"
+  "hero.deckPos": "เกมที่ {n} จาก {total}",
+  "search.dlgTitle": "ค้นหาเกม",
+  "search.keySelect": "เลือก",
+  "search.keyOpen": "เปิด",
+  "search.allN": "ดูผลทั้งหมด {n} เกมของ “{q}” →",
+  "search.found": "พบ {n} เกม",
+  "search.none": "ไม่พบเกมที่ตรงกับ “{q}” ลองคำอื่น หรือเลือกจากแนวเกมด้านล่าง",
+  "search.recent": "ค้นหาล่าสุด",
+  "search.clearRecent": "ล้าง",
+  "search.genres": "แนวเกม",
+  "search.trending": "เกมขายดี",
+  "search.hint": "กด / หรือ Ctrl+K เพื่อค้นหาแบบเต็มจอ"
 }
