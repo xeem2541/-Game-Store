@@ -114,10 +114,12 @@ export const confirmBox = async (title, message, confirmText = 'ยืนยั�
 
 // ตารางพร้อมสถานะ empty — cols = [{ h, f: (row) => html, cls }]
 // กรอบตารางเลื่อนแนวนอนได้บนจอเล็ก → ต้องโฟกัสด้วยคีย์บอร์ดได้ (tabindex) เพื่อใช้ลูกศรเลื่อน แม้ในตารางไม่มีลิงก์
-export function table(cols, rows, { rowAttr, label = 'ตารางข้อมูล' } = {}) {
+// ตารางกว้าง (5 คอลัมน์ขึ้นไป) บนมือถือเปลี่ยนเป็นการ์ดทีละแถว (CSS: ชื่อคอลัมน์มาจาก data-label) แทนการเลื่อนแนวนอนจนตัดคอลัมน์ท้ายทิ้ง
+// ใส่ role ชัดเจนทุกชั้น: CSS ที่เปลี่ยน display ของตารางทำให้ screen reader เสียความหมายตารางตามธรรมชาติ
+export function table(cols, rows, { rowAttr, label = 'ตารางข้อมูล', cards = cols.length >= 5 } = {}) {
   if (!rows.length) return empty();
-  return `<div class="table-wrap" tabindex="0" role="region" aria-label="${esc(label)}"><table><thead><tr>${cols.map((c) => `<th class="${c.cls || ''}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>
-    ${rows.map((r) => `<tr ${rowAttr ? rowAttr(r) : ''}>${cols.map((c) => `<td class="${c.cls || ''}">${c.f(r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  return `<div class="table-wrap${cards ? ' as-cards' : ''}" tabindex="0" role="region" aria-label="${esc(label)}"><table role="table"><thead role="rowgroup"><tr role="row">${cols.map((c) => `<th role="columnheader" class="${c.cls || ''}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody role="rowgroup">
+    ${rows.map((r) => `<tr role="row" ${rowAttr ? rowAttr(r) : ''}>${cols.map((c) => `<td role="cell" data-label="${esc(c.h)}" class="${c.cls || ''}"><div class="cell">${c.f(r)}</div></td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
 export function pager(info) {

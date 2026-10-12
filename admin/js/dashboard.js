@@ -19,7 +19,7 @@ export async function render(el, _rest, alive) {
   const n = (v) => v.toLocaleString('th-TH');
 
   el.innerHTML = `
-    <h1>Dashboard</h1>
+    <h1>ภาพรวม</h1>
     <div class="kpis">
       ${kpi('kpi-today', 'ยอดขายวันนี้', money(s.todayRevenue), `${n(s.todayOrders)} ออเดอร์ • เฉลี่ย 7 วัน ${money(Math.round(s.weekRevenue / 7))} ต่อวัน`)}
       ${kpi('kpi-week', 'ยอดขาย 7 วันล่าสุด', money(s.weekRevenue), `${n(s.weekOrders)} ออเดอร์`)}

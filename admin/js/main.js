@@ -12,15 +12,15 @@ import { renderSetup as renderMfaSetup } from './mfa.js';
 
 // เมนู: roles = บทบาทที่เห็นเมนูนี้ (staff ไม่เห็น ผู้ใช้ / คูปอง / Audit log) — เซิร์ฟเวอร์ตรวจสิทธิ์ซ้ำทุก endpoint อยู่แล้ว
 const ROUTES = [
-  { key: 'dashboard', label: '📊 Dashboard', roles: ['staff', 'admin'], mod: dashboard },
-  { key: 'games', label: '🎮 เกม', roles: ['staff', 'admin'], mod: games },
-  { key: 'stock', label: '🔑 สต็อกโค้ด', roles: ['staff', 'admin'], mod: stock },
-  { key: 'orders', label: '🧾 ออเดอร์', roles: ['staff', 'admin'], mod: orders },
-  { key: 'users', label: '👥 ผู้ใช้', roles: ['admin'], mod: users },
-  { key: 'coupons', label: '🏷️ คูปอง', roles: ['staff', 'admin'], perm: 'coupons.manage', mod: coupons },
-  { key: 'reviews', label: '⭐ รีวิว', roles: ['staff', 'admin'], mod: reviews },
-  { key: 'reports', label: '📁 รายงาน', roles: ['staff', 'admin'], mod: reports },
-  { key: 'audit', label: '📜 Audit log', roles: ['admin'], mod: audit },
+  { key: 'dashboard', icon: 'dashboard', label: 'ภาพรวม', roles: ['staff', 'admin'], mod: dashboard },
+  { key: 'games', icon: 'gamepad', label: 'เกม', roles: ['staff', 'admin'], mod: games },
+  { key: 'stock', icon: 'key', label: 'สต็อกโค้ด', roles: ['staff', 'admin'], mod: stock },
+  { key: 'orders', icon: 'receipt', label: 'ออเดอร์', roles: ['staff', 'admin'], mod: orders },
+  { key: 'users', icon: 'users', label: 'ผู้ใช้', roles: ['admin'], mod: users },
+  { key: 'coupons', icon: 'tag', label: 'คูปอง', roles: ['staff', 'admin'], perm: 'coupons.manage', mod: coupons },
+  { key: 'reviews', icon: 'star', label: 'รีวิว', roles: ['staff', 'admin'], mod: reviews },
+  { key: 'reports', icon: 'report', label: 'รายงาน', roles: ['staff', 'admin'], mod: reports },
+  { key: 'audit', icon: 'log', label: 'Audit log', roles: ['admin'], mod: audit },
 ];
 
 const view = $('#view');
@@ -62,7 +62,7 @@ async function route() {
 
 const whoHtml = () => `<strong>${esc(state.me.name)}</strong><div>${esc(state.me.email)}</div>
     <div><span class="badge ${esc(state.me.role)}">${state.me.role === 'admin' ? 'admin' : 'staff'}</span></div>
-    <p><a href="/" target="_blank" rel="noopener">เปิดหน้าร้าน ↗</a></p><button class="btn sm" id="logout" type="button">ออกจากระบบ</button>`;
+    <p><a class="ext" href="/" target="_blank" rel="noopener">เปิดหน้าร้าน <svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-external" /></svg></a></p><button class="btn sm" id="logout" type="button">ออกจากระบบ</button>`;
 const bindLogout = () => { $('#logout').onclick = async () => { await api('/auth/logout', { method: 'POST', body: {} }).catch(() => {}); location.href = '/admin/login'; }; };
 
 async function start() {
@@ -84,7 +84,7 @@ async function start() {
   if (warn !== null || (left !== null && left <= 2)) {
     toast(`เหลือรหัสกู้คืน 2FA ${left ?? warn} รหัส — ให้ admin ล้าง 2FA แล้วตั้งใหม่เพื่อรับรหัสชุดใหม่`, true);
   }
-  $('#nav').innerHTML = ROUTES.filter((r) => r.roles.includes(state.me.role) && (!r.perm || hasPerm(r.perm))).map((r) => `<a href="#/${r.key}" data-key="${r.key}">${r.label}</a>`).join('');
+  $('#nav').innerHTML = ROUTES.filter((r) => r.roles.includes(state.me.role) && (!r.perm || hasPerm(r.perm))).map((r) => `<a href="#/${r.key}" data-key="${r.key}"><svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-${r.icon}" /></svg><span>${r.label}</span></a>`).join('');
   $('#who').innerHTML = whoHtml();
   bindLogout();
   $('#menuBtn').onclick = () => setMenu(!$('#sidebar').classList.contains('open'));
