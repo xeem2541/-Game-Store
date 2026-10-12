@@ -44,6 +44,15 @@ test('รายการเกม: กรอง/เรียง/แบ่งห�
   assert.equal((await raw('/api/games?sort=hack')).status, 400);
 });
 
+test('รายการเกม: กรองด้วย slugs (เกมที่เพิ่งดู) — เฉพาะที่ระบุและไม่ซ่อน, รูปแบบผิดถูกปฏิเสธ', async () => {
+  const some = (await get('/api/games?limit=3')).items.map((g) => g.slug);
+  const r = await get(`/api/games?slugs=${some.join(',')}`);
+  assert.deepEqual(r.items.map((g) => g.slug).sort(), [...some].sort());
+  assert.equal((await get('/api/games?slugs=no-such-game')).total, 0);
+  assert.equal((await raw('/api/games?slugs=a%27%20OR%201%3D1')).status, 400, 'ต้องเป็น slug คั่นด้วยจุลภาคเท่านั้น');
+  assert.equal((await raw(`/api/games?slugs=${Array.from({ length: 13 }, (_, i) => `g${i}`).join(',')}`)).status, 400, 'ไม่เกิน 12 รายการ');
+});
+
 test('ค้นหา: % และ _ ถูกค้นเป็นตัวอักษรจริง ไม่ใช่ wildcard ของ LIKE', async () => {
   assert.equal((await get('/api/games?q=Dragon')).items[0].slug, 'dragon-realm');
   assert.equal((await get('/api/games?q=%25')).total, 0, '% ต้องไม่จับทุกเกม');

@@ -376,5 +376,9 @@
   "pw.tipGood": "Great",
   "profile.menu": "Account menu",
   "profile.since": "Member since {d}",
-  "profile.admin": "Admin"
+  "profile.admin": "Admin",
+  "home.recent": "Recently viewed",
+  "home.recentClear": "Clear history",
+  "home.recentCleared": "Viewing history cleared",
+  "home.becauseGenre": "Because you like {genre}"
 }

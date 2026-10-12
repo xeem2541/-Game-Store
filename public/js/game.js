@@ -1,3 +1,4 @@
+import { recordView } from './recent.js';
 import { markReady, api, descOf, cart, cardHtml, remember, priceHtml, esc, $, t, user, loginUrl, genreName, heartHtml, renderHearts, toast, lang, money } from './common.js';
 import { splitWords } from './kinetic.js';
 import { prefersReducedMotion } from './motion.js';
@@ -22,6 +23,7 @@ if (game && window.__revealTransition) await window.__revealTransition.finished.
 if (game) {
   const g = game;
   remember([g, ...g.related]);
+  recordView(g.slug, g.genre);
   const specsContent = g.spec_min || g.spec_rec ? `
     <div class="bento-card sys-req">
       <div class="bento-label">${t('game.specs')}</div>

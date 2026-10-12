@@ -48,6 +48,10 @@
         <div id="featured" class="grid bento-home" aria-busy="true"><div class="tile sk-tile area-a" aria-hidden="true"></div><div class="tile sk-tile area-b" aria-hidden="true"></div><div class="tile sk-tile area-c" aria-hidden="true"></div><div class="tile sk-tile area-d" aria-hidden="true"></div><div class="tile sk-tile area-e" aria-hidden="true"></div><div class="tile sk-tile area-f" aria-hidden="true"></div><div class="tile sk-tile area-g" aria-hidden="true"></div></div>
       </section>
 
+      <!-- แถวเฉพาะคน (อ่านจากเกมที่เพิ่งดูในเครื่อง): ซ่อนไว้จนกว่ามีข้อมูล — อยู่ใต้ bento จึงไม่ดันเนื้อหาในจอแรก -->
+      <section id="recentSec" aria-labelledby="recentTitle" hidden><h2 class="sec" id="recentTitle"><span data-i18n="home.recent">เกมที่คุณเพิ่งดู</span> <button class="sec-btn" id="recentClear" type="button" data-i18n="home.recentClear">ล้างประวัติ</button></h2><div id="recent" class="grid row-scroll" data-late></div></section>
+      <section id="forYouSec" aria-labelledby="forYouTitle" hidden><h2 class="sec" id="forYouTitle"><span id="forYouText"></span> <a id="forYouAll" href="/games.html" data-i18n="home.all">ดูทั้งหมด →</a></h2><div id="forYou" class="grid row-scroll" data-late></div></section>
+
       <!-- ซื้อยังไง 3 ขั้น (scrollytelling): desktop ภาพด้านซ้ายติดอยู่กับที่และเปลี่ยนตามขั้นที่เลื่อนถึง / มือถือเรียงเป็นการ์ดธรรมดา
            เนื้อหาจริงอยู่ใน <ol> (screen reader อ่านตามลำดับ) ภาพประกอบเป็น aria-hidden ยกเว้นปุ่มสลับวิธีชำระในฉาก 2 -->
       <section class="howto" id="howto" aria-labelledby="howtoTitle">

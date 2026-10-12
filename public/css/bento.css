@@ -145,3 +145,7 @@ a.bento-card:hover .bento-hint { color: var(--c-accent); }
   .grid.row-scroll::-webkit-scrollbar { display: none; }
   .grid.row-scroll > * { scroll-snap-align: start; }
 }
+
+/* ปุ่มข้างหัวข้อ (เช่น "ล้างประวัติ") หน้าตาเหมือนลิงก์ "ดูทั้งหมด" */
+.sec .sec-btn { margin-left: auto; padding: 6px 16px; border: var(--border-thin); border-radius: var(--r-brutal); background: none; color: var(--c-text-2); font: inherit; font-size: 14px; font-weight: var(--fw-bold); text-transform: none; cursor: pointer; transition: color var(--dur-2), border-color var(--dur-2); }
+.sec .sec-btn:hover { color: var(--c-text); border-color: var(--c-border-strong); }

@@ -1,8 +1,9 @@
-import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml, lang } from './common.js';
+import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml, lang, toast } from './common.js';
 import { canRender3D, prefersReducedMotion, whenIdle } from './motion.js';
 import { splitWords } from './kinetic.js';
 import { initScrollFx } from './scroll-fx.js';
 import { gsap } from './vendor/gsap.js';
+import { getRecent, clearRecent, topGenre } from './recent.js';
 
 initScrollFx(); // parallax สำรองสำหรับเบราว์เซอร์ที่ไม่รองรับ CSS scroll-driven animation
 
@@ -86,6 +87,40 @@ for (const key of ['bestsellers', 'newest', 'onSale']) {
   grid.removeAttribute('aria-busy');
 }
 markReady();
+
+// ---- แถวเฉพาะคน: "เกมที่คุณเพิ่งดู" + "เพราะคุณสนใจแนว…" (อ่านจากประวัติการดูในเครื่อง ไม่ส่งไปเซิร์ฟเวอร์) ----
+async function personalRows() {
+  const recent = getRecent();
+  const sec = $('#recentSec');
+  const forSec = $('#forYouSec');
+  if (!recent.length) { sec.hidden = true; forSec.hidden = true; return; }
+  const seen = new Set(recent.map((r) => r.slug));
+  const genre = topGenre(recent);
+  const [mine, more] = await Promise.all([
+    api(`/games?limit=12&slugs=${recent.map((r) => r.slug).join(',')}`).catch(() => ({ items: [] })),
+    api(`/games?genre=${encodeURIComponent(genre)}&sort=bestseller&limit=12`).catch(() => ({ items: [] })),
+  ]);
+  const order = new Map(recent.map((r, i) => [r.slug, i]));
+  const viewed = mine.items.sort((a, b) => order.get(a.slug) - order.get(b.slug)).slice(0, 8); // ใหม่สุดก่อน
+  const picks = more.items.filter((g) => !seen.has(g.slug)).slice(0, 8);
+  remember([...viewed, ...picks]);
+  const fill = (el, list) => { el.innerHTML = list.map(cardHtml).join(''); };
+  sec.hidden = !viewed.length;
+  fill($('#recent'), viewed);
+  forSec.hidden = picks.length < 3;
+  if (!forSec.hidden) {
+    $('#forYouText').textContent = t('home.becauseGenre', { genre: genreName(genre) });
+    $('#forYouAll').setAttribute('href', `/games.html?genre=${encodeURIComponent(genre)}&sort=bestseller`);
+    fill($('#forYou'), picks);
+  }
+}
+$('#recentClear').addEventListener('click', () => {
+  clearRecent();
+  $('#recentSec').hidden = true;
+  $('#forYouSec').hidden = true;
+  toast(t('home.recentCleared'));
+});
+personalRows();
 
 // ---- ซื้อยังไง 3 ขั้น: ขั้นที่อยู่กลางจอเป็นขั้นปัจจุบัน → ภาพด้านซ้ายเปลี่ยนตาม (ทำงานแม้ขอลดการเคลื่อนไหว เพราะเป็นข้อมูล แค่ไม่มีแอนิเมชัน) ----
 const visual = $('.howto-visual');
@@ -174,7 +209,7 @@ if (!prefersReducedMotion()) {
     [howtoTitle, () => gsap.fromTo(splitWords(howtoTitle, { locale: lang }), { yPercent: 80, opacity: 0 }, {
       yPercent: 0, opacity: 1, duration: 0.6, stagger: 0.06, ease: 'power3.out', clearProps: 'opacity,transform',
     })],
-    ...[...document.querySelectorAll('.content-wrapper .grid')].map((grid) => [grid, () => gsap.fromTo(grid.querySelectorAll(':scope > .tile, .card'), { y: 32, opacity: 0 }, {
+    ...[...document.querySelectorAll('.content-wrapper .grid:not([data-late])')].map((grid) => [grid, () => gsap.fromTo(grid.querySelectorAll(':scope > .tile, .card'), { y: 32, opacity: 0 }, {
       ...done, duration: 0.6, stagger: 0.05, ease: 'power2.out',
     })]),
   ];

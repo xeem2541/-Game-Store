@@ -35,6 +35,8 @@ const listQuery = z.object({
   maxPrice: z.coerce.number().int().min(0).optional(),
   onSale: z.enum(['1']).optional(),
   featured: z.enum(['1']).optional(),
+  // รายการ slug คั่นด้วยจุลภาค (สูงสุด 12) — หน้าแรกใช้ดึง "เกมที่เพิ่งดู" ที่จำไว้ในเครื่องผู้ใช้
+  slugs: z.string().max(400).regex(/^[a-z0-9-]+(,[a-z0-9-]+){0,11}$/).optional(),
   sort: z.enum(Object.keys(SORTS)).default('default'),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(60).default(12),
@@ -53,6 +55,7 @@ gamesRouter.get('/', (req, res) => {
   if (p.maxPrice !== undefined) { where.push(`${FINAL_PRICE_SQL} <= ?`); args.push(p.maxPrice); }
   if (p.onSale) where.push('g.discount > 0');
   if (p.featured) where.push('g.featured = 1');
+  if (p.slugs) { const list = p.slugs.split(','); where.push(`g.slug IN (${list.map(() => '?').join(',')})`); args.push(...list); }
 
   const parsed = parseQuery(p.q);
   const { terms } = parsed;
