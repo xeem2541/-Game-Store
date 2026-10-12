@@ -14,16 +14,33 @@
 </head>
 <body data-page="reset">
   <header class="topbar"></header>
-  <main class="auth-box">
-    <h1 data-i18n="auth.reset">ตั้งรหัสผ่านใหม่</h1>
-    <form id="form" novalidate>
-      <label><span data-i18n="auth.newPassword"></span>
-        <input name="password" type="password" required autocomplete="new-password" minlength="8" maxlength="72"></label>
-      <small data-i18n="auth.passwordHint"></small>
-      <p id="msg" class="msg" role="alert"></p>
-      <button class="btn primary big" type="submit" data-i18n="auth.reset"></button>
-    </form>
-
+  <main class="auth-split">
+    <div class="auth-art">
+      <div class="auth-stack" aria-hidden="true"><span class="aa-card"></span><span class="aa-card"></span><span class="aa-card"></span></div>
+      <div class="auth-art-text">
+        <p class="auth-art-eyebrow">GAME <b>STORE</b></p>
+        <p class="auth-art-title" data-i18n="authArt.title">เกมแท้ รับโค้ดทันที</p>
+        <ul class="auth-art-points">
+          <li data-i18n="authArt.p1">โค้ดแสดงทันทีหลังชำระเงิน และส่งทางอีเมล</li>
+          <li data-i18n="authArt.p2">บัตรเครดิต/เดบิต หรือ PromptPay</li>
+          <li data-i18n="authArt.p3">คลังเกมเก็บโค้ดไว้ให้ดูได้ทุกเมื่อ</li>
+        </ul>
+      </div>
+    </div>
+    <section class="auth-box">
+      <h1 data-i18n="auth.reset">ตั้งรหัสผ่านใหม่</h1>
+      <form id="form" novalidate>
+        <div class="pw-wrap">
+          <label><span data-i18n="auth.newPassword"></span>
+            <input name="password" type="password" required autocomplete="new-password" minlength="8" maxlength="72" aria-describedby="pwHint"></label>
+          <button class="pw-toggle" type="button" aria-pressed="false" aria-label="แสดงรหัสผ่าน" data-i18n-label="auth.showPassword"><svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-eye" /></svg></button>
+        </div>
+        <div class="pw-meter" aria-hidden="true" data-level="0"><i></i><i></i><i></i><i></i></div>
+        <small id="pwHint" class="pw-hint" aria-live="polite" data-i18n="auth.passwordHint"></small>
+        <p id="msg" class="msg" role="alert"></p>
+        <button class="btn primary big" type="submit" data-i18n="auth.reset"></button>
+      </form>
+    </section>
   </main>
   <footer></footer>
   <script type="module" src="/js/auth-pages.js"></script>

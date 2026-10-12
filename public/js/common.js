@@ -269,8 +269,14 @@ function mountLayout() {
     $('#tabSearch').addEventListener('click', () => openSearchDialog());
     // คีย์บอร์ดบนจอเปิดอยู่ (โฟกัสช่องพิมพ์) → ซ่อนแถบ ไม่ให้ลอยขึ้นมาทับช่องที่กำลังพิมพ์
     const typing = (el) => el?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, select');
-    document.addEventListener('focusin', (e) => document.body.classList.toggle('is-typing', typing(e.target)));
-    document.addEventListener('focusout', () => setTimeout(() => document.body.classList.toggle('is-typing', typing(document.activeElement)), 0));
+    // ออกจากช่องพิมพ์: รอ 350ms ค่อยแสดงแถบกลับ (คีย์บอร์ดปิดก่อน) — ถ้าแสดงทันที แถบจะโผล่มารับการกดปุ่มที่อยู่ขอบล่างจอ
+    // (เช่น กด "สมัครสมาชิก" ตรงที่แถบเคยอยู่: ช่องรหัสผ่านเสียโฟกัสตอนกดลง แถบกลับมาก่อนปล่อยนิ้ว แล้วการกดไปโดนแถบแทน)
+    let showTimer;
+    document.addEventListener('focusin', (e) => { clearTimeout(showTimer); if (typing(e.target)) document.body.classList.add('is-typing'); });
+    document.addEventListener('focusout', () => {
+      clearTimeout(showTimer);
+      showTimer = setTimeout(() => document.body.classList.toggle('is-typing', typing(document.activeElement)), 350);
+    });
   }
 
   let shownCount = cart.get().length;

@@ -356,5 +356,22 @@
   "search.clearRecent": "Clear",
   "search.genres": "Genres",
   "search.trending": "Best sellers",
-  "search.hint": "Press / or Ctrl+K for full-screen search"
+  "search.hint": "Press / or Ctrl+K for full-screen search",
+  "authArt.title": "Genuine games, instant keys",
+  "authArt.p1": "Keys appear right after payment and arrive by email",
+  "authArt.p2": "Credit/debit card or PromptPay",
+  "authArt.p3": "Your library keeps every key for later",
+  "authArt.tabs": "Account",
+  "auth.showPassword": "Show password",
+  "auth.hidePassword": "Hide password",
+  "pw.level1": "Very weak",
+  "pw.level2": "Weak",
+  "pw.level3": "Fair",
+  "pw.level4": "Strong",
+  "pw.tipLength": "At least 8 characters",
+  "pw.tipShort": "Needs at least 8 characters",
+  "pw.tipGuessable": "Easy to guess — avoid common words, number runs, phone numbers or your name/email",
+  "pw.tipLonger": "12+ characters is much safer",
+  "pw.tipMix": "Mix in capitals, numbers or symbols",
+  "pw.tipGood": "Great"
 }

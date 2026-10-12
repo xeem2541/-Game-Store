@@ -1,0 +1,90 @@
+/* ==========================================================================
+   หน้าเข้าสู่ระบบ / สมัคร / ลืมรหัส / ตั้งรหัสใหม่ / ยืนยันอีเมล — แบ่งครึ่งจอ
+   ซ้าย: ภาพปกเกมขายดีซ้อนกัน + จุดเด่นของร้าน (ตกแต่ง) | ขวา: ฟอร์ม
+   มือถือ: ภาพย่อเป็นแถบด้านบน ฟอร์มอยู่ใต้
+   ========================================================================== */
+.auth-split {
+  display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); width: min(1080px, calc(100% - 2 * var(--sp-5)));
+  min-height: min(640px, calc(100vh - 180px)); margin: var(--sp-6) auto var(--sp-8); padding: 0; /* main ทั่วไปมี padding — ที่นี่ภาพเต็มขอบกล่อง */
+  border: var(--border-thin); border-radius: var(--r-xl); overflow: hidden; background: var(--c-surface); box-shadow: var(--shadow-3);
+}
+.auth-split .auth-box {
+  align-self: center; width: 100%; max-width: 440px; margin: 0 auto; padding: var(--sp-7) var(--sp-6);
+  background: none; border: 0; border-radius: 0; box-shadow: none; backdrop-filter: none;
+}
+.auth-split .auth-box h1 { margin-bottom: var(--sp-5); font-size: var(--fs-2xl); text-align: left; text-transform: none; letter-spacing: 0; color: var(--c-text); text-shadow: none; }
+.auth-split .auth-box form { gap: var(--sp-4); }
+.auth-split .alt { margin-top: var(--sp-5); }
+
+/* ---- ฝั่งภาพ ---- */
+.auth-art {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end; gap: var(--sp-5); padding: var(--sp-7) var(--sp-6); overflow: hidden; isolation: isolate;
+  background:
+    radial-gradient(70% 60% at 75% 25%, rgb(var(--rgb-focus) / 0.45), transparent 70%),
+    radial-gradient(60% 50% at 15% 85%, rgb(var(--rgb-accent) / 0.35), transparent 70%),
+    linear-gradient(160deg, #161b2b, #0b0e16);
+  border-right: var(--border-thin);
+}
+.auth-stack { position: relative; flex: 1; min-height: 220px; perspective: 1100px; }
+.aa-card {
+  position: absolute; top: 50%; left: 50%; width: min(58%, 280px); aspect-ratio: 4 / 3; border-radius: var(--r-lg);
+  border: 1px solid rgb(var(--rgb-white) / 0.16); box-shadow: var(--shadow-3);
+  background: linear-gradient(135deg, rgb(var(--rgb-white) / 0.08), rgb(var(--rgb-white) / 0.02)) center / cover no-repeat;
+  transition: opacity var(--dur-4) var(--ease-out);
+}
+.aa-card:nth-child(1) { z-index: 3; transform: translate(-50%, -50%) rotateY(-14deg) rotateZ(-3deg); }
+.aa-card:nth-child(2) { z-index: 1; transform: translate(-88%, -68%) rotateY(22deg) scale(0.78); filter: brightness(0.6); }
+.aa-card:nth-child(3) { z-index: 2; transform: translate(-14%, -28%) rotateY(-26deg) scale(0.74); filter: brightness(0.6); }
+.aa-card.is-in { animation: aa-in var(--dur-4) var(--ease-out) backwards; }
+.aa-card:nth-child(2).is-in { animation-delay: 80ms; }
+.aa-card:nth-child(3).is-in { animation-delay: 160ms; }
+@keyframes aa-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  .auth-stack { animation: aa-float 7s ease-in-out infinite; }
+  @keyframes aa-float { 50% { transform: translateY(-8px); } }
+}
+.auth-art-eyebrow { margin: 0 0 var(--sp-2); font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: 0.14em; color: var(--c-text-2); }
+.auth-art-eyebrow b { color: var(--c-accent); }
+.auth-art-title { margin: 0 0 var(--sp-4); font-size: clamp(28px, 3vw, 40px); font-weight: var(--fw-bold); line-height: 1.15; text-wrap: balance; color: var(--c-text); }
+.auth-art-points { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; color: var(--c-text-2); font-size: var(--fs-sm); }
+.auth-art-points li { display: flex; align-items: center; gap: var(--sp-2); }
+.auth-art-points li::before { content: ''; width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--c-ok); box-shadow: 0 0 8px rgb(var(--rgb-ok) / 0.6); }
+
+/* ---- แท็บ เข้าสู่ระบบ / สมัคร ---- */
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: var(--sp-5); padding: 4px; border: var(--border-thin); border-radius: var(--r-pill); background: var(--surface-tint); }
+.auth-tabs a { display: grid; place-items: center; min-height: 40px; border-radius: var(--r-pill); color: var(--c-text-2); font-size: var(--fs-sm); font-weight: var(--fw-bold); text-decoration: none; transition: background-color var(--dur-2), color var(--dur-2); }
+.auth-tabs a:hover { color: var(--c-text); }
+.auth-tabs a[aria-current="page"] { background: var(--c-accent); color: var(--c-on-accent); }
+
+/* ---- รหัสผ่าน: ปุ่มแสดง/ซ่อน + ตัววัดความแข็งแรง ---- */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 52px; }
+.pw-toggle {
+  position: absolute; right: 4px; bottom: 4px; display: grid; place-items: center; width: 44px; height: calc(100% - 8px); max-height: 44px;
+  border: 0; border-radius: var(--r-md); background: none; color: var(--c-text-2); cursor: pointer;
+}
+.pw-toggle:hover { color: var(--c-text); background: var(--surface-hover); }
+.pw-toggle .icon { width: 20px; height: 20px; }
+.pw-wrap label { width: 100%; }
+.pw-meter { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: calc(var(--sp-2) * -1); }
+.pw-meter i { height: 4px; border-radius: 2px; background: var(--c-border-strong); transition: background-color var(--dur-3) var(--ease-out); }
+.pw-meter[data-level="1"] i:nth-child(-n+1) { background: var(--c-err); }
+.pw-meter[data-level="2"] i:nth-child(-n+2) { background: var(--c-warn); }
+.pw-meter[data-level="3"] i:nth-child(-n+3) { background: #d6e14b; }
+.pw-meter[data-level="4"] i { background: var(--c-ok); }
+.pw-hint { min-height: 1.5em; margin-top: -6px; color: var(--c-text-2); font-size: var(--fs-sm); }
+
+/* ---- จอแคบ: ภาพเป็นแถบด้านบน ---- */
+@media (max-width: 860px) {
+  .auth-split { grid-template-columns: 1fr; min-height: 0; width: calc(100% - 2 * var(--sp-4)); margin-top: var(--sp-4); }
+  .auth-art { flex-direction: row; align-items: center; gap: var(--sp-4); padding: var(--sp-5); border-right: 0; border-bottom: var(--border-thin); }
+  .auth-stack { flex: 0 0 120px; min-height: 96px; }
+  .aa-card { width: 96px; }
+  .auth-art-title { margin: 0; font-size: var(--fs-xl); }
+  .auth-art-points { display: none; }
+  .auth-split .auth-box { padding: var(--sp-6) var(--sp-5); }
+}
+@media (max-width: 400px) {
+  .auth-stack { flex-basis: 96px; }
+  .aa-card { width: 80px; }
+}

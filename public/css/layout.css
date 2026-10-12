@@ -451,7 +451,7 @@ a { color: var(--c-accent); }
 .alt { text-align: center; margin-top: 24px; color: var(--c-text-2); }
 .alt a:not(.btn) { color: var(--c-accent); text-decoration: none; font-weight: 700; }
 .alt a:not(.btn):hover { text-decoration: underline; }
-@media (max-width: 560px) { .auth-box { width: calc(100% - 2 * var(--sp-4)); margin: var(--sp-6) auto; padding: var(--sp-6) var(--sp-5); } }
+@media (max-width: 560px) { .auth-box:not(.auth-split .auth-box) { width: calc(100% - 2 * var(--sp-4)); margin: var(--sp-6) auto; padding: var(--sp-6) var(--sp-5); } }
 
 /* ---- หน้านโยบาย ---- */
 .legal { max-width: 820px; }
