@@ -58,6 +58,8 @@
   "howto.s3d": "Your key appears on the order page and is emailed right away, with a receipt for every order.",
   "howto.cta": "Start browsing",
   "howto.v.card": "Card",
+  "howto.v.methods": "Try a payment method",
+  "howto.v.sampleQr": "Sample QR — not a real payment code",
   "howto.v.total": "Total",
   "howto.v.key": "Your game key",
   "howto.v.ready": "✓ Ready to use",

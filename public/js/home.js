@@ -90,6 +90,14 @@ const pickStep = () => {
 };
 setStep(steps[0]);
 addEventListener('scroll', pickStep, { passive: true });
+
+// ฉาก 2: ลองกดสลับวิธีชำระ บัตร ↔ PromptPay (ภาพเปลี่ยนตาม — CSS ทำแอนิเมชัน)
+$('.hv-methods')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-method]');
+  if (!btn) return;
+  btn.closest('.hv-pay').dataset.method = btn.dataset.method;
+  for (const b of btn.parentElement.children) b.setAttribute('aria-pressed', String(b === btn));
+});
 // เนื้อหาด้านบนโหลดทีหลังแล้วดันส่วนนี้ลง (Safari ไม่มี scroll anchoring → ไม่มี scroll event) ให้เลือกขั้นใหม่ด้วย
 new ResizeObserver(pickStep).observe(document.body);
 // สำรอง: ขั้นใดเข้า/ออกจอหรือเปลี่ยนสัดส่วนที่เห็น → คำนวณใหม่ (กรณีเบราว์เซอร์ไม่ส่ง scroll event ตอนเลื่อนแบบทันที)

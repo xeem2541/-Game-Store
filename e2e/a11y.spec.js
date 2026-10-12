@@ -111,3 +111,29 @@ test('ซื้อยังไง 3 ขั้น: ภาพประกอบเ
   }
   await expect(page.getByRole('link', { name: 'เริ่มเลือกเกม' })).toBeVisible();
 });
+
+test('ซื้อยังไง ขั้น 2: กดสลับวิธีชำระ บัตร ↔ PromptPay (QR ตัวอย่าง) ได้ด้วยเมาส์/คีย์บอร์ด และ axe ผ่าน', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await page.waitForSelector('body.ready', { state: 'attached' });
+  await expect(async () => {
+    await page.locator('.howto-step[data-step="2"]').evaluate((el) => {
+      scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' });
+      dispatchEvent(new Event('scroll'));
+    });
+    await expect(page.locator('.howto-visual')).toHaveAttribute('data-step', '2', { timeout: 1000 });
+  }).toPass({ timeout: 10000 });
+  const card = page.locator('.hv-methods button[data-method="card"]');
+  const pp = page.locator('.hv-methods button[data-method="promptpay"]');
+  await expect(card).toHaveAttribute('aria-pressed', 'true');
+  await pp.click();
+  await expect(pp).toHaveAttribute('aria-pressed', 'true');
+  await expect(card).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.hv-pay')).toHaveAttribute('data-method', 'promptpay');
+  await expect.poll(() => page.locator('.hv-qr').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  await card.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.hv-pay')).toHaveAttribute('data-method', 'card');
+  const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(res.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => v.id)).toEqual([]);
+});

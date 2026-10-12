@@ -77,13 +77,32 @@
 /* ฉาก 2: หน้าชำระเงิน */
 .hv-pay { display: grid; gap: var(--sp-4); justify-items: center; width: min(100%, 300px); padding: var(--sp-5); border-radius: var(--r-lg); border: 1px solid var(--glass-border); background: var(--glass-bg-strong); box-shadow: var(--shadow-2); }
 .hv-methods { display: flex; gap: var(--sp-2); }
-.hv-methods span { padding: var(--sp-1) var(--sp-3); border-radius: var(--r-pill); border: var(--border-thin); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-2); }
-.hv-methods .on { border-color: var(--c-accent); color: var(--c-accent); }
-/* QR ตกแต่ง (ไม่ใช่ QR จริง): ลายตารางจาก gradient ไม่ต้องโหลดภาพ */
-.hv-qr {
-  width: 120px; aspect-ratio: 1; border-radius: var(--r-md); border: 8px solid var(--c-text);
-  background: repeating-conic-gradient(var(--c-text) 0 25%, var(--c-bg) 0 50%) 0 0 / 20px 20px, var(--c-bg);
+/* กดสลับวิธีชำระ: บัตร ↔ PromptPay (สองภาพซ้อนในช่องเดียวกัน ขนาดคงที่ — สลับแล้วกล่องไม่ยืด/หด) */
+.hv-methods button {
+  padding: var(--sp-1) var(--sp-3); border-radius: var(--r-pill); border: var(--border-thin); background: none;
+  font: inherit; font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-2); cursor: pointer;
+  transition: color var(--dur-2), border-color var(--dur-2), background-color var(--dur-2), transform var(--dur-2) var(--ease-out);
 }
+.hv-methods button:hover { color: var(--c-text); border-color: var(--c-border-strong); }
+.hv-methods button:active { transform: scale(0.95); }
+.hv-methods button[aria-pressed="true"] { border-color: var(--c-accent); color: var(--c-accent); background: rgb(var(--rgb-accent) / 0.08); }
+.hv-view { display: grid; place-items: center; width: 100%; height: 190px; }
+.hv-view > * { grid-area: 1 / 1; transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out); }
+.hv-pay[data-method="card"] .hv-qr, .hv-pay[data-method="promptpay"] .hv-card { opacity: 0; transform: scale(0.92) rotateY(25deg); pointer-events: none; }
+/* บัตร: ชิป + เลขบัตรปิดบัง + ชื่อ/วันหมดอายุ */
+.hv-card {
+  display: grid; align-content: space-between; width: 220px; aspect-ratio: 1.586; padding: var(--sp-4); border-radius: var(--r-lg); color: #fff;
+  background: radial-gradient(120% 90% at 0% 0%, rgb(255 255 255 / 0.22), transparent 55%), linear-gradient(135deg, rgb(var(--rgb-accent)), #7c3aed);
+  box-shadow: 0 12px 28px rgb(var(--rgb-black) / 0.45);
+}
+.hv-chip { width: 34px; height: 26px; border-radius: 6px; background: linear-gradient(135deg, #f6d27a, #b98a2c); }
+.hv-card-no { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; white-space: nowrap; }
+.hv-card-meta { display: flex; justify-content: space-between; font-size: var(--fs-xs); opacity: 0.85; letter-spacing: 0.06em; }
+/* PromptPay: QR จริงที่สแกนได้ แต่เป็นข้อความธรรมดา (ดู img/demo-qr.svg) บนกรอบขาวแบบ QR ชำระเงิน */
+.hv-qr { display: grid; justify-items: center; gap: 6px; padding: 0 10px 8px; border-radius: var(--r-md); background: #fff; color: #0b0f1a; overflow: hidden; box-shadow: 0 12px 28px rgb(var(--rgb-black) / 0.45); }
+.hv-qr-head { width: calc(100% + 20px); padding: 5px 0; background: #14325c; color: #fff; font-size: var(--fs-xs); font-weight: var(--fw-bold); text-align: center; letter-spacing: 0.04em; }
+.hv-qr img { display: block; width: 132px; height: 132px; }
+.hv-qr-note { font-size: 10px; color: #5b6475; }
 .hv-amount { display: flex; justify-content: space-between; width: 100%; color: var(--c-text-2); font-size: var(--fs-sm); }
 .hv-amount b { color: var(--c-text); font-size: var(--fs-lg); }
 
