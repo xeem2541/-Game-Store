@@ -78,13 +78,17 @@ test('กองปกเกมใน hero (มือถือ): การ์ด�
   const n = await cards.count();
   expect(n).toBeGreaterThan(1);
   await expect(page.locator('#deckDots span')).toHaveCount(n);
-  const center = async (i) => { const b = await cards.nth(i).boundingBox(); return b.x + b.width / 2; };
-  expect(Math.abs((await center(0)) - 195)).toBeLessThan(4);
+  // ระยะจากกึ่งกลางการ์ดถึงกึ่งกลางแถว ตามตำแหน่ง layout (ไม่นับการเอียง 3D ที่แต่ละเบราว์เซอร์คำนวณกรอบต่างกันเล็กน้อย)
+  const offCenter = (i) => page.locator('#deckTrack').evaluate((t, j) => {
+    const c = t.children[j];
+    return Math.abs(c.offsetLeft - t.scrollLeft + c.offsetWidth / 2 - t.clientWidth / 2);
+  }, i);
+  expect(await offCenter(0)).toBeLessThan(2);
   await expect(page.locator('#deckDots span').first()).toHaveClass(/on/);
 
   await page.locator('#deckTrack').evaluate((el) => el.scrollTo({ left: el.children[1].offsetLeft - (el.clientWidth - el.children[1].offsetWidth) / 2 }));
   await expect(page.locator('#deckDots span').nth(1)).toHaveClass(/on/);
-  expect(Math.abs((await center(1)) - 195)).toBeLessThan(4);
+  await expect.poll(() => offCenter(1)).toBeLessThan(2);
   // เบราว์เซอร์ที่รองรับ scroll-driven animation: การ์ดข้าง ๆ หมุน (การ์ดกลางตรง)
   const supported = await page.evaluate(() => CSS.supports('animation-timeline: view()'));
   if (supported) {

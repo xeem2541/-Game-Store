@@ -121,7 +121,7 @@ test('ซื้อยังไง ขั้น 2: กดสลับวิธี
     await page.locator('.howto-step[data-step="2"]').evaluate((el) => {
       scrollTo({ top: el.getBoundingClientRect().top + scrollY - innerHeight / 2 + el.offsetHeight / 2, behavior: 'instant' });
       dispatchEvent(new Event('scroll'));
-    });
+    }, null, { timeout: 2000 });
     await expect(page.locator('.howto-visual')).toHaveAttribute('data-step', '2', { timeout: 1000 });
   }).toPass({ timeout: 10000 });
   await toStep2();
@@ -136,10 +136,11 @@ test('ซื้อยังไง ขั้น 2: กดสลับวิธี
   // การคลิกก่อนหน้าอาจเลื่อนหน้า (scroll into view) จนฉากเปลี่ยนไปขั้นอื่น → กลับมาขั้น 2 ก่อนกด Enter
   await expect(async () => {
     await toStep2();
-    await card.evaluate((el) => el.focus({ preventScroll: true }));
+    await card.evaluate((el) => el.focus({ preventScroll: true }), null, { timeout: 2000 });
+    await expect(card).toBeFocused({ timeout: 1000 }); // กด Enter เฉพาะเมื่อโฟกัสอยู่ที่ปุ่มจริง (ไม่งั้นอาจไปกดลิงก์อื่นแล้วออกจากหน้า)
     await page.keyboard.press('Enter');
     await expect(page.locator('.howto-stage .hv-pay')).toHaveAttribute('data-method', 'card', { timeout: 1000 });
-  }).toPass({ timeout: 15000 });
+  }).toPass({ timeout: 30000 });
   // รอภาพบัตรค่อย ๆ ปรากฏจนครบก่อนตรวจ (ระหว่างเฟด ตัวอักษรโปร่งแสง axe จะวัดคอนทราสต์ผิด)
   await expect.poll(() => page.locator('.howto-stage .hv-card').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
   const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();

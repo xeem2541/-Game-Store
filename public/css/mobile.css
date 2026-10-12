@@ -54,7 +54,7 @@
   .hero-deck { display: block; margin: 0 calc(var(--sp-4) * -1) var(--sp-5); }
   .hero:has(.hero-deck) { padding-top: var(--sp-5); } /* ให้กองเกมขึ้นมาอยู่ในจอแรกมากขึ้น */
   .deck-track {
-    display: flex; gap: var(--sp-1); padding: var(--sp-3) max(19%, calc(50% - 160px)) var(--sp-4); overflow-x: auto; overscroll-behavior-x: contain;
+    position: relative; display: flex; gap: var(--sp-1); padding: var(--sp-3) max(19%, calc(50% - 160px)) var(--sp-4); overflow-x: auto; overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory; scrollbar-width: none; perspective: 900px;
   }
   .deck-track::-webkit-scrollbar { display: none; }
