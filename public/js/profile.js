@@ -4,6 +4,11 @@ import { markReady, api, $, esc, t, user, loginUrl, cardHtml, remember, toast, m
 if (!user) { location.replace(loginUrl()); throw new Error('redirect'); }
 
 const panel = $('#panel');
+// ออกจากระบบจากหน้าบัญชี (บนมือถือเมนูผู้ใช้ใน header ถูกแทนด้วยแถบล่างจอ)
+$('#profileLogout').addEventListener('click', async () => {
+  await api('/auth/logout', { method: 'POST', body: {} }).catch(() => {});
+  location.href = '/';
+});
 const tabs = [...document.querySelectorAll('[data-tab]')];
 
 if (!user.emailVerified) {

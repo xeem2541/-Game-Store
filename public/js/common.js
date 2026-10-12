@@ -178,7 +178,10 @@ function flyToCart(e, game) {
   const btn = e?.target?.closest('button') || e?.target;
   if (!btn) return;
   const rect = btn.getBoundingClientRect();
-  const dest = $('#cartBtn').getBoundingClientRect();
+  // ปลายทาง: ปุ่มตะกร้าที่มองเห็นอยู่ (header บนจอกว้าง / แถบล่างจอบนมือถือ)
+  const target = [$('#cartBtn'), $('.tabbar [data-nav="cart"]')].find((el) => el?.getClientRects().length);
+  if (!target) return;
+  const dest = target.getBoundingClientRect();
   const fly = document.createElement('img');
   fly.src = game.cover + '?size=sm';
   Object.assign(fly.style, {
@@ -243,11 +246,42 @@ function mountLayout() {
     </div>
   </aside>`);
 
+  // มือถือ (≤640px): แถบเมนูล่างจอแบบแอป — ปุ่มบัญชี/ตะกร้าใน header ซ่อนด้วย CSS (ย้ายมาอยู่ที่นี่ กดถึงด้วยนิ้วโป้ง)
+  // หน้ายืนยันสั่งซื้อ/คำสั่งซื้อไม่แสดง (ให้โฟกัสกับการจ่ายเงิน และมีแถบยอดรวมของหน้านั้นอยู่ล่างจอแล้ว)
+  const path = location.pathname;
+  if (!/^\/(checkout|order\/)/.test(path)) {
+    const here = path === '/' || path === '/index.html' ? 'home'
+      : /^\/(games\.html|game\/)/.test(path) ? 'games'
+        : path === '/cart' ? 'cart'
+          : /^\/(profile|login|register|forgot|reset|verify)/.test(path) ? 'account' : '';
+    const tab = (id, href, icon, label, extra = '') => `<a class="tab" href="${href}" data-nav="${id}" ${here === id ? 'aria-current="page"' : ''}>
+      <svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-${icon}" /></svg><span class="tab-label">${label}</span>${extra}</a>`;
+    document.body.insertAdjacentHTML('beforeend', `<nav class="tabbar" aria-label="${t('tabbar.label')}">
+      ${tab('home', '/', 'home', t('tabbar.home'))}
+      ${tab('games', '/games.html', 'grid', t('tabbar.games'))}
+      <button class="tab" type="button" id="tabSearch"><svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-search" /></svg><span class="tab-label">${t('tabbar.search')}</span></button>
+      ${tab('cart', '/cart', 'cart', t('cart.btn'), '<span class="tab-badge" id="tabCartCount"></span>')}
+      ${tab('account', user ? '/profile' : '/login', 'user', user ? t('tabbar.account') : t('header.login'))}
+    </nav>`);
+    document.body.classList.add('has-tabbar');
+    // ค้นหา: ขึ้นไปบนสุดแล้วโฟกัสช่องค้นหาใน header (คีย์บอร์ดเปิดเพราะอยู่ใน event ของการแตะ)
+    $('#tabSearch').addEventListener('click', () => {
+      scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+      $('#search')?.focus({ preventScroll: true });
+    });
+    // คีย์บอร์ดบนจอเปิดอยู่ (โฟกัสช่องพิมพ์) → ซ่อนแถบ ไม่ให้ลอยขึ้นมาทับช่องที่กำลังพิมพ์
+    const typing = (el) => el?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, select');
+    document.addEventListener('focusin', (e) => document.body.classList.toggle('is-typing', typing(e.target)));
+    document.addEventListener('focusout', () => setTimeout(() => document.body.classList.toggle('is-typing', typing(document.activeElement)), 0));
+  }
+
   let shownCount = cart.get().length;
   const renderCart = () => {
     const items = cart.get();
     $('#cartCount').textContent = items.length;
-    if (items.length > shownCount) replay($('#cartCount'), 'bump');
+    const tabCount = $('#tabCartCount');
+    if (tabCount) tabCount.textContent = items.length || '';
+    if (items.length > shownCount) { replay($('#cartCount'), 'bump'); replay(tabCount, 'bump'); }
     shownCount = items.length;
     $('#cartTotal').textContent = priceText(items.reduce((s, i) => s + i.finalPrice, 0)).replace(t('price.free'), '฿0');
     $('#cartItems').innerHTML = items.length

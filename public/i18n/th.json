@@ -294,5 +294,12 @@
   "order.copyDone": "คัดลอกแล้ว ✓",
   "order.redeemSteam": "เปิดใน Steam",
   "order.redeemPsn": "เปิดใน PlayStation Store",
-  "order.redeemNintendo": "เปิดใน Nintendo eShop"
+  "order.redeemNintendo": "เปิดใน Nintendo eShop",
+  "tabbar.label": "เมนูหลัก",
+  "tabbar.home": "หน้าแรก",
+  "tabbar.games": "เกม",
+  "tabbar.search": "ค้นหา",
+  "tabbar.account": "บัญชี",
+  "hero.deckLabel": "เกมแนะนำ ปัดซ้าย-ขวาเพื่อดูเกมอื่น",
+  "hero.deckPos": "เกมที่ {n} จาก {total}"
 }

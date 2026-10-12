@@ -1,0 +1,92 @@
+/* ==========================================================================
+   มือถือ (UI เฟส 17): แถบเมนูล่างจอแบบแอป + กองปกเกมใน hero หน้าแรก
+   ========================================================================== */
+
+/* ---- หัวข้อหน้าที่มีปุ่มด้านขวา (เช่น บัญชีของฉัน + ออกจากระบบ) ---- */
+.page-head { align-items: center; justify-content: space-between; }
+.page-head h1 { margin: 0; font-size: inherit; text-transform: inherit; }
+.page-head .btn { flex-shrink: 0; min-height: 40px; font-size: var(--fs-sm); text-transform: none; }
+
+/* ---- แถบเมนูล่างจอ: ซ่อนบนจอกว้าง (มีเมนูใน header อยู่แล้ว) ---- */
+:root { --tabbar-h: 0px; }
+.tabbar { display: none; }
+@media (max-width: 640px) {
+  body.has-tabbar { --tabbar-h: calc(60px + env(safe-area-inset-bottom)); padding-bottom: var(--tabbar-h); }
+  /* ปุ่มบัญชี/ตะกร้าใน header ย้ายไปแถบล่างจอ (ปุ่มภาษาอยู่ที่เดิม) */
+  .has-tabbar .actions .usermenu, .has-tabbar .actions > .btn, .has-tabbar #cartBtn { display: none; }
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-nav); display: grid; grid-template-columns: repeat(5, 1fr);
+    height: var(--tabbar-h); padding-bottom: env(safe-area-inset-bottom);
+    border-top: var(--border-thick); background: var(--c-surface); box-shadow: 0 -8px 24px rgb(var(--rgb-black) / 0.35);
+    transition: transform var(--dur-3) var(--ease-out), visibility 0s;
+  }
+  .tab {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0;
+    border: 0; background: none; color: var(--c-text-2); font: inherit; font-size: 11px; font-weight: var(--fw-bold); text-decoration: none; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; transition: color var(--dur-2);
+  }
+  .tab .icon { width: 22px; height: 22px; transition: transform var(--dur-3) var(--ease-spring); }
+  .tab:active .icon { transform: scale(0.88); }
+  .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tab[aria-current="page"] { color: var(--c-accent); }
+  .tab[aria-current="page"]::before { /* ขีดบอกหน้าปัจจุบัน */
+    content: ''; position: absolute; top: -1px; left: 30%; right: 30%; height: 3px; border-radius: 0 0 3px 3px; background: var(--c-accent);
+  }
+  .tab:focus-visible { outline-offset: -4px; }
+  .tab-badge {
+    position: absolute; top: 6px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--r-pill);
+    background: var(--c-accent); color: var(--c-on-accent); font-size: 11px; line-height: 18px; text-align: center;
+  }
+  .tab-badge:empty { display: none; }
+  .tab-badge.bump { animation: bump var(--dur-3) var(--ease-spring); }
+  /* พิมพ์อยู่ (คีย์บอร์ดเปิด): ซ่อนแถบ ไม่ลอยมาทับช่องที่กำลังพิมพ์ */
+  .is-typing .tabbar { transform: translateY(100%); visibility: hidden; transition: transform var(--dur-3) var(--ease-out), visibility 0s var(--dur-3); }
+
+  /* แถบอื่นที่ติดล่างจอ ยกขึ้นอยู่เหนือแถบเมนู */
+  .has-tabbar .sticky-cta { bottom: var(--tabbar-h); padding-bottom: 10px; }
+  .has-tabbar .sum-bar { bottom: var(--tabbar-h); padding-bottom: var(--sp-3); }
+  .has-tabbar .toast { bottom: calc(var(--tabbar-h) + 16px); }
+}
+
+/* ---- กองปกเกมแนะนำใน hero (≤900px — จอกว้างมีฉาก 3D/ภาพปกเรียงซ้อนอยู่แล้ว) ---- */
+.hero-deck { display: none; }
+@media (max-width: 900px) {
+  .hero-deck { display: block; margin: 0 calc(var(--sp-4) * -1) var(--sp-5); }
+  .hero:has(.hero-deck) { padding-top: var(--sp-5); } /* ให้กองเกมขึ้นมาอยู่ในจอแรกมากขึ้น */
+  .deck-track {
+    display: flex; gap: var(--sp-1); padding: var(--sp-3) max(19%, calc(50% - 160px)) var(--sp-4); overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; scrollbar-width: none; perspective: 900px;
+  }
+  .deck-track::-webkit-scrollbar { display: none; }
+  .deck-card {
+    position: relative; flex: 0 0 100%; scroll-snap-align: center; display: flex; flex-direction: column;
+    border: var(--border-thick); border-radius: var(--r-xl); overflow: hidden; background: var(--c-surface); box-shadow: var(--shadow-2);
+    color: var(--c-text); text-decoration: none; transform-origin: center;
+  }
+  .deck-card img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
+  .deck-card.sk { aspect-ratio: 4 / 4.3; background: var(--surface-1); box-shadow: none; }
+  .deck-info { display: grid; gap: 2px; padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+  .deck-title { overflow: hidden; font-weight: var(--fw-bold); text-overflow: ellipsis; white-space: nowrap; }
+  .deck-meta { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); color: var(--c-text-2); font-size: var(--fs-sm); }
+  .deck-price { display: flex; gap: 6px; align-items: baseline; color: var(--c-text); font-weight: var(--fw-bold); white-space: nowrap; }
+  .deck-price .old { color: var(--c-text-2); font-size: var(--fs-xs); }
+  .deck-badge { position: absolute; top: var(--sp-3); left: var(--sp-3); padding: 2px 10px; border-radius: var(--r-pill); background: var(--c-ok); color: var(--c-on-accent); font-size: var(--fs-xs); font-weight: var(--fw-bold); }
+  .deck-card:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 3px; }
+  .deck-dots { display: flex; justify-content: center; gap: 6px; }
+  .deck-dots span { width: 6px; height: 6px; border-radius: var(--r-pill); background: var(--c-border-strong); transition: width var(--dur-3) var(--ease-out), background-color var(--dur-3); }
+  .deck-dots span.on { width: 18px; background: var(--c-accent); }
+
+  /* เอียงแบบหน้าปก 3D ตามตำแหน่ง: การ์ดกลางตรง การ์ดข้างหมุนเข้าหาและเล็กลง (เฉพาะเบราว์เซอร์ที่รองรับ — ที่เหลือเป็นแถวปัดธรรมดา) */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .deck-card:not(.sk) { animation: deck-tilt linear both; animation-timeline: view(inline); }
+      .deck-card:not(.sk) img { animation: deck-dim linear both; animation-timeline: view(inline); }
+    }
+  }
+}
+@keyframes deck-tilt {
+  0% { transform: rotateY(32deg) scale(0.84); }
+  50% { transform: none; }
+  100% { transform: rotateY(-32deg) scale(0.84); }
+}
+@keyframes deck-dim { 0%, 100% { filter: brightness(0.55); } 50% { filter: none; } }

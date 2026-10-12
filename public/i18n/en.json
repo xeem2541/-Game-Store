@@ -338,5 +338,12 @@
   "order.copyDone": "Copied ✓",
   "order.redeemSteam": "Open in Steam",
   "order.redeemPsn": "Open in PlayStation Store",
-  "order.redeemNintendo": "Open in Nintendo eShop"
+  "order.redeemNintendo": "Open in Nintendo eShop",
+  "tabbar.label": "Main menu",
+  "tabbar.home": "Home",
+  "tabbar.games": "Games",
+  "tabbar.search": "Search",
+  "tabbar.account": "Account",
+  "hero.deckLabel": "Featured games, swipe to see more",
+  "hero.deckPos": "Game {n} of {total}"
 }

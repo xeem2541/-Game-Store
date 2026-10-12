@@ -19,6 +19,35 @@ if (heroGame) {
 const heroCovers = data.featured.slice(0, 3).map((g) => g.cover);
 $('#heroStack').innerHTML = heroCovers.map((src) => `<img src="${esc(src)}" alt="" width="400" height="300" decoding="async">`).join('');
 
+// มือถือ/แท็บเล็ต: กองปกเกมแนะนำแบบปัดได้ (จอกว้างซ่อนด้วย CSS — ภาพ lazy จึงไม่โหลดบนจอกว้าง)
+// เอียง 3D ตามตำแหน่งการ์ดใช้ CSS scroll-driven animation; จุดบอกตำแหน่งอัปเดตด้วย IntersectionObserver
+const deckGames = data.featured.slice(0, 6);
+const track = $('#deckTrack');
+// การ์ดแรกเป็นภาพใหญ่สุดของจอแรกบนมือถือ (LCP) → โหลดทันทีความสำคัญสูง; จอกว้างกองนี้ซ่อน จึงไม่โหลด
+const deckShown = matchMedia('(max-width: 900px)').matches;
+if (deckGames.length) {
+  track.innerHTML = deckGames.map((g, i) => `
+    <a class="deck-card" href="/game/${esc(g.slug)}">
+      <img src="${esc(g.cover)}" alt="" width="400" height="300" ${i === 0 && deckShown ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'}>
+      ${g.discount ? `<span class="deck-badge">-${g.discount}%</span>` : ''}
+      <span class="deck-info"><span class="deck-title">${esc(g.title)}</span><span class="deck-meta"><span>${esc(g.platform)}</span><span class="deck-price">${priceHtml(g)}</span></span></span>
+      <span class="sr-only">${t('hero.deckPos', { n: i + 1, total: deckGames.length })}</span>
+    </a>`).join('');
+  track.removeAttribute('aria-busy');
+  const dots = $('#deckDots');
+  dots.innerHTML = deckGames.map(() => '<span></span>').join('');
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      const i = [...track.children].indexOf(e.target);
+      [...dots.children].forEach((d, j) => d.classList.toggle('on', j === i));
+    }
+  }, { root: track, threshold: 0.6 });
+  [...track.children].forEach((c) => io.observe(c));
+} else {
+  $('#heroDeck').hidden = true;
+}
+
 // ---- bento เกมแนะนำ + ทางลัด: ช่อง a = เกมเด่น, b = ดีลลดแรงสุด, c = ตามงบ, d = แพลตฟอร์ม, e/f = เกมแนะนำ, g = แนวเกม ----
 const links = (items) => `<ul class="tile-links">${items.map(([href, label]) => `<li><a href="${esc(href)}">${esc(label)}</a></li>`).join('')}</ul>`;
 const linkTile = (area, id, title, items) => `<nav class="tile tile-links-wrap area-${area}" aria-labelledby="${id}"><h3 class="tile-label" id="${id}">${title}</h3>${links(items)}</nav>`;
