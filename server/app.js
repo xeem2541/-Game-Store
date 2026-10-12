@@ -24,6 +24,7 @@ import { adminRouter } from './routes/admin/index.js';
 import { stripeWebhook } from './routes/webhooks.js';
 import { reviewsRouter } from './routes/reviews.js';
 import { wishlistRouter } from './routes/wishlist.js';
+import { renderHostLearner } from './services/renderHost.js';
 
 export function createApp() {
   const app = express();
@@ -82,6 +83,10 @@ export function createApp() {
       next();
     });
   }
+
+  // Render ที่ไม่ได้ตั้ง APP_URL: เรียนรู้โดเมนจริงจากคำขอแรก (services/renderHost.js)
+  const learnHost = renderHostLearner(config);
+  if (learnHost) app.use(learnHost);
 
   // CORS: อนุญาตเฉพาะ origin ที่ตั้งไว้ใน APP_URL / CORS_ORIGINS (คำขอจาก origin เดียวกันไม่ต้องใช้ CORS อยู่แล้ว)
   app.use(cors({
