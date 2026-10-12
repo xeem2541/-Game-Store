@@ -134,8 +134,11 @@ test('ซื้อยังไง ขั้น 2: กดสลับวิธี
   await card.focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('.howto-stage .hv-pay')).toHaveAttribute('data-method', 'card');
+  // รอภาพบัตรค่อย ๆ ปรากฏจนครบก่อนตรวจ (ระหว่างเฟด ตัวอักษรโปร่งแสง axe จะวัดคอนทราสต์ผิด)
+  await expect.poll(() => page.locator('.howto-stage .hv-card').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
   const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-  expect(res.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => v.id)).toEqual([]);
+  const bad = res.violations.filter((v) => ['serious', 'critical'].includes(v.impact));
+  expect(bad.map((v) => `${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 });
 
 test('ซื้อยังไง บนมือถือ: ภาพประกอบอยู่ในการ์ดของแต่ละขั้น และขั้น 2 กดสลับบัตร ↔ PromptPay ได้', async ({ page }) => {

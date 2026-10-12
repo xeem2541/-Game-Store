@@ -62,6 +62,7 @@
   "howto.v.sampleQr": "Sample QR — not a real payment code",
   "howto.v.total": "Total",
   "howto.v.key": "Your game key",
+  "howto.v.voucher": "Game voucher",
   "howto.v.ready": "✓ Ready to use",
   "catalog.title": "All games",
   "catalog.count": "({n} games)",

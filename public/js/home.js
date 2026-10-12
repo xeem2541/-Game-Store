@@ -76,6 +76,15 @@ for (const step of steps) {
 for (const box of document.querySelectorAll('.hv-covers')) {
   data.featured.slice(1, 4).forEach((g, i) => { if (box.children[i]) box.children[i].style.backgroundImage = `url('${g.cover}?size=sm')`; });
 }
+// ฉาก 3: คูปองเป็นของเกมที่ถูกเลือกในฉาก 1 (ปกใบกลาง)
+const picked = data.featured[2];
+if (picked) {
+  for (const v of document.querySelectorAll('.hv-voucher')) {
+    v.querySelector('.hv-v-art').style.backgroundImage = `url('/api/games/${encodeURIComponent(picked.slug)}/scene.svg')`; // ฉากไม่มีชื่อเกม (ชื่ออยู่ฝั่งขวาแล้ว)
+    v.querySelector('.hv-v-title').textContent = picked.title;
+    v.querySelector('.hv-v-platform').textContent = picked.platform;
+  }
+}
 function setStep(el) {
   for (const s of steps) s.classList.toggle('is-active', s === el);
   visual.dataset.step = el.dataset.step;
