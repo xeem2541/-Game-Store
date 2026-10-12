@@ -55,6 +55,7 @@ test('ตะกร้า: แถบขั้นตอน, ลบเกมแล�
   await expect(page.locator('.coupon-tag .coupon-code')).toHaveText('WELCOME10');
   await expect(page.locator('.coupon-save')).toHaveText(/^−฿/);
   await expect(page.locator('.savings')).toBeVisible();
+  await page.locator('.side').evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))); // ตรวจหลังแอนิเมชันคูปองจบ
   expect(await serious(page)).toEqual([]);
 
   await page.locator('#couponRemove').click();

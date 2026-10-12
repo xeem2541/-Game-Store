@@ -63,8 +63,8 @@
 .side.is-fresh .coupon-tag { animation: coupon-pop var(--dur-4) var(--ease-spring) backwards; }
 .side.is-fresh .sum-row.neg:has(+ .grand) { animation: row-in var(--dur-4) var(--ease-out) var(--dur-2) backwards; }
 .side.is-fresh .sum-row.grand strong { color: var(--c-ok); transition: color var(--dur-4) 0.8s; }
-@keyframes coupon-pop { from { opacity: 0; transform: scale(0.8) rotate(-2deg); } }
-@keyframes row-in { from { opacity: 0; transform: translateY(-8px); background: rgb(var(--rgb-ok) / 0.2); } }
+@keyframes coupon-pop { from { transform: scale(0.8) rotate(-2deg); } } /* ไม่จางเข้า: ตัวอักษรทึบตลอด (คอนทราสต์ผ่านทุกเฟรม) */
+@keyframes row-in { from { transform: translateY(-8px); background: rgb(var(--rgb-ok) / 0.2); } }
 .savings { margin: 0; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: rgb(var(--rgb-ok) / 0.08); color: var(--c-ok); font-size: var(--fs-sm); font-weight: var(--fw-bold); text-align: center; }
 
 /* ---- ช่องทางชำระเงิน (หน้ายืนยัน) ---- */
