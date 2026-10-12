@@ -1,9 +1,8 @@
-import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml, lang, toast } from './common.js';
+import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml, lang, toast, getRecent, clearRecent, topGenre } from './common.js';
 import { canRender3D, prefersReducedMotion, whenIdle } from './motion.js';
 import { splitWords } from './kinetic.js';
 import { initScrollFx } from './scroll-fx.js';
 import { gsap } from './vendor/gsap.js';
-import { getRecent, clearRecent, topGenre } from './recent.js';
 
 initScrollFx(); // parallax สำรองสำหรับเบราว์เซอร์ที่ไม่รองรับ CSS scroll-driven animation
 

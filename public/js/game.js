@@ -1,5 +1,4 @@
-import { recordView } from './recent.js';
-import { markReady, api, descOf, cart, cardHtml, remember, priceHtml, esc, $, t, user, loginUrl, genreName, heartHtml, renderHearts, toast, lang, money } from './common.js';
+import { markReady, api, descOf, cart, cardHtml, remember, priceHtml, esc, $, t, user, loginUrl, genreName, heartHtml, renderHearts, toast, lang, money, recordView } from './common.js';
 import { splitWords } from './kinetic.js';
 import { prefersReducedMotion } from './motion.js';
 import { initScrollFx } from './scroll-fx.js';
