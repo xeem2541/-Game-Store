@@ -61,9 +61,21 @@ markReady();
 // ---- ซื้อยังไง 3 ขั้น: ขั้นที่อยู่กลางจอเป็นขั้นปัจจุบัน → ภาพด้านซ้ายเปลี่ยนตาม (ทำงานแม้ขอลดการเคลื่อนไหว เพราะเป็นข้อมูล แค่ไม่มีแอนิเมชัน) ----
 const visual = $('.howto-visual');
 const progress = $('.howto-progress');
-const covers = $('.hv-covers').children;
-data.featured.slice(1, 4).forEach((g, i) => { if (covers[i]) covers[i].style.backgroundImage = `url('${g.cover}?size=sm')`; });
 const steps = [...document.querySelectorAll('.howto-step')];
+// มือถือ: ภาพประกอบของแต่ละขั้นอยู่ในการ์ดของขั้นนั้น (desktop ใช้ภาพเดียวติดกับที่ด้านซ้าย — สำเนานี้ CSS ซ่อนไว้)
+for (const step of steps) {
+  const src = $(`.hv-${step.dataset.step}`);
+  if (!src) continue;
+  const mini = document.createElement('div');
+  mini.className = `howto-mini hv-${step.dataset.step}`;
+  if (src.hasAttribute('aria-hidden')) mini.setAttribute('aria-hidden', 'true');
+  mini.append(...[...src.childNodes].map((n) => n.cloneNode(true)));
+  step.prepend(mini);
+}
+// ปกเกมในฉาก 1 (ทั้งภาพหลักและสำเนาในการ์ดมือถือ) — ตั้งผ่าน CSSOM (CSP ไม่อนุญาต style แบบ inline)
+for (const box of document.querySelectorAll('.hv-covers')) {
+  data.featured.slice(1, 4).forEach((g, i) => { if (box.children[i]) box.children[i].style.backgroundImage = `url('${g.cover}?size=sm')`; });
+}
 function setStep(el) {
   for (const s of steps) s.classList.toggle('is-active', s === el);
   visual.dataset.step = el.dataset.step;
@@ -91,9 +103,9 @@ const pickStep = () => {
 setStep(steps[0]);
 addEventListener('scroll', pickStep, { passive: true });
 
-// ฉาก 2: ลองกดสลับวิธีชำระ บัตร ↔ PromptPay (ภาพเปลี่ยนตาม — CSS ทำแอนิเมชัน)
-$('.hv-methods')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-method]');
+// ฉาก 2: ลองกดสลับวิธีชำระ บัตร ↔ PromptPay (ภาพเปลี่ยนตาม — CSS ทำแอนิเมชัน) ทั้งภาพหลักและในการ์ดมือถือ
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.hv-methods button[data-method]');
   if (!btn) return;
   btn.closest('.hv-pay').dataset.method = btn.dataset.method;
   for (const b of btn.parentElement.children) b.setAttribute('aria-pressed', String(b === btn));

@@ -28,6 +28,16 @@
 .howto-step p { color: var(--c-text-2); font-size: var(--fs-md); max-width: 32em; }
 .howto-step .btn { margin-top: var(--sp-2); }
 .howto-stage { display: none; }
+/* มือถือ/แท็บเล็ต: ภาพประกอบอยู่บนการ์ดของแต่ละขั้น (home.js คัดลอกจากภาพหลัก) — desktop ซ่อน ใช้ภาพติดกับที่ด้านซ้ายแทน */
+.howto-mini { display: none; }
+@media (max-width: 900px) {
+  .howto-mini {
+    display: grid; place-items: center; gap: var(--sp-4); align-self: stretch; padding: var(--sp-5) var(--sp-3);
+    border-radius: var(--r-lg); border: 1px solid var(--glass-border);
+    background: radial-gradient(80% 70% at 30% 20%, rgb(var(--rgb-focus) / 0.18), transparent 70%), radial-gradient(60% 60% at 90% 100%, rgb(var(--rgb-accent) / 0.14), transparent 70%), var(--c-bg);
+  }
+  .howto-mini .hv-covers { max-width: 300px; }
+}
 
 @media (min-width: 901px) {
   .howto-layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--sp-8); }

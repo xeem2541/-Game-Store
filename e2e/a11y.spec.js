@@ -123,17 +123,36 @@ test('ซื้อยังไง ขั้น 2: กดสลับวิธี
     });
     await expect(page.locator('.howto-visual')).toHaveAttribute('data-step', '2', { timeout: 1000 });
   }).toPass({ timeout: 10000 });
-  const card = page.locator('.hv-methods button[data-method="card"]');
-  const pp = page.locator('.hv-methods button[data-method="promptpay"]');
+  const card = page.locator('.howto-stage .hv-methods button[data-method="card"]');
+  const pp = page.locator('.howto-stage .hv-methods button[data-method="promptpay"]');
   await expect(card).toHaveAttribute('aria-pressed', 'true');
   await pp.click();
   await expect(pp).toHaveAttribute('aria-pressed', 'true');
   await expect(card).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.locator('.hv-pay')).toHaveAttribute('data-method', 'promptpay');
-  await expect.poll(() => page.locator('.hv-qr').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  await expect(page.locator('.howto-stage .hv-pay')).toHaveAttribute('data-method', 'promptpay');
+  await expect.poll(() => page.locator('.howto-stage .hv-qr').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
   await card.focus();
   await page.keyboard.press('Enter');
-  await expect(page.locator('.hv-pay')).toHaveAttribute('data-method', 'card');
+  await expect(page.locator('.howto-stage .hv-pay')).toHaveAttribute('data-method', 'card');
+  const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(res.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => v.id)).toEqual([]);
+});
+
+test('ซื้อยังไง บนมือถือ: ภาพประกอบอยู่ในการ์ดของแต่ละขั้น และขั้น 2 กดสลับบัตร ↔ PromptPay ได้', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await page.waitForSelector('body.ready', { state: 'attached' });
+  await expect(page.locator('.howto-stage')).toBeHidden();
+  for (const n of ['1', '2', '3']) await expect(page.locator(`.howto-step[data-step="${n}"] .howto-mini`)).toBeVisible();
+  // ปกเกมในฉาก 1 ของการ์ดมือถือมีภาพ (ตั้งผ่าน CSSOM หลังคัดลอก)
+  expect(await page.locator('.howto-step[data-step="1"] .hv-covers span').first().evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(/url\(/);
+  const step2 = page.locator('.howto-step[data-step="2"]');
+  await step2.scrollIntoViewIfNeeded();
+  await step2.locator('button[data-method="promptpay"]').click();
+  await expect(step2.locator('.hv-pay')).toHaveAttribute('data-method', 'promptpay');
+  await expect.poll(() => step2.locator('.hv-qr').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  await expect(page.locator('.howto-stage .hv-pay')).toHaveAttribute('data-method', 'card'); // ภาพหลัก (desktop) แยกกัน
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(res.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => v.id)).toEqual([]);
 });
