@@ -52,9 +52,9 @@ test('ลูกค้าซื้อเกมครบวงจร แล้ว�
   await expect(page.locator('.status.paid')).toBeVisible({ timeout: 20_000 });
 
   // 6) โค้ดเกม (ซ่อนก่อน แล้วกดแสดง) + ใบเสร็จ PDF
-  const key = page.locator('#keys .key-row .key').first();
+  const key = page.locator('#keys .voucher .key').first();
   await expect(key).toHaveText(/^•+/);
-  await page.locator('#keys .key-row button').first().click();
+  await page.locator('#keys .voucher [data-act=show]').first().click();
   await expect(key).toHaveText(/^FAKE-[0-9A-F]{6}-[0-9A-F]{6}-[0-9A-F]{6}$/);
   const code = (await key.textContent()).trim();
   const [download] = await Promise.all([page.waitForEvent('download'), page.click('a[href$="receipt.pdf"]')]);
