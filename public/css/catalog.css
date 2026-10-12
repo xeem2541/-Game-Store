@@ -28,7 +28,7 @@ body.is-search .catalog-sub { display: none; }
   margin-bottom: var(--sp-5);
 }
 .genre-bento:empty { border-radius: var(--r-lg); background: var(--surface-1); }
-body.is-search .genre-bento { display: none; }
+body.is-search .genre-bento, .genre-bento[hidden] { display: none; }
 .genre-tile {
   position: relative; isolation: isolate; overflow: hidden;
   display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 2px;

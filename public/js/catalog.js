@@ -60,6 +60,7 @@ function writeUrl(page = 1, { dropQ = false } = {}) {
 // ---- ช่องแนวเกมแบบ bento: แนวที่มีเกมมากสุดเป็นช่องใหญ่ ที่เหลือช่องเล็ก + "ทุกแนว" — กดเพื่อกรอง กดซ้ำเพื่อยกเลิก ----
 let genreStats = [];
 function renderBento() {
+  bento.hidden = genreStats.length === 0; // ร้านยังไม่มีเกม: ไม่แสดงช่อง "ทุกแนว 0 เกม" ช่องเดียวโดด ๆ
   const current = form.elements.genre.value;
   const total = genreStats.reduce((n, g) => n + g.count, 0);
   const tiles = [...genreStats, { genre: '', count: total }];

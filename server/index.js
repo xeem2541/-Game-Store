@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { config } from './config.js';
 import { db } from './db/index.js';
 import { seedIfEmpty } from './db/seed.js';
+import { ensureEnvAdmin } from './services/envAdmin.js';
 import { isAutoRefundBusy, processAutoRefunds } from './services/autoRefunds.js';
 import { isEmailQueueBusy, processEmailQueue } from './services/emailQueue.js';
 import { expirePending } from './services/orders.js';
@@ -11,6 +12,8 @@ import { expirePending } from './services/orders.js';
 export function start({ port = config.port } = {}) {
   seedIfEmpty(); // production: ไม่ seed อะไรเลย (ดู db/seed.js) ยกเว้นโหมดตัวอย่าง
   // โหมดตัวอย่าง: ภาพในเกมของทุกเกม (สร้างเบื้องหลัง ไม่บล็อกการเปิดเว็บ — เกมที่มีภาพแล้วข้าม)
+  // บัญชีแอดมินจาก ADMIN_EMAIL/ADMIN_PASSWORD (เซิร์ฟเวอร์ที่ไม่มี Shell ให้รัน make-role.js) — ไม่ได้ตั้ง = ไม่ทำอะไร
+  ensureEnvAdmin().catch((e) => console.error('ADMIN_EMAIL:', e.message));
   if (config.demoMode) import('./db/demo.js').then((m) => m.seedScreenshots()).catch((e) => console.error('demo screenshots:', e.message));
   const server = createApp().listen(port, '0.0.0.0');
   server.once('listening', () => console.log(`Game Store running at ${config.appUrl} (port ${server.address().port})`));

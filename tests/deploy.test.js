@@ -76,7 +76,9 @@ test('โหมดตัวอย่าง: เซิร์ฟเวอร์ pr
   const dir = tmpDir();
   const port = 3290 + Math.floor(Math.random() * 50);
   const env = { PATH: process.env.PATH, NODE_ENV: 'production', DEMO_MODE: '1', PORT: String(port), RENDER_EXTERNAL_URL: 'https://gs-demo.onrender.com',
-    DATABASE_PATH: path.join(dir, 'd.db'), BACKUP_DIR: path.join(dir, 'b'), LOG_REQUESTS: '0' };
+    DATABASE_PATH: path.join(dir, 'd.db'), BACKUP_DIR: path.join(dir, 'b'), LOG_REQUESTS: '0',
+    // plan ฟรีไม่มี Shell ให้รัน make-role.js → แอดมินจาก env (2FA ปิด: ข้อมูล 2FA หายทุกครั้งที่ข้อมูลถูกล้าง)
+    ADMIN_EMAIL: 'owner@shop.test', ADMIN_PASSWORD: 'demo-admin-password-long', ADMIN_MFA_REQUIRED: '0' };
   const { spawn } = await import('node:child_process');
   const base = `http://127.0.0.1:${port}`;
   let child;
@@ -123,6 +125,12 @@ test('โหมดตัวอย่าง: เซิร์ฟเวอร์ pr
     assert.equal(order.status, 'pending');
     const paid = await (await call(`/api/orders/${order.id}/dev-pay`, { method: 'POST', body: '{}' })).json();
     assert.equal(paid.order.status, 'paid');
+
+    // แอดมินจาก ADMIN_EMAIL/ADMIN_PASSWORD เข้าหลังบ้านได้ (ใช้ cookie jar เดียวกัน — คุกกี้หลังบ้านแยกจากลูกค้า)
+    const adm = await call('/api/admin/auth/login', { method: 'POST', body: JSON.stringify({ email: 'owner@shop.test', password: 'demo-admin-password-long' }) });
+    assert.equal(adm.status, 200, await adm.clone().text());
+    const me = await (await call('/api/admin/auth/me')).json();
+    assert.equal(me.user.role, 'admin');
 
     // รีสตาร์ทโดยข้อมูลยังอยู่: ความลับที่สุ่มไว้ต้องเหมือนเดิม (ล็อกอินค้างอยู่ และถอดรหัสโค้ดเกมเดิมได้)
     await shutdown();

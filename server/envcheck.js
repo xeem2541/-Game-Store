@@ -44,6 +44,12 @@ export function checkProductionEnv(env = process.env) {
   if (!env.TRUST_PROXY && !env.RENDER) warnings.push('ไม่ได้ตั้ง TRUST_PROXY — ถ้าอยู่หลัง reverse proxy (Caddy/nginx) ให้ตั้ง TRUST_PROXY=1 ไม่งั้น rate limit จะนับ IP ของ proxy แทน IP ลูกค้า');
   if (env.DEV_PAY === '1' && !demo) errors.push('ห้ามเปิด DEV_PAY ใน production');
   if (env.ALLOW_DEMO_SEED === '1' && !demo) warnings.push('เปิด ALLOW_DEMO_SEED=1 อยู่ — ฐานข้อมูลว่างจะถูกใส่เกมสมมติ คูปองทดสอบ และโค้ดเกมปลอม (FAKE-...) ที่ลูกค้าซื้อด้วยเงินจริงได้ ใช้กับ staging เท่านั้น');
+  // แอดมินจาก env (services/envAdmin.js): ต้องตั้งคู่กัน และรหัสผ่านยาว ไม่ใช่ค่าตัวอย่าง
+  if (env.ADMIN_EMAIL || env.ADMIN_PASSWORD) {
+    const pw = env.ADMIN_PASSWORD ?? '';
+    need(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((env.ADMIN_EMAIL ?? '').trim()), 'ADMIN_EMAIL ต้องเป็นอีเมลที่ถูกต้อง (ตั้งคู่กับ ADMIN_PASSWORD)');
+    need(pw.length >= 12 && !PLACEHOLDER.test(pw), 'ADMIN_PASSWORD ต้องยาวอย่างน้อย 12 ตัวอักษร และไม่ใช่ค่าตัวอย่าง (ตั้งคู่กับ ADMIN_EMAIL)');
+  }
   if (env.ADMIN_MFA_REQUIRED === '0') warnings.push('ปิด 2FA ของหลังบ้านอยู่ (ADMIN_MFA_REQUIRED=0) — บัญชีที่คืนเงินและดูโค้ดเกมได้ป้องกันด้วยรหัสผ่านอย่างเดียว');
   if (env.RENDER && env.REQUIRE_EXISTING_DB !== '1' && !demo) warnings.push('ยังไม่ได้ตั้ง REQUIRE_EXISTING_DB=1 — หลัง deploy ครั้งแรกสำเร็จให้ตั้งไว้ ถ้า disk ไม่ถูก mount ระบบจะหยุดแทนที่จะเริ่มด้วยฐานข้อมูลว่าง');
   return { errors, warnings };
