@@ -18,6 +18,8 @@ const openCart = async (page) => {
   await page.waitForSelector('body.ready', { state: 'attached' });
 };
 const serious = async (page) => {
+  // รอ transition/แอนิเมชันสีจบก่อนตรวจ (กลางทาง Firefox/WebKit ให้สีตัวอักษรเฉลี่ยกับพื้นหลังจนคอนทราสต์ต่ำชั่วครู่)
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished.catch(() => {}))));
   const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   return res.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`);
 };
@@ -56,6 +58,7 @@ test('ตะกร้า: แถบขั้นตอน, ลบเกมแล�
   await expect(page.locator('.coupon-save')).toHaveText(/^−฿/);
   await expect(page.locator('.savings')).toBeVisible();
   await page.locator('.side').evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))); // ตรวจหลังแอนิเมชันคูปองจบ
+  await expect(page.locator('#toast')).not.toHaveClass(/show/); // toast ของการลบเกมต้องหายก่อน (ไม่งั้นตรวจตอนกำลังจาง)
   expect(await serious(page)).toEqual([]);
 
   await page.locator('#couponRemove').click();
