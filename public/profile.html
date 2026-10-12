@@ -20,17 +20,23 @@
       <span data-i18n="profile.unverified"></span>
       <button class="btn" id="resendBtn" type="button" data-i18n="profile.resend"></button>
     </div>
+    <section class="profile-hero" id="profileHero" aria-label="โปรไฟล์">
+      <span class="avatar sk-avatar" aria-hidden="true"></span>
+      <div class="ph-text"><strong class="ph-name">&nbsp;</strong><span class="ph-meta">&nbsp;</span></div>
+    </section>
     <section id="stats" class="profile-stats" data-i18n-label="profile.summary" aria-label="สรุปบัญชี" aria-busy="true">
       <div class="tile sk-tile" aria-hidden="true"></div><div class="tile sk-tile" aria-hidden="true"></div><div class="tile sk-tile" aria-hidden="true"></div><div class="tile sk-tile" aria-hidden="true"></div>
     </section>
-    <div class="chips tabs" role="tablist">
-      <button class="chip" role="tab" data-tab="info" data-i18n="profile.tab.info"></button>
-      <button class="chip" role="tab" data-tab="password" data-i18n="profile.tab.password"></button>
-      <button class="chip" role="tab" data-tab="orders" data-i18n="profile.tab.orders"></button>
-      <button class="chip" role="tab" data-tab="library" data-i18n="profile.tab.library"></button>
-      <button class="chip" role="tab" data-tab="wishlist" data-i18n="profile.tab.wishlist"></button>
+    <div class="profile-layout">
+      <div class="profile-nav" role="tablist" data-i18n-label="profile.menu" aria-label="เมนูบัญชี">
+        <button class="ptab" role="tab" data-tab="info" data-i18n="profile.tab.info"></button>
+        <button class="ptab" role="tab" data-tab="password" data-i18n="profile.tab.password"></button>
+        <button class="ptab" role="tab" data-tab="orders" data-i18n="profile.tab.orders"></button>
+        <button class="ptab" role="tab" data-tab="library" data-i18n="profile.tab.library"></button>
+        <button class="ptab" role="tab" data-tab="wishlist" data-i18n="profile.tab.wishlist"></button>
+      </div>
+      <section id="panel" class="panel" role="tabpanel"></section>
     </div>
-    <section id="panel" class="panel" role="tabpanel"></section>
   </main>
   <footer></footer>
   <script type="module" src="/js/profile.js"></script>

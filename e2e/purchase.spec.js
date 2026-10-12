@@ -63,8 +63,8 @@ test('ลูกค้าซื้อเกมครบวงจร แล้ว�
 
   // 7) คลังเกมมีโค้ดเดียวกัน
   await page.goto('/profile#library');
-  await expect(page.locator('#panel .lib-row')).toHaveCount(1);
-  await page.locator('#panel .key-row button').first().click();
+  await expect(page.locator('#panel .voucher')).toHaveCount(1);
+  await page.locator('#panel .voucher [data-act=show]').first().click();
   await expect(page.locator('#panel .key')).toHaveText(code);
 
   // 8) แอดมินคืนเงินผ่านหน้าหลังบ้าน (ยืนยัน 2 ชั้น)

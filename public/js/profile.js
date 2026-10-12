@@ -1,5 +1,6 @@
-import { renderKeys } from './keys-ui.js';
-import { markReady, api, $, esc, t, user, loginUrl, cardHtml, remember, toast, money, fmtDateTime, emptyArt } from './common.js';
+import { renderVouchers } from './checkout-ui.js';
+import { bindPasswordToggles, bindStrengthMeter } from './password-ui.js';
+import { markReady, api, $, esc, t, user, loginUrl, cardHtml, remember, toast, money, fmtDateTime, emptyArt, lang } from './common.js';
 
 if (!user) { location.replace(loginUrl()); throw new Error('redirect'); }
 
@@ -50,11 +51,15 @@ const views = {
     };
   },
   password() {
+    const field = (name, label, ac, extra = '') => `<div class="pw-wrap"><label><span>${label}</span>
+          <input name="${name}" type="password" required autocomplete="${ac}" maxlength="72" ${extra}></label>
+          <button class="pw-toggle" type="button" aria-pressed="false" aria-label="${t('auth.showPassword')}"><svg class="icon" aria-hidden="true"><use href="/icons.svg#icon-eye" /></svg></button></div>`;
     panel.innerHTML = `
       <form id="pwForm" class="auth-form">
-        <label><span>${t('profile.currentPassword')}</span><input name="cur" type="password" required autocomplete="current-password"></label>
-        <label><span>${t('auth.newPassword')}</span><input name="next" type="password" required minlength="8" maxlength="72" autocomplete="new-password"></label>
-        <small>${t('auth.passwordHint')}</small>
+        ${field('cur', t('profile.currentPassword'), 'current-password')}
+        ${field('next', t('auth.newPassword'), 'new-password', 'minlength="8" aria-describedby="pwHint"')}
+        <div class="pw-meter" aria-hidden="true" data-level="0"><i></i><i></i><i></i><i></i></div>
+        <small id="pwHint" class="pw-hint" aria-live="polite">${t('auth.passwordHint')}</small>
         <p class="msg" id="msg" role="alert"></p>
         <button class="btn primary" type="submit">${t('common.save')}</button>
       </form>
@@ -62,6 +67,8 @@ const views = {
         <small>${t('profile.logoutAllNote')}</small>
         <button class="btn danger" id="logoutAllBtn" type="button">${t('profile.logoutAll')}</button>
       </div>`;
+    bindPasswordToggles(panel);
+    bindStrengthMeter($('#pwForm'), $('.pw-meter'), $('#pwHint'), { field: 'next', email: user.email, name: user.name });
     $('#logoutAllBtn').onclick = async () => {
       try { await api('/auth/logout-all', { method: 'POST', body: {} }); location.href = '/login'; } catch (err) { toast(err.message); }
     };
@@ -73,6 +80,8 @@ const views = {
       try {
         await api('/me/password', { method: 'POST', body: { currentPassword: f.cur.value, newPassword: f.next.value } });
         f.reset();
+        $('.pw-meter').dataset.level = '0';
+        $('#pwHint').textContent = t('auth.passwordHint');
         msg.classList.add('ok');
         msg.textContent = t('profile.passwordChanged');
       } catch (err) { msg.classList.remove('ok'); msg.textContent = err.message; }
@@ -111,14 +120,9 @@ const views = {
   async library() {
     const { items } = await api('/me/library');
     if (!items.length) { panel.innerHTML = `<div class="empty">${emptyArt('empty-library')}<p>${t('profile.noLibrary')}</p></div>`; return; }
-    panel.innerHTML = `<div class="order-list">${items.map((g, i) => `
-      <div class="order-row lib-row">
-        <img class="thumb" src="${esc(g.cover)}" alt="">
-        <div class="grow"><a href="/game/${esc(g.slug)}"><strong>${esc(g.title)}</strong></a>
-          <div class="meta">${esc(g.platform)} • ${t('profile.purchased')} ${fmtDateTime(g.purchasedAt)}</div></div>
-        <div class="keys full" id="lib-keys-${i}"></div>
-      </div>`).join('')}</div>`;
-    items.forEach((g, i) => renderKeys($('#lib-keys-' + i), g.keys));
+    // เกมที่ซื้อ = คูปองโค้ดเหมือนหน้าคำสั่งซื้อ (แสดง/คัดลอก/เปิดในร้านของแพลตฟอร์ม)
+    panel.innerHTML = '<div class="vouchers lib-vouchers" id="libKeys"></div>';
+    renderVouchers($('#libKeys'), items.flatMap((g) => g.keys.map((k) => ({ slug: g.slug, title: g.title, platform: g.platform, code: k.code }))));
   },
   async wishlist() {
     const { items } = await api('/wishlist');
@@ -137,6 +141,18 @@ async function show(name) {
 
 const goTo = (name) => { history.replaceState(null, '', '#' + name); show(name); };
 tabs.forEach((b) => b.addEventListener('click', () => goTo(b.dataset.tab)));
+// เปลี่ยน #แท็บ ที่แถบที่อยู่ / ปุ่มย้อนกลับ (replaceState ข้างบนไม่ทำให้เกิดเหตุการณ์นี้)
+window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+
+// หัวโปรไฟล์: อวาตาร์ตัวอักษรแรกของชื่อ + อีเมล + เป็นสมาชิกตั้งแต่
+function renderHero() {
+  const initial = [...user.name.trim()][0]?.toUpperCase() ?? '?';
+  const since = new Date(user.createdAt.replace(' ', 'T') + 'Z').toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { year: 'numeric', month: 'long' });
+  $('#profileHero').innerHTML = `<span class="avatar" aria-hidden="true">${esc(initial)}</span>
+    <div class="ph-text"><strong class="ph-name">${esc(user.name)}</strong><span class="ph-meta">${esc(user.email)} · ${t('profile.since', { d: since })}</span></div>
+    ${user.role === 'admin' ? `<a class="btn" href="/admin/">${t('profile.admin')}</a>` : ''}`;
+}
+renderHero();
 
 // การ์ดสรุปบัญชี (bento) — กดแล้วไปแท็บที่เกี่ยวข้อง
 async function renderStats() {

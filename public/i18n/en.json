@@ -373,5 +373,8 @@
   "pw.tipGuessable": "Easy to guess — avoid common words, number runs, phone numbers or your name/email",
   "pw.tipLonger": "12+ characters is much safer",
   "pw.tipMix": "Mix in capitals, numbers or symbols",
-  "pw.tipGood": "Great"
+  "pw.tipGood": "Great",
+  "profile.menu": "Account menu",
+  "profile.since": "Member since {d}",
+  "profile.admin": "Admin"
 }
