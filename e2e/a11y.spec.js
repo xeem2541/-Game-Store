@@ -128,12 +128,16 @@ test('ซื้อยังไง ขั้น 2: กดสลับวิธี
   const card = page.locator('.howto-stage .hv-methods button[data-method="card"]');
   const pp = page.locator('.howto-stage .hv-methods button[data-method="promptpay"]');
   await expect(card).toHaveAttribute('aria-pressed', 'true');
-  await pp.click();
-  await expect(pp).toHaveAttribute('aria-pressed', 'true');
+  // การคลิกของ Playwright เลื่อนหน้าให้ปุ่มอยู่ในจอก่อน ซึ่งอาจพาฉากไปขั้นอื่น (ปุ่มถูกซ่อน) → กลับมาขั้น 2 แล้วลองใหม่
+  await expect(async () => {
+    await toStep2();
+    await pp.click({ timeout: 2000 });
+    await expect(pp).toHaveAttribute('aria-pressed', 'true', { timeout: 1000 });
+  }).toPass({ timeout: 30000 });
   await expect(card).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('.howto-stage .hv-pay')).toHaveAttribute('data-method', 'promptpay');
   await expect.poll(() => page.locator('.howto-stage .hv-qr').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
-  // การคลิกก่อนหน้าอาจเลื่อนหน้า (scroll into view) จนฉากเปลี่ยนไปขั้นอื่น → กลับมาขั้น 2 ก่อนกด Enter
+  // คีย์บอร์ด: กลับมาขั้น 2, โฟกัสปุ่มบัตรโดยไม่เลื่อนหน้า แล้วกด Enter
   await expect(async () => {
     await toStep2();
     await card.evaluate((el) => el.focus({ preventScroll: true }), null, { timeout: 2000 });
