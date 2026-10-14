@@ -1,0 +1,17 @@
+{
+  "name": "RoadTrip",
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "RoadTripBuilder": { "$path": "src/server/RoadTripBuilder.server.lua" }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "RoadTripHUD": { "$path": "src/client/RoadTripHUD.client.lua" }
+      }
+    }
+  }
+}
