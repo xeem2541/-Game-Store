@@ -10,9 +10,7 @@
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "RoadTripHUD": {
-          "$path": "src/client/RoadTripHUD.client.lua"
-        }
+        "$path": "src/client"
       }
     }
   }

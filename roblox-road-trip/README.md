@@ -1,37 +1,31 @@
-# Road Trip Racing — แมพรถซิ่งเที่ยวทริป (Roblox)
+# Road Trip Racing — แมพรถซิ่งเที่ยวทริป (Roblox) · เวอร์ชันเขียนใหม่
 
-ถนนยาว ~6,000 studs ผ่าน 5 โซน: **เมือง → ทุ่งหญ้า → ภูเขา → ชายหาด → แคมป์**
-มีจุดเสกรถ แผ่นบูสต์ และเช็คพอยต์ (9 จุด + เส้นชัย) แมพถูกสร้างจากสคริปต์ตอนกด Play ไม่ต้องวางโมเดลเอง
+ถนนยาว 6,000 studs ผ่าน 5 โซน: **เมือง → ทุ่งหญ้า → ภูเขา → ชายหาด → แคมป์**
+มีจุดเสกรถ แผ่นบูสต์ และเช็คพอยต์ 9 จุด + เส้นชัย แมพถูกสร้างจากสคริปต์ตอนกด Play
 
-> ⚠️ สคริปต์ผ่านการตรวจ syntax แล้ว แต่ **ยังไม่ได้ทดสอบใน Roblox Studio** (ทำในสภาพแวดล้อมที่รัน Studio ไม่ได้)
-> ค่าที่อาจต้องจูน (ทิศล้อ/เลี้ยว/ความเร็ว) อยู่หัวไฟล์ section `CONFIG`
+> ⚠️ ยังไม่ได้ทดสอบฟิสิกส์รถใน Studio จริง ค่าที่ปรับได้อยู่ใน `Config.lua` (`Config.CAR`)
 
-## วิธีติดตั้ง (Studio) — แบ่งเป็นไฟล์เล็ก ๆ วางทีละไฟล์
-1. เปิดเทมเพลต **Baseplate** (สคริปต์จะลบพื้น/จุดเกิดเดิมให้เอง)
-2. ใน **ServerScriptService** สร้าง `Script` ชื่อ `RoadTripBuilder` แล้ววางโค้ดจาก `src/server/RoadTripBuilder.server.lua`
-3. คลิกขวาที่ `RoadTripBuilder` ▸ Insert Object ▸ **ModuleScript** สร้าง 6 ตัว เป็น *ลูกของ* `RoadTripBuilder` ตั้งชื่อตรงตามนี้ แล้ววางโค้ดจากไฟล์ใน `src/server/RoadTripBuilder/`:
-   `Config`, `World`, `Gates`, `Decor`, `Cars`, `PlayerSetup`
-4. ใน **StarterPlayer ▸ StarterPlayerScripts** สร้าง `LocalScript` ชื่อ `RoadTripHUD` แล้ววางโค้ดจาก `src/client/RoadTripHUD.client.lua`
-5. กด **Play** (รอ 10–20 วินาที) แล้วเดินไปที่แผ่นสีเขียวใกล้จุดเกิด กด `E` เพื่อเสกรถ
+## โครงสร้าง (ตำแหน่งใน Studio)
+| ไฟล์ | อยู่ที่ | ชนิด |
+|---|---|---|
+| `src/server/RoadTrip.server.lua` | ServerScriptService, ชื่อ `RoadTrip` | Script |
+| `src/server/RoadTrip/Config.lua` | ลูกของ `RoadTrip`, ชื่อ `Config` | ModuleScript |
+| `.../Util.lua` `Roads.lua` `Props.lua` `Car.lua` `Gameplay.lua` | ลูกของ `RoadTrip` ชื่อตามไฟล์ | ModuleScript |
+| `src/client/CarController.client.lua` | StarterPlayer ▸ StarterPlayerScripts, ชื่อ `CarController` | LocalScript |
+| `src/client/RoadTripHUD.client.lua` | StarterPlayer ▸ StarterPlayerScripts, ชื่อ `RoadTripHUD` | LocalScript |
 
-ใช้ Rojo ก็ได้: `rojo serve` ในโฟลเดอร์นี้ (มี `default.project.json` ให้)
-ถ้าสร้างพัง จะมีกล่องแดง `RoadTrip ERROR` ที่ล่างจอ และข้อความใน Output
+## ติดตั้งอัตโนมัติ (ผ่าน Claude Code + Studio MCP)
+เปิด Studio (เทมเพลต Baseplate) ให้ MCP Server เป็นสีเขียว แล้วสั่ง Claude:
 
-## การควบคุม
-`W/S` เร่ง/ถอย · `A/D` เลี้ยว · เหยียบแผ่นฟ้า = บูสต์ 3 วินาที
+> ลบสคริปต์เก่าของโปรเจกต์นี้ใน Studio (ServerScriptService.RoadTripBuilder, StarterPlayerScripts.RoadTripHUD) แล้วติดตั้งชุดใหม่: ดาวน์โหลดไฟล์จาก https://raw.githubusercontent.com/xeem2541/-Game-Store/claude/eager-wozniak-n9brvl/roblox-road-trip/ ไปที่โฟลเดอร์ C:\Users\FONG\roadtrip2 แล้วสร้าง instance ใน Studio ตามตารางในโครงสร้างด้านบนโดยใส่โค้ดตรงตามต้นฉบับห้ามแก้ (ไฟล์: src/server/RoadTrip.server.lua, src/server/RoadTrip/{Config,Util,Roads,Props,Car,Gameplay}.lua, src/client/CarController.client.lua, src/client/RoadTripHUD.client.lua) เช็คจำนวนบรรทัดตรงต้นฉบับ แล้วกด Play รอ 25 วินาที อ่าน Output รายงาน error
 
-## ฟีเจอร์
-| อย่าง | รายละเอียด |
-|---|---|
-| จุดเสกรถ | แผ่นเขียวที่ลานสตาร์ท และข้างเช็คพอยต์ทุกจุด — เสกรถที่เช็คพอยต์ล่าสุด (คันเก่าจะถูกลบ) |
-| แผ่นบูสต์ | แผ่นสีฟ้ามีลูกศร ทุก ~400 studs สลับเลน |
-| เช็คพอยต์ | ซุ้มประตูทุก 600 studs (ที่ 1200, 2400, 3600, 4800 คือซุ้มเข้าโซนใหม่) ตาย/รถตก/รถพลิกเกิน 4 วิ จะกลับมาที่เช็คพอยต์ล่าสุด |
-| เส้นชัย | ปลายทางที่แคมป์ ได้ `Trips +1` แล้วเริ่มทริปใหม่ |
-| HUD | โซนปัจจุบัน, เช็คพอยต์, km/h, ข้อความแจ้งเตือน; `leaderstats` มี Checkpoint / Trips |
+## ติดตั้งด้วยมือ
+สร้าง instance ตามตาราง แล้วคัดลอกโค้ดจากแต่ละไฟล์ไปวางทีละไฟล์ ลบโค้ดเริ่มต้นก่อนวาง
+ใช้ Rojo ก็ได้: `rojo serve` (มี `default.project.json`)
 
-## ปรับแต่ง (หัวไฟล์ `RoadTripBuilder.server.lua`)
-- `ZONE_LENGTH`, `CHECKPOINT_EVERY`, `BOOST_EVERY` — ความยาวโซน / ระยะเช็คพอยต์ / ระยะแผ่นบูสต์
-- `CAR_MAX_SPEED`, `BOOST_MULT`, `BOOST_TIME` — ความเร็วรถและบูสต์
-- `DRIVE_SIGN = -1` ถ้ากด W แล้วรถถอยหลัง · `STEER_SIGN = -1` ถ้าเลี้ยวผิดข้าง
-- `ZONES` — สีพื้น/ถนน/วัสดุของแต่ละโซน
-- เปลี่ยนรูปทรงถนนที่ `heightAt` (เนิน/ภูเขา) และ `lateralAt` (โค้ง)
+## การเล่น
+เดินไปที่แผ่นเขียวใกล้จุดเกิด กด `E` เสกรถ · `W/S` เร่ง/ถอย/เบรก · `A/D` เลี้ยว · แผ่นฟ้า = บูสต์
+ตาย/รถตกแมพ/รถพลิกเกิน 4 วิ → กลับเช็คพอยต์ล่าสุด · ถึงเส้นชัยได้ `Trips +1`
+
+## จูนค่ารถ (`Config.CAR`)
+`MaxSpeed` ความเร็วสูงสุด · `Accel` อัตราเร่ง · `Grip` แรงเกาะข้าง (มาก = ไม่ไถล) · `TurnRate` ความไวเลี้ยว · `BoostMult/BoostTime/BoostKick` บูสต์
