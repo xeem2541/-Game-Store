@@ -14,6 +14,37 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
+
+print("[RoadTrip] สคริปต์เริ่มทำงาน กำลังสร้างแมพ... (รอสักครู่)")
+
+local function reportError(err)
+	warn("[RoadTrip] เกิดข้อผิดพลาด: " .. tostring(err))
+	local function addGui(parent)
+		local g = Instance.new("ScreenGui")
+		g.Name = "RoadTripError"
+		g.ResetOnSpawn = false
+		local l = Instance.new("TextLabel")
+		l.Size = UDim2.new(1, -40, 0, 160)
+		l.Position = UDim2.new(0, 20, 1, -180)
+		l.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+		l.TextColor3 = Color3.new(1, 1, 1)
+		l.TextWrapped = true
+		l.TextScaled = true
+		l.Text = "RoadTrip ERROR: " .. tostring(err)
+		l.Parent = g
+		g.Parent = parent
+	end
+	addGui(StarterGui)
+	for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
+		local pg = pl:FindFirstChildOfClass("PlayerGui")
+		if pg then
+			addGui(pg)
+		end
+	end
+end
+
+local ok, err = xpcall(function()
 
 ----------------------------------------------------------------------
 -- CONFIG
@@ -153,10 +184,6 @@ local old = Workspace:FindFirstChild("RoadTripWorld")
 if old then
 	old:Destroy()
 end
-local baseplate = Workspace:FindFirstChild("Baseplate")
-if baseplate then
-	baseplate:Destroy()
-end
 
 local world = Instance.new("Folder")
 world.Name = "RoadTripWorld"
@@ -213,6 +240,9 @@ end
 -- ถนน
 ----------------------------------------------------------------------
 for t = 0, TOTAL - STEP, STEP do
+	if (t / STEP) % 25 == 0 then
+		task.wait()
+	end
 	local a, b = pointAt(t), pointAt(t + STEP)
 	local zone = ZONES[zoneIndexAt(t + STEP / 2)]
 	local mid = (a + b) / 2
@@ -685,6 +715,9 @@ local function tent(t, side)
 end
 
 for t = 30, TOTAL - 30, 30 do
+	if (t / 30) % 10 == 0 then
+		task.wait()
+	end
 	local zi = zoneIndexAt(t)
 	for _, side in ipairs({ -1, 1 }) do
 		if zi == 1 then
@@ -1030,4 +1063,22 @@ Players.PlayerRemoving:Connect(function(player)
 	playerState[player] = nil
 end)
 
+-- ลบพื้น/จุดเกิดเดิมของเทมเพลต แล้วให้ผู้เล่นเกิดใหม่ที่จุดเกิดของแมพนี้
+for _, name in ipairs({ "Baseplate", "SpawnLocation" }) do
+	local obj = Workspace:FindFirstChild(name)
+	if obj and obj ~= spawn then
+		obj:Destroy()
+	end
+end
+for _, pl in ipairs(Players:GetPlayers()) do
+	task.spawn(function()
+		pl:LoadCharacter()
+	end)
+end
+
 print(string.format("[RoadTrip] สร้างแมพเสร็จ: ถนนยาว %d studs, %d โซน, %d เช็คพอยต์", TOTAL, #ZONES, FINISH_INDEX))
+end, debug.traceback)
+
+if not ok then
+	reportError(err)
+end
