@@ -6,13 +6,16 @@
 > ⚠️ สคริปต์ผ่านการตรวจ syntax แล้ว แต่ **ยังไม่ได้ทดสอบใน Roblox Studio** (ทำในสภาพแวดล้อมที่รัน Studio ไม่ได้)
 > ค่าที่อาจต้องจูน (ทิศล้อ/เลี้ยว/ความเร็ว) อยู่หัวไฟล์ section `CONFIG`
 
-## วิธีติดตั้ง (Studio)
-1. เปิดเทมเพลต **Baseplate** (สคริปต์จะลบ Baseplate เดิมให้เอง)
+## วิธีติดตั้ง (Studio) — แบ่งเป็นไฟล์เล็ก ๆ วางทีละไฟล์
+1. เปิดเทมเพลต **Baseplate** (สคริปต์จะลบพื้น/จุดเกิดเดิมให้เอง)
 2. ใน **ServerScriptService** สร้าง `Script` ชื่อ `RoadTripBuilder` แล้ววางโค้ดจาก `src/server/RoadTripBuilder.server.lua`
-3. ใน **StarterPlayer ▸ StarterPlayerScripts** สร้าง `LocalScript` ชื่อ `RoadTripHUD` แล้ววางโค้ดจาก `src/client/RoadTripHUD.client.lua`
-4. กด **Play** แล้วเดินไปที่แผ่นสีเขียวใกล้จุดเกิด กด `E` เพื่อเสกรถ
+3. คลิกขวาที่ `RoadTripBuilder` ▸ Insert Object ▸ **ModuleScript** สร้าง 6 ตัว เป็น *ลูกของ* `RoadTripBuilder` ตั้งชื่อตรงตามนี้ แล้ววางโค้ดจากไฟล์ใน `src/server/RoadTripBuilder/`:
+   `Config`, `World`, `Gates`, `Decor`, `Cars`, `PlayerSetup`
+4. ใน **StarterPlayer ▸ StarterPlayerScripts** สร้าง `LocalScript` ชื่อ `RoadTripHUD` แล้ววางโค้ดจาก `src/client/RoadTripHUD.client.lua`
+5. กด **Play** (รอ 10–20 วินาที) แล้วเดินไปที่แผ่นสีเขียวใกล้จุดเกิด กด `E` เพื่อเสกรถ
 
 ใช้ Rojo ก็ได้: `rojo serve` ในโฟลเดอร์นี้ (มี `default.project.json` ให้)
+ถ้าสร้างพัง จะมีกล่องแดง `RoadTrip ERROR` ที่ล่างจอ และข้อความใน Output
 
 ## การควบคุม
 `W/S` เร่ง/ถอย · `A/D` เลี้ยว · เหยียบแผ่นฟ้า = บูสต์ 3 วินาที

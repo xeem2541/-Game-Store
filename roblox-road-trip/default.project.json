@@ -4,13 +4,15 @@
     "$className": "DataModel",
     "ServerScriptService": {
       "$className": "ServerScriptService",
-      "RoadTripBuilder": { "$path": "src/server/RoadTripBuilder.server.lua" }
+      "$path": "src/server"
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "RoadTripHUD": { "$path": "src/client/RoadTripHUD.client.lua" }
+        "RoadTripHUD": {
+          "$path": "src/client/RoadTripHUD.client.lua"
+        }
       }
     }
   }
