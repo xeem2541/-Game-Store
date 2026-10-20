@@ -1,8 +1,9 @@
 import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml, lang, toast, getRecent, clearRecent, topGenre } from './common.js';
-import { canRender3D, prefersReducedMotion, whenIdle } from './motion.js';
+import { canRender3D, canRenderShader, prefersReducedMotion, whenIdle } from './motion.js';
 import { splitWords } from './kinetic.js';
 import { initScrollFx } from './scroll-fx.js';
 import { mountMarquee } from './marquee.js';
+import { mountRing } from './ring.js';
 import { gsap } from './vendor/gsap.js';
 
 initScrollFx(); // parallax สำรองสำหรับเบราว์เซอร์ที่ไม่รองรับ CSS scroll-driven animation
@@ -91,6 +92,8 @@ const uniq = (list) => [...new Map(list.map((g) => [g.slug, g])).values()];
 const gameLink = (g) => ({ href: `/game/${g.slug}`, label: g.title });
 mountMarquee($('#marqueeTop'), uniq([...data.featured, ...data.bestsellers]).slice(0, 12).map(gameLink));
 mountMarquee($('#marqueeDeals'), data.onSale.slice(0, 12).map((g) => ({ ...gameLink(g), tag: `-${g.discount}%` })));
+// ---- วงล้อเกม 3 มิติ: เกมขายดี + ใหม่ + แนะนำ + ลดราคา (ไม่ซ้ำ) สูงสุด 12 เกม ----
+mountRing($('#ringSec'), uniq([...data.bestsellers, ...data.newest, ...data.featured, ...data.onSale]).slice(0, 12));
 markReady();
 
 // ---- แถวเฉพาะคน: "เกมที่คุณเพิ่งดู" + "เพราะคุณสนใจแนว…" (อ่านจากประวัติการดูในเครื่อง ไม่ส่งไปเซิร์ฟเวอร์) ----
@@ -199,7 +202,9 @@ if (!prefersReducedMotion()) {
   // หัวข้อ hero ไม่เริ่มจากโปร่งใส (เป็น LCP element — ถ้าซ่อนไว้ LCP จะช้าตามแอนิเมชัน) ขยับเฉพาะองค์ประกอบรอง
   // fromTo + ค่าปลายทางชัดเจน + clearProps: ไม่อ่านค่าจาก CSS ระหว่าง transition และคืน style ให้ CSS (hover) เมื่อจบ
   const done = { opacity: 1, y: 0, clearProps: 'opacity,transform' };
-  gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.6 } })
+  // ฉากเปิดตัวกำลังเล่น (css/intro.css): เริ่มแอนิเมชันหัวข้อตอนม่านเริ่มเปิด ไม่งั้นเล่นจบไปหลังม่านแล้ว
+  const introDelay = document.documentElement.dataset.intro === 'play' ? 0.75 : 0;
+  gsap.timeline({ delay: introDelay, defaults: { ease: 'power3.out', duration: 0.6 } })
     // kinetic: คำในหัวข้อลอยขึ้นทีละคำ (แสดงผลแรกเห็นหัวข้อเต็มแล้ว LCP จึงไม่รอแอนิเมชันนี้)
     .fromTo(heroWords, { yPercent: 60, rotate: 4, opacity: 0 }, { yPercent: 0, rotate: 0, opacity: 1, duration: 0.7, stagger: 0.07, clearProps: 'opacity,transform' })
     .fromTo('.hero-eyebrow', { y: 12, opacity: 0 }, { ...done }, 0)
@@ -234,6 +239,19 @@ if (!prefersReducedMotion()) {
     progress.classList.add('scrub');
     requestAnimationFrame(pickStep);
   }
+}
+
+// พื้นหลังแสงของเหลว (WebGL ล้วน ไม่กี่ KB): ทุกขนาดจอที่มี GPU จริง — โหลดหลังหน้าแสดงผล ไม่กระทบ LCP
+// เครื่องที่วาด WebGL ด้วย CPU ไม่แสดง (shader ทุกพิกเซลทุกเฟรมทำให้หน้าหน่วง) — เห็นพื้นหลังนิ่งแทน
+if (canRenderShader()) {
+  whenIdle(async () => {
+    try {
+      const { mountLiquidHero } = await import('./liquid-hero.js');
+      mountLiquidHero($('#heroBg'));
+    } catch (e) {
+      console.warn('ไม่สามารถแสดงพื้นหลัง WebGL:', e.message); // ยังเห็นพื้นหลังนิ่งตามเดิม
+    }
+  });
 }
 
 // ฉาก 3D: โหลดแบบ lazy หลังหน้าแสดงผลแล้ว และเฉพาะเครื่องที่รองรับ — ไม่งั้นใช้ภาพนิ่ง (.hero-fallback / .hero-stack) ต่อไป

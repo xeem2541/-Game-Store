@@ -36,6 +36,8 @@ public/               หน้าร้าน (HTML/CSS/JS ธรรมดา �
   css/bento.css       bento grid (หน้าแรก หน้าเกม โปรไฟล์) + ขนาดการ์ดเกม
   css/effects.css     glassmorphism + micro-interactions + spotlight การ์ด, ปุ่มแม่เหล็ก, ตัวเลขนับขึ้น, ผิวฟิล์ม
   css/marquee.css     แถบชื่อเกมเลื่อนไม่หยุดในหน้าแรก (เนื้อหาจาก js/marquee.js)
+  css/intro.css       ฉากเปิดตัวหน้าแรก (ครั้งเดียวต่อแท็บ) + ชั้นพื้นหลังแสงของเหลว (js/liquid-hero.js, WebGL)
+  css/ring.css        วงล้อเกม 3 มิติที่หมุนตามการเลื่อน (js/ring.js)
   js/motion.js        ตัวช่วยแอนิเมชัน (reduced-motion, ตรวจการอยู่ในจอ, ตรวจว่าเครื่องแสดง 3D ได้)
   js/fx.js            spotlight + ปุ่มแม่เหล็ก (เฉพาะเมาส์) + ตัวเลขนับขึ้น — ทุกหน้าร้านโหลดผ่าน common.js
   js/vendor/          GSAP / three.js ที่ build จาก node_modules แล้ว (`npm run vendor`)

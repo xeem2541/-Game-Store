@@ -14,6 +14,8 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body data-async>
+  <!-- ฉากเปิดตัว (css/intro.css): แสดงเฉพาะเมื่อ theme-init.js ตั้ง data-intro="play" — CSS ล้วน ไม่รอ JS, ไม่รับคลิก (กดปุ่มข้างใต้ได้ทันที) -->
+  <div class="intro" aria-hidden="true"><div class="intro-panel intro-top"></div><div class="intro-panel intro-bottom"></div><div class="intro-mark"><span class="intro-logo">GAME <b>STORE</b></span><span class="intro-line"></span></div></div>
   <header class="topbar"></header>
   <main class="full-width">
     <section id="hero" class="hero" aria-labelledby="heroTitle">
@@ -94,6 +96,16 @@
         </div>
       </section>
       
+      <!-- วงล้อเกม 3 มิติ (js/ring.js): ฉากค้างกลางจอแล้ววงล้อหมุนตามการเลื่อน — ความสูงจองไว้ใน ring.css
+           เนื้อหาจริงเป็นรายการลิงก์ธรรมดา (screen reader/คีย์บอร์ดใช้ได้ตามปกติ); ขอลดการเคลื่อนไหว = แถวปัดแนวนอน -->
+      <section class="ring-sec" id="ringSec" aria-labelledby="ringTitle">
+        <div class="ring-sticky">
+          <h2 class="sec" id="ringTitle"><span data-i18n="ring.title">หมุนดูเกมทั้งร้าน</span></h2>
+          <div class="ring-stage"><ul class="ring" id="ring" aria-busy="true"></ul><div class="ring-floor" aria-hidden="true"></div></div>
+          <div class="ring-info" aria-hidden="true"><span class="ring-count"></span><b class="ring-name">&nbsp;</b><span class="ring-price">&nbsp;</span></div>
+          <p class="ring-hint" aria-hidden="true" data-i18n="ring.hint">เลื่อนลงเพื่อหมุนวงล้อ</p>
+        </div>
+      </section>
       <div class="marquee" id="marqueeDeals" role="region" aria-label="ดีลแรงตอนนี้" data-i18n-label="marquee.deals"></div>
       <section><h2 class="sec"><span data-i18n="home.best">TRENDING NOW</span> <a href="/games.html?sort=bestseller" data-i18n="home.all">VIEW ALL</a></h2><div id="bestsellers" class="grid row-scroll" aria-busy="true"><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div><div class="card sk" aria-hidden="true"><div class="cover sk-cover"></div><div class="info sk-info"></div></div></div></section>
       

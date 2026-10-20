@@ -1,0 +1,63 @@
+/* ==========================================================================
+   วงล้อเกม 3 มิติ (UI เฟส 25) — js/ring.js ตั้ง --ring-r (รัศมี), --a (มุมของการ์ด), --d (ระยะจากด้านหน้า 0..1)
+   - ฉากค้างกลางจอ (sticky) ตลอดความสูงของ section → การเลื่อนกลายเป็นการหมุน; ความสูงจองไว้ใน CSS (ไม่มี layout shift)
+   - ขอลดการเคลื่อนไหว: ไม่จองความสูง ไม่ค้าง แสดงเป็นแถวปัดแนวนอนธรรมดา
+   ========================================================================== */
+.ring-sec { --card-w: 260px; position: relative; margin-block: var(--sp-8); }
+.ring-sec[hidden] { display: none; }
+.ring-sticky { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: var(--sp-3); } /* คอลัมน์ไม่ขยายตามแถวการ์ด (แถวต้องเลื่อนในตัวเอง) */
+.ring-sticky .sec, .ring-stage { justify-self: stretch; min-width: 0; }
+
+/* ---- แบบปกติ (ก่อน JS / ขอลดการเคลื่อนไหว): แถวปัดแนวนอน ---- */
+.ring { display: flex; gap: var(--sp-4); width: 100%; margin: 0; padding: 0 0 var(--sp-3); list-style: none; overflow-x: auto; scroll-snap-type: x mandatory; }
+.ring-item { flex: none; width: var(--card-w); scroll-snap-align: start; }
+.ring-item a { position: relative; display: block; overflow: hidden; border: 1px solid var(--glass-border); border-radius: var(--r-lg); background: var(--surface-1); color: var(--c-text); text-decoration: none; }
+.ring-item img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
+/* ชื่อเกมอยู่ในภาพปกแล้ว → ซ่อนทางสายตา (ยังเป็นชื่อของลิงก์ให้ screen reader) */
+.ring-cap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ring-item a:focus-visible { outline: 3px solid var(--c-focus); outline-offset: 3px; }
+.ring-info, .ring-hint, .ring-floor { display: none; }
+
+/* ---- วงล้อ 3 มิติ (js/ring.js เพิ่ม .is-ring เมื่อไม่ได้ขอลดการเคลื่อนไหว) ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .ring-sec { height: 320vh; } /* จองไว้ตั้งแต่แรก: JS ใส่เนื้อหาแล้วหน้าไม่ขยับ */
+}
+.ring-sec.is-ring .ring-sticky {
+  position: sticky; top: 0; height: 100vh; height: 100svh; align-content: center;
+  padding-top: 96px; /* พ้น header ที่ลอยอยู่ */
+}
+/* overflow-x: clip — การ์ดด้านข้างของวงล้อเลยขอบจอแคบ ห้ามทำให้หน้าเลื่อนแนวนอน (clip ไม่สร้าง scroll container และไม่ตัดแนวตั้ง) */
+.ring-sec.is-ring .ring-stage { position: relative; width: 100%; height: calc(var(--card-w) * 0.75 + 80px); perspective: 1600px; perspective-origin: 50% 30%; overflow-x: clip; }
+.ring-sec.is-ring .ring {
+  position: absolute; inset: 0; display: block; overflow: visible; padding: 0; scroll-snap-type: none;
+  transform-style: preserve-3d; will-change: transform;
+}
+.ring-sec.is-ring .ring-item {
+  position: absolute; top: 50%; left: 50%; margin: calc(var(--card-w) * -0.375) 0 0 calc(var(--card-w) / -2);
+  transform: rotateY(var(--a, 0deg)) translateZ(var(--ring-r, 600px));
+  opacity: calc(1 - var(--d, 0) * 0.8);
+}
+.ring-sec.is-ring .ring-item a { box-shadow: 0 24px 48px rgb(var(--rgb-black) / 0.55); transition: border-color var(--dur-3), box-shadow var(--dur-3); }
+/* การ์ดที่หันหลัง: ภาพกลับด้าน → มืดลงจนเหลือแค่เงา (ไม่เห็นชื่อกลับหัว) */
+.ring-sec.is-ring .ring-item a::after { content: ''; position: absolute; inset: 0; background: var(--c-bg); opacity: calc(var(--d, 0) * 1.1 - 0.1); pointer-events: none; }
+.ring-sec.is-ring .ring-item.is-front a { border-color: rgb(var(--rgb-accent) / 0.8); box-shadow: 0 0 0 1px rgb(var(--rgb-accent) / 0.5), 0 0 48px rgb(var(--rgb-accent) / 0.45), 0 30px 60px rgb(var(--rgb-black) / 0.6); }
+.ring-sec.is-ring .ring-floor {
+  display: block; position: absolute; left: 50%; bottom: -24px; width: min(90%, 900px); height: 90px; transform: translateX(-50%);
+  background: radial-gradient(50% 50% at 50% 50%, rgb(var(--rgb-accent) / 0.28), rgb(var(--rgb-focus) / 0.12) 55%, transparent 75%);
+  pointer-events: none;
+}
+.ring-sec.is-ring .ring-info { display: grid; justify-items: center; gap: 2px; min-height: 84px; text-align: center; }
+.ring-count { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--c-accent); letter-spacing: 0.1em; }
+.ring-name { font-size: var(--fs-xl); }
+.ring-price { color: var(--c-text-2); font-weight: var(--fw-bold); }
+.ring-sec.is-ring .ring-hint { display: block; margin: 0; color: var(--c-text-2); font-size: var(--fs-sm); }
+
+@media (max-width: 640px) {
+  .ring-sec { --card-w: 170px; }
+  .ring-sec.is-ring .ring-sticky { padding-top: 150px; padding-bottom: var(--tabbar-h, 0px); } /* header 2 แถว + แถบเมนูล่างจอ */
+  .ring-sec.is-ring .ring-stage { perspective: 900px; }
+  .ring-name { font-size: var(--fs-lg); }
+}
+@media (prefers-reduced-motion: no-preference) and (max-width: 640px) {
+  .ring-sec { height: 260vh; }
+}

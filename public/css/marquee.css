@@ -36,6 +36,7 @@
 
 /* ปุ่มหยุด/เล่น: ขนาดแตะได้ 44px อยู่ท้ายแถบ (นอกพื้นที่ที่เลื่อน ไม่ทับลิงก์) */
 .marquee-toggle {
+  position: relative; z-index: 1; /* อยู่เหนือลิงก์ที่เลื่อนผ่านขอบ (ถูกตัดทางสายตาแล้ว แต่กรอบยังทับ) — ปุ่มกดได้เต็มขนาด */
   flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-inline: var(--sp-2);
   border: 1px solid var(--glass-border); border-radius: 50%; background: var(--surface-1); color: var(--c-text-2); cursor: pointer;
 }

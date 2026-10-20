@@ -19,6 +19,28 @@ export function watchVisibility(el, cb, { rootMargin = '0px', threshold = 0 } = 
   return () => io.disconnect();
 }
 
+// ตรวจ WebGL ครั้งเดียวต่อหน้า (สร้าง context ทดสอบกิน CPU หลายสิบ ms บนเครื่องที่ไม่มี GPU — เดิมเรียกซ้ำทุกฉาก)
+// software = เบราว์เซอร์วาด WebGL ด้วย CPU (SwiftShader / llvmpipe): shader เต็มจอบนเครื่องแบบนี้ทำให้หน้าเว็บหน่วง
+let glProbe = null;
+function probeGL() {
+  if (glProbe) return glProbe;
+  glProbe = { ok: false, software: false };
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl2') || c.getContext('webgl');
+    if (gl) {
+      glProbe.ok = true;
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      const name = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '');
+      glProbe.software = /swiftshader|llvmpipe|softpipe|software/i.test(name);
+      gl.getExtension('WEBGL_lose_context')?.loseContext(); // คืน context ทดสอบทันที (เบราว์เซอร์จำกัดจำนวน context)
+    }
+  } catch {
+    glProbe.ok = false;
+  }
+  return glProbe;
+}
+
 // เครื่องนี้ควรแสดงฉาก 3D หรือไม่: ต้องมี WebGL, ไม่ขอลดการเคลื่อนไหว, ไม่เปิดโหมดประหยัดเน็ต และหน่วยความจำไม่ต่ำมาก
 // ไม่ผ่าน → ใช้ภาพนิ่ง (fallback) ที่แสดงอยู่แล้วต่อไป
 export function canRender3D() {
@@ -26,13 +48,11 @@ export function canRender3D() {
   const conn = navigator.connection;
   if (conn?.saveData || /(^|-)2g$/.test(conn?.effectiveType ?? '')) return false;
   if (navigator.deviceMemory !== undefined && navigator.deviceMemory < 2) return false;
-  try {
-    const c = document.createElement('canvas');
-    return Boolean(c.getContext('webgl2') || c.getContext('webgl'));
-  } catch {
-    return false;
-  }
+  return probeGL().ok;
 }
+
+// shader เต็มพื้นที่ (คำนวณทุกพิกเซลทุกเฟรม): ต้องผ่าน canRender3D และวาดด้วย GPU จริง
+export const canRenderShader = () => canRender3D() && !probeGL().software;
 
 // เล่นแอนิเมชันของ class ซ้ำได้ทุกครั้ง (เช่น ตัวเลขตะกร้าเด้งทุกครั้งที่เพิ่มของ) แล้วเอา class ออกเมื่อจบ
 export function replay(el, cls) {

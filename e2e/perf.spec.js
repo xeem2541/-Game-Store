@@ -90,7 +90,9 @@ test('หน้าแรกบนมือถือ: แถวเกมเป็
   await page.waitForSelector('body.ready', { state: 'attached' });
   const r = await page.evaluate(() => {
     const row = document.querySelector('#bestsellers');
-    return { pageOverflow: document.documentElement.scrollWidth - innerWidth, rowScrolls: row.scrollWidth > row.clientWidth, height: document.documentElement.scrollHeight };
+    // ไม่นับส่วนวงล้อเกม 3 มิติ (ตั้งใจให้เต็มจอ + มีระยะเลื่อนไว้หมุน) — เทสนี้กันการ์ดเกมเรียงลงทีละใบ
+    const runway = document.querySelector('#ringSec')?.offsetHeight ?? 0;
+    return { pageOverflow: document.documentElement.scrollWidth - innerWidth, rowScrolls: row.scrollWidth > row.clientWidth, height: document.documentElement.scrollHeight - runway };
   });
   expect(r.pageOverflow).toBe(0);
   expect(r.rowScrolls).toBe(true);

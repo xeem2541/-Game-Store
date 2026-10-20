@@ -1,0 +1,59 @@
+/* ==========================================================================
+   ฉากเปิดตัวหน้าแรก (UI เฟส 25) — "ม่านเปิด" ครั้งเดียวต่อการเปิดเว็บ (theme-init.js ตั้ง :root[data-intro="play"])
+   - CSS ล้วน: เริ่มตั้งแต่เฟรมแรก ไม่ต้องรอ JS โหลด, จบเองใน 1.4 วินาที แล้วซ่อนสนิท (visibility: hidden)
+   - pointer-events: none ตลอด → ผู้ใช้กดปุ่ม/ช่องค้นหาข้างใต้ได้ทันที ไม่ต้องรอฉากจบ; aria-hidden (ตกแต่งล้วน)
+   - ขยับด้วย transform/opacity เท่านั้น (ทำบน compositor) — ขอลดการเคลื่อนไหว: ไม่แสดงเลย
+   ========================================================================== */
+.intro { display: none; }
+:root[data-intro="play"] .intro {
+  display: block; position: fixed; inset: 0; z-index: calc(var(--z-overlay) + 50); pointer-events: none;
+  animation: intro-hide 0s linear 1.45s forwards;
+}
+.intro-panel {
+  position: absolute; left: 0; right: 0; height: 50.5%;
+  background:
+    radial-gradient(60% 120% at 50% 100%, rgb(var(--rgb-focus) / 0.22), transparent 70%),
+    var(--c-bg);
+  animation: intro-up 0.75s cubic-bezier(0.76, 0, 0.24, 1) 0.65s forwards;
+}
+.intro-top { top: 0; }
+.intro-bottom {
+  bottom: 0; animation-name: intro-down;
+  background: radial-gradient(60% 120% at 50% 0%, rgb(var(--rgb-accent) / 0.2), transparent 70%), var(--c-bg);
+}
+.intro-mark {
+  position: absolute; top: 50%; left: 50%; display: grid; justify-items: center; gap: var(--sp-3);
+  transform: translate(-50%, -50%);
+  animation: intro-mark-out 0.45s var(--ease-out) 0.6s forwards;
+}
+.intro-logo {
+  font-size: clamp(2rem, 1rem + 5vw, 4.5rem); font-weight: var(--fw-bold); letter-spacing: 0.08em; color: var(--c-text); white-space: nowrap;
+  animation: intro-logo-in 0.6s var(--ease-out) both;
+}
+.intro-logo b { color: var(--c-accent); text-shadow: 0 0 24px rgb(var(--rgb-accent) / 0.7); }
+.intro-line {
+  width: min(60vw, 420px); height: 2px; border-radius: 2px; transform-origin: left;
+  background: linear-gradient(90deg, rgb(var(--rgb-focus)), rgb(var(--rgb-accent)));
+  box-shadow: 0 0 16px rgb(var(--rgb-accent) / 0.8);
+  animation: intro-line 0.55s var(--ease-out) 0.1s both;
+}
+/* หน้าเว็บข้างใต้: ฉากหลัง hero ซูมออกช้า ๆ ตอนม่านเปิด (เหมือนกล้องถอย) — ไม่แตะ .hero-bg เพราะ parallax ใน story.css ใช้ animation ของมันอยู่ */
+:root[data-intro="play"] .hero-fallback, :root[data-intro="play"] .hero-liquid { animation: intro-hero-zoom 1.8s var(--ease-out) 0.5s both; }
+
+@keyframes intro-logo-in { from { opacity: 0; transform: scale(0.86); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes intro-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes intro-mark-out { to { opacity: 0; transform: translate(-50%, -50%) scale(1.12); } }
+/* ค่าคงที่ (ไม่ใช้ตัวแปร CSS ใน keyframes) เบราว์เซอร์จึงเล่นบน compositor ได้ */
+@keyframes intro-up { to { transform: translateY(-100%); } }
+@keyframes intro-down { to { transform: translateY(100%); } }
+@keyframes intro-hide { to { visibility: hidden; } }
+@keyframes intro-hero-zoom { from { transform: scale(1.18); } to { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-intro="play"] .intro { display: none; }
+  :root[data-intro="play"] .hero-fallback, :root[data-intro="play"] .hero-liquid { animation: none; }
+}
+
+/* ---- พื้นหลังแสงของเหลว (js/liquid-hero.js): ชั้นเหนือภาพนิ่ง ใต้ฉาก 3D — วาดความละเอียดต่ำแล้วขยาย (ภาพฟุ้งอยู่แล้ว) ---- */
+.hero-liquid { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.2s var(--ease-out); }
+.hero-liquid.ready { opacity: 1; }
