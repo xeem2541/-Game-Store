@@ -1,0 +1,41 @@
+/* ==========================================================================
+   UI เฟส 26: เคอร์เซอร์วงแสง + แสงพื้นหลังตามสีเกม (js/cursor-fx.js, js/ambient.js)
+   ========================================================================== */
+
+/* ---- แสงพื้นหลังทั้งหน้าตามสีเกม: ใช้ currentColor → เปลี่ยนสีด้วย transition ของ color (ไม่ต้องใช้ @property) ----
+   อยู่หลังเนื้อหาทั้งหมด (z-index -1 เหมือนแสงบรรยากาศใน effects.css) ไม่ทับข้อความ/ปุ่ม และไม่รับคลิก */
+.ambient {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none; color: transparent; opacity: 0;
+  background:
+    radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, currentColor 24%, transparent), transparent 70%),
+    radial-gradient(45% 45% at 100% 100%, color-mix(in srgb, currentColor 12%, transparent), transparent 70%),
+    radial-gradient(40% 40% at 0% 60%, color-mix(in srgb, currentColor 9%, transparent), transparent 70%);
+  transition: color 0.9s var(--ease-out), opacity 0.9s var(--ease-out);
+}
+.ambient.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .ambient { transition: none; } }
+
+/* ---- เคอร์เซอร์วงแสง: ตามเคอร์เซอร์ของระบบแบบหน่วง (เคอร์เซอร์ของระบบยังแสดงอยู่) ----
+   สร้างเฉพาะอุปกรณ์ที่มีเมาส์และไม่ได้ขอลดการเคลื่อนไหว; pointer-events: none — ไม่บังการคลิกอะไรเลย */
+.cursor {
+  position: fixed; top: 0; left: 0; z-index: calc(var(--z-overlay) + 40); pointer-events: none;
+  width: 0; height: 0; opacity: 0; transition: opacity var(--dur-2);
+}
+.cursor.on { opacity: 1; }
+.cursor.hidden, .cursor[data-state="text"] { opacity: 0; }
+.cursor-ring {
+  position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid rgb(var(--rgb-accent) / 0.75);
+  box-shadow: 0 0 18px rgb(var(--rgb-accent) / 0.35), inset 0 0 10px rgb(var(--rgb-accent) / 0.2);
+  transition: transform var(--dur-3) var(--ease-spring), background-color var(--dur-3), border-color var(--dur-3);
+}
+.cursor[data-state="link"] .cursor-ring { transform: scale(1.5); background: rgb(var(--rgb-accent) / 0.12); border-color: rgb(var(--rgb-accent)); }
+.cursor[data-state="game"] .cursor-ring { transform: scale(2.4); background: rgb(var(--rgb-bg) / 0.55); border-color: rgb(var(--rgb-white) / 0.7); backdrop-filter: blur(2px); }
+.cursor.down .cursor-ring { transform: scale(0.8); }
+.cursor[data-state="game"].down .cursor-ring { transform: scale(2.1); }
+.cursor-label {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%) scale(0.6); opacity: 0;
+  color: var(--c-text); font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: 0.06em; white-space: nowrap;
+  transition: opacity var(--dur-2), transform var(--dur-3) var(--ease-spring);
+}
+.cursor[data-state="game"] .cursor-label { opacity: 1; transform: translate(-50%, -50%) scale(1); }

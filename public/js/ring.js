@@ -12,7 +12,7 @@ export function mountRing(sec, games) {
   if (!ring) return;
   if (games.length < 3) { sec.hidden = true; return; }
   ring.innerHTML = games.map((g) => `
-    <li class="ring-item">
+    <li class="ring-item" data-c1="${esc(g.color1 ?? '')}">
       <a href="/game/${esc(g.slug)}">
         <img src="${esc(g.cover)}?size=sm" alt="" width="400" height="300" loading="lazy" decoding="async">
         <span class="ring-cap">${esc(g.title)}</span>

@@ -19,7 +19,8 @@ test('สำรอง: ฉากหลัง hero เลื่อนช้าก
   await page.goto('/game/dragon-realm');
   await page.waitForSelector('body.ready', { state: 'attached' });
   const sections = page.locator('.reveal-scroll');
-  await expect(sections.first()).toHaveClass(/revealed/); // ส่วนบน (bento) อยู่ในจอตั้งแต่แรก
+  // ส่วนที่อยู่ในจอตั้งแต่แรกแสดงทันที (hero หน้าเกมสูงเกือบเต็มจอตั้งแต่เฟส 26 — ส่วนแรกอาจอยู่ใต้จอแล้ว)
+  await expect.poll(() => sections.evaluateAll((els) => els.filter((el) => el.getBoundingClientRect().top < innerHeight).every((el) => el.classList.contains('revealed')))).toBe(true);
   const last = sections.last();
   await expect(last).not.toHaveClass(/revealed/);
   await last.scrollIntoViewIfNeeded();

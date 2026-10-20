@@ -4,6 +4,7 @@
 // - ตั้งค่าผ่าน CSSOM (style.setProperty) เท่านั้น: CSP ไม่อนุญาต style แบบ inline ใน HTML
 // - คำนวณไม่เกินเฟรมละครั้ง ขยับด้วย transform/translate (ไม่กระทบ layout)
 import { prefersReducedMotion } from './motion.js';
+import { initAmbientHover, initCursor, initScrollSkew } from './cursor-fx.js';
 
 const finePointer = () => matchMedia('(hover: hover) and (pointer: fine)').matches;
 
@@ -148,7 +149,8 @@ function initCountUp() {
 }
 
 export function initFx() {
+  initAmbientHover(); // สีพื้นหลังตามเกม — ไม่ใช่การเคลื่อนไหว ทำงานเสมอ (รวมโฟกัสด้วยคีย์บอร์ด)
   if (prefersReducedMotion()) return;
   initCountUp();
-  if (finePointer()) { initSpotlight(); initMagnetic(); }
+  if (finePointer()) { initSpotlight(); initMagnetic(); initCursor(); initScrollSkew(); }
 }

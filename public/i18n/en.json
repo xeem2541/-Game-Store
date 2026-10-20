@@ -389,5 +389,6 @@
   "marquee.pause": "Pause the scrolling game titles",
   "marquee.play": "Resume the scrolling game titles",
   "ring.title": "Spin through the store",
-  "ring.hint": "Scroll to spin the wheel"
+  "ring.hint": "Scroll to spin the wheel",
+  "cursor.view": "View"
 }

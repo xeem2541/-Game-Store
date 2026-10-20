@@ -2,6 +2,7 @@ import { markReady, api, descOf, cart, cardHtml, remember, priceHtml, esc, $, t,
 import { splitWords } from './kinetic.js';
 import { prefersReducedMotion } from './motion.js';
 import { initScrollFx } from './scroll-fx.js';
+import { mountGameWorld } from './game-world.js';
 
 initScrollFx(); // parallax / ค่อย ๆ ปรากฏ สำรองสำหรับเบราว์เซอร์ที่ไม่รองรับ CSS scroll-driven animation
 
@@ -37,6 +38,8 @@ if (game) {
   const firstSentence = (descOf(g).match(/^.+?[.!?。](\s|$)/)?.[0] ?? descOf(g)).trim();
 
   $('#detail').innerHTML = `
+    <!-- โลกของเกมเต็มจอ (js/game-world.js): ฉากของเกม → ลำแสง → ละออง → หมอก — fixed หลังเนื้อหาทั้งหมด -->
+    <div class="game-world" id="gameWorld" aria-hidden="true"><div class="gw-layer gw-far"></div><div class="gw-layer gw-rays"></div><div class="gw-layer gw-dust"></div><div class="gw-fog"></div></div>
     <!-- parallax 3 ชั้น: ฉากหลังเบลอ (ช้าสุด) → แสงสีของเกม → กล่องเกม (เร็วกว่าเนื้อหา) -->
     <div class="game-backdrop" id="gameBackdrop"></div>
     <div class="game-glow" aria-hidden="true"></div>
@@ -122,6 +125,7 @@ if (game) {
   spine.style.setProperty('--c1', g.color1);
   spine.style.setProperty('--c2', g.color2);
   $('.game-glow').style.setProperty('--glow', g.color1);
+  mountGameWorld($('#gameWorld'), g);
 
   initBuyButtons(g);
   initStickyCta();

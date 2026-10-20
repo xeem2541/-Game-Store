@@ -29,7 +29,7 @@ const track = $('#deckTrack');
 const deckShown = matchMedia('(max-width: 900px)').matches;
 if (deckGames.length) {
   track.innerHTML = deckGames.map((g, i) => `
-    <a class="deck-card" href="/game/${esc(g.slug)}">
+    <a class="deck-card" href="/game/${esc(g.slug)}" data-c1="${esc(g.color1 ?? '')}">
       <img src="${esc(g.cover)}" alt="" width="400" height="300" ${i === 0 && deckShown ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'}>
       ${g.discount ? `<span class="deck-badge">-${g.discount}%</span>` : ''}
       <span class="deck-info"><span class="deck-title">${esc(g.title)}</span><span class="deck-meta"><span>${esc(g.platform)}</span><span class="deck-price">${priceHtml(g)}</span></span></span>

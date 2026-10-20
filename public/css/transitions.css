@@ -27,3 +27,11 @@
 .detail-sk .sk-line { width: 100%; }
 .detail-sk .sk-line.w60 { width: 60%; height: 48px; }
 .detail-sk .sk-line.w40 { width: 40%; }
+
+/* หน้าเกม: หน้าใหม่ขยายเป็นวงกลมจากจุดที่กดการ์ด (UI เฟส 26 — theme-init.js ตั้ง data-vt และ --vt-x/--vt-y) — ภาพปกยังขยายไปเป็นภาพปกหน้าเกมเหมือนเดิม */
+:root[data-vt="circle"]::view-transition-old(root) { animation: none; }
+:root[data-vt="circle"]::view-transition-new(root) { animation: vt-circle 0.65s cubic-bezier(0.65, 0, 0.35, 1) both; }
+@keyframes vt-circle {
+  from { clip-path: circle(0% at var(--vt-x, 50%) var(--vt-y, 50%)); }
+  to { clip-path: circle(150% at var(--vt-x, 50%) var(--vt-y, 50%)); }
+}

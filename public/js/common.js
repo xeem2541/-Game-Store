@@ -157,7 +157,7 @@ export const priceHtml = (g) => (g.discount ? `<span class="old">${priceText(g.p
 
 export function cardHtml(g) {
   return `
-  <article class="card">
+  <article class="card" data-c1="${esc(g.color1 ?? '')}">
     <a class="cover" href="/game/${esc(g.slug)}">
       <img src="${esc(g.cover)}?size=sm" alt="${esc(g.title)}" loading="lazy" decoding="async" width="400" height="300">
       ${g.discount ? `<span class="badge">-${g.discount}%</span>` : ''}
@@ -428,12 +428,24 @@ document.addEventListener('keydown', (e) => {
 
 // เปลี่ยนหน้าแบบ view transition (css/transitions.css): กดการ์ด/ลิงก์เกม → ภาพปกที่กดขยายไปเป็นภาพปกในหน้าเกม
 // จำลิงก์ที่กดล่าสุด แล้วตอนออกจากหน้า (pageswap) ตั้งชื่อ game-cover ให้ภาพปกของลิงก์นั้น ถ้าปลายทางเป็นหน้าเกมเดียวกัน
+// หน้าเกมเปิดเป็นวงกลมขยายออกจากจุดที่กด (UI เฟส 26): จำจุดกดไว้ใน sessionStorage ให้หน้าถัดไปอ่านตอน pagereveal (theme-init.js)
+const VT_ORIGIN_KEY = 'vtOrigin';
 let lastGameLink = null;
-document.addEventListener('click', (e) => { lastGameLink = e.target.closest?.('a[href^="/game/"]') ?? null; }, true);
+let lastClick = null;
+document.addEventListener('click', (e) => {
+  lastGameLink = e.target.closest?.('a[href^="/game/"]') ?? null;
+  if (!lastGameLink) return;
+  // กดด้วยคีย์บอร์ด (Enter) ไม่มีพิกัดเมาส์ → ใช้กึ่งกลางของลิงก์
+  const r = lastGameLink.getBoundingClientRect();
+  const x = e.detail ? e.clientX : r.left + r.width / 2;
+  const y = e.detail ? e.clientY : r.top + r.height / 2;
+  lastClick = `${Math.round((x / innerWidth) * 100)},${Math.round((y / innerHeight) * 100)}`;
+}, true);
 window.addEventListener('pageswap', (e) => {
   if (!e.viewTransition || !lastGameLink) return;
   const to = e.activation?.entry?.url;
   if (!to || new URL(to).pathname !== new URL(lastGameLink.href).pathname) return;
+  try { if (lastClick) sessionStorage.setItem(VT_ORIGIN_KEY, lastClick); } catch { /* โหมดส่วนตัว: ใช้การเปลี่ยนหน้าแบบปกติ */ }
   const img = lastGameLink.querySelector('img') ?? lastGameLink.closest('.card, .tile')?.querySelector('.cover img, img');
   if (img?.getClientRects().length) img.style.viewTransitionName = 'game-cover';
 });
