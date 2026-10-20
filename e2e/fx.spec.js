@@ -25,7 +25,7 @@ test('Spotlight + แม่เหล็ก: ตามเมาส์บน deskt
   await ready(page);
   const btn = page.locator('#addBtn');
   const r = await btn.boundingBox();
-  await page.mouse.move(r.x + r.width + 40, r.y + r.height + 40); // ใกล้ปุ่ม แต่ไกลพอที่ไม่จำกัดก็จะเกิน 8px
+  await page.mouse.move(r.x + r.width + 40, r.y + r.height + 40, { steps: 4 }); // ใกล้ปุ่ม แต่ไกลพอที่ไม่จำกัดก็จะเกิน 8px
   await expect(btn).toHaveClass(/is-magnet/);
   await page.waitForTimeout(700); // รอ transition จบ
   const [tx, ty] = (await btn.evaluate((b) => getComputedStyle(b).translate)).split(' ').map(parseFloat);

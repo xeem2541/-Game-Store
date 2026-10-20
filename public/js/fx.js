@@ -46,25 +46,24 @@ export function magnetOffset(dx, dy, w, h, max = MAG_MAX, reach = MAG_REACH) {
 }
 
 function initMagnetic() {
-  const visible = new Set();
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) e.isIntersecting ? visible.add(e.target) : visible.delete(e.target);
-  });
-  const watched = new WeakSet();
-  const watch = (root) => {
-    for (const el of root.querySelectorAll?.(MAGNET_SEL) ?? []) if (!watched.has(el)) { watched.add(el); io.observe(el); }
+  // ปุ่มทั้งหมดที่ตรงเงื่อนไข (หน้าหนึ่งมีไม่กี่ปุ่ม) — ตรวจตำแหน่งตอนเมาส์ขยับเลย ไม่รอ IntersectionObserver
+  // (ซึ่งแจ้งแบบ async: เมาส์ที่ขยับทันทีหลังหน้าโหลดจะถูกมองข้าม)
+  const buttons = new Set();
+  const watch = () => {
+    for (const el of buttons) if (!el.isConnected) buttons.delete(el);
+    for (const el of document.querySelectorAll(MAGNET_SEL)) buttons.add(el);
   };
-  watch(document);
-  onDomAdded(() => watch(document));
+  watch();
+  onDomAdded(watch);
 
   let frame = 0;
   let pt = null;
   const apply = () => {
     frame = 0;
-    for (const btn of visible) {
-      if (!btn.isConnected || !btn.matches(MAGNET_SEL)) { btn.style.removeProperty('--mag-x'); btn.style.removeProperty('--mag-y'); continue; }
+    for (const btn of buttons) {
       const r = btn.getBoundingClientRect();
-      const off = pt && magnetOffset(pt.x - (r.left + r.width / 2), pt.y - (r.top + r.height / 2), r.width, r.height);
+      const usable = btn.isConnected && btn.matches(MAGNET_SEL) && r.width > 0 && r.bottom > 0 && r.top < innerHeight;
+      const off = usable && pt && magnetOffset(pt.x - (r.left + r.width / 2), pt.y - (r.top + r.height / 2), r.width, r.height);
       btn.classList.toggle('is-magnet', Boolean(off));
       if (off) { btn.style.setProperty('--mag-x', `${off.x.toFixed(1)}px`); btn.style.setProperty('--mag-y', `${off.y.toFixed(1)}px`); }
       else { btn.style.removeProperty('--mag-x'); btn.style.removeProperty('--mag-y'); }
