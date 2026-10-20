@@ -383,5 +383,9 @@
   "home.becauseGenre": "Because you like {genre}",
   "filter.title": "Filters",
   "filter.done": "Show results",
-  "filter.show": "Show {n} games"
+  "filter.show": "Show {n} games",
+  "marquee.trending": "Trending games",
+  "marquee.deals": "Hot deals right now",
+  "marquee.pause": "Pause the scrolling game titles",
+  "marquee.play": "Resume the scrolling game titles"
 }

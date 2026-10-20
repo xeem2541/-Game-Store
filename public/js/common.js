@@ -1,6 +1,7 @@
 // โค้ดที่ใช้ร่วมกันทุกหน้า: API, ผู้ใช้, ตะกร้า, wishlist, header/footer, การ์ดเกม
 import { t, applyI18n, lang, setLang, genreName, errText, descOf } from './i18n.js';
 import { flash, prefersReducedMotion, replay } from './motion.js';
+import { initFx } from './fx.js';
 export { t, applyI18n, lang, genreName, descOf };
 
 export const $ = (s, r = document) => r.querySelector(s);
@@ -465,6 +466,9 @@ if (window.matchMedia('(hover: hover) and (pointer: fine)').matches && !prefersR
     for (const v of ['--rx', '--ry', '--mx', '--my']) card.style.removeProperty(v);
   }, { passive: true });
 }
+
+// Spotlight บนการ์ด, ปุ่มแม่เหล็ก, ตัวเลขนับขึ้น (js/fx.js)
+initFx();
 
 // Navbar dynamic scroll state
 window.addEventListener('scroll', () => {

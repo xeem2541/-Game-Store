@@ -2,6 +2,7 @@ import { api, cardHtml, remember, $, markReady, esc, t, genreName, priceHtml, la
 import { canRender3D, prefersReducedMotion, whenIdle } from './motion.js';
 import { splitWords } from './kinetic.js';
 import { initScrollFx } from './scroll-fx.js';
+import { mountMarquee } from './marquee.js';
 import { gsap } from './vendor/gsap.js';
 
 initScrollFx(); // parallax สำรองสำหรับเบราว์เซอร์ที่ไม่รองรับ CSS scroll-driven animation
@@ -85,6 +86,11 @@ for (const key of ['bestsellers', 'newest', 'onSale']) {
   grid.innerHTML = data[key].map(cardHtml).join('');
   grid.removeAttribute('aria-busy');
 }
+// ---- แถบชื่อเกมเลื่อนไม่หยุด: แถบบน = เกมแนะนำ + ขายดี (ไม่ซ้ำกัน), แถบกลาง = เกมลดราคาพร้อมเปอร์เซ็นต์ส่วนลด ----
+const uniq = (list) => [...new Map(list.map((g) => [g.slug, g])).values()];
+const gameLink = (g) => ({ href: `/game/${g.slug}`, label: g.title });
+mountMarquee($('#marqueeTop'), uniq([...data.featured, ...data.bestsellers]).slice(0, 12).map(gameLink));
+mountMarquee($('#marqueeDeals'), data.onSale.slice(0, 12).map((g) => ({ ...gameLink(g), tag: `-${g.discount}%` })));
 markReady();
 
 // ---- แถวเฉพาะคน: "เกมที่คุณเพิ่งดู" + "เพราะคุณสนใจแนว…" (อ่านจากประวัติการดูในเครื่อง ไม่ส่งไปเซิร์ฟเวอร์) ----

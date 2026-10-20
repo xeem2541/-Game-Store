@@ -339,5 +339,9 @@
   "home.becauseGenre": "เพราะคุณสนใจแนว {genre}",
   "filter.title": "ตัวกรอง",
   "filter.done": "ดูผลลัพธ์",
-  "filter.show": "แสดง {n} เกม"
+  "filter.show": "แสดง {n} เกม",
+  "marquee.trending": "เกมมาแรง",
+  "marquee.deals": "ดีลแรงตอนนี้",
+  "marquee.pause": "หยุดแถบชื่อเกมที่เลื่อนอยู่",
+  "marquee.play": "เล่นแถบชื่อเกมต่อ"
 }

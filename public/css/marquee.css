@@ -1,0 +1,56 @@
+/* ==========================================================================
+   แถบชื่อเกมเลื่อนไม่หยุด (UI เฟส 24) — เนื้อหาเติมโดย js/marquee.js
+   - ความสูงจองไว้ตายตัว: เนื้อหาเข้ามาทีหลังแล้วหน้าไม่ขยับ (CLS 0)
+   - เลื่อนด้วย transform เท่านั้น, หยุดเมื่อ hover / focus / กดปุ่มหยุด / อยู่นอกจอ
+   - ขอลดการเคลื่อนไหว: ไม่เลื่อนเอง เป็นแถวที่ผู้ใช้ปัดเองได้ และไม่มีปุ่มหยุด
+   ========================================================================== */
+.marquee {
+  position: relative; display: flex; align-items: center; block-size: 64px; overflow: hidden;
+  border-block: 1px solid var(--glass-border);
+  background: linear-gradient(90deg, rgb(var(--rgb-accent) / 0.07), rgb(var(--rgb-focus) / 0.07));
+}
+.marquee[hidden] { display: none; }
+.content-wrapper > .marquee { margin-block: var(--sp-6); border-radius: var(--r-lg); border-inline: 1px solid var(--glass-border); }
+.marquee-viewport {
+  flex: 1; min-width: 0; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.marquee-track { display: flex; width: max-content; }
+.marquee-list { display: flex; flex: none; margin: 0; padding: 0; list-style: none; }
+.marquee-list li { display: flex; align-items: center; white-space: nowrap; }
+/* ตัวคั่น: ข้อความแทนเป็นค่าว่าง (/ '') screen reader จึงไม่อ่านสัญลักษณ์ */
+.marquee-list li::after { content: '✦'; content: '✦' / ''; padding-inline: var(--sp-5); color: var(--c-accent); font-size: var(--fs-sm); }
+.marquee-list a {
+  color: var(--c-text-2); font-size: var(--fs-lg); font-weight: var(--fw-bold); text-decoration: none; letter-spacing: 0.02em;
+  transition: color var(--dur-2);
+}
+.marquee-list a:hover, .marquee-list a:focus-visible { color: var(--c-text); }
+.mq-tag { margin-inline-start: 6px; padding: 2px 8px; border-radius: var(--r-sm); background: var(--c-accent); color: var(--c-on-accent); font-size: var(--fs-xs); vertical-align: 2px; }
+
+.marquee.is-running .marquee-track { animation: mq-scroll var(--mq-dur, 40s) linear infinite; }
+.content-wrapper > .marquee.is-running .marquee-track { animation-direction: reverse; } /* แถบที่สองเลื่อนสวนทาง */
+.marquee:hover .marquee-track, .marquee:focus-within .marquee-track,
+.marquee.is-paused .marquee-track, .marquee.is-off .marquee-track { animation-play-state: paused; }
+@keyframes mq-scroll { to { transform: translateX(-50%); } }
+
+/* ปุ่มหยุด/เล่น: ขนาดแตะได้ 44px อยู่ท้ายแถบ (นอกพื้นที่ที่เลื่อน ไม่ทับลิงก์) */
+.marquee-toggle {
+  flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-inline: var(--sp-2);
+  border: 1px solid var(--glass-border); border-radius: 50%; background: var(--surface-1); color: var(--c-text-2); cursor: pointer;
+}
+.marquee-toggle:hover { color: var(--c-text); }
+.mq-icon { width: 10px; height: 12px; border-inline: 3px solid currentColor; } /* ⏸ */
+.marquee-toggle[aria-pressed="true"] .mq-icon { width: 0; height: 0; border-block: 6px solid transparent; border-inline: 10px solid currentColor; border-inline-end: 0; } /* ▶ */
+
+@media (max-width: 640px) {
+  .marquee { block-size: 52px; }
+  .marquee-list a { font-size: var(--fs-md); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-viewport { overflow-x: auto; scrollbar-width: none; }
+  .marquee .marquee-track { animation: none; }
+  .marquee .marquee-list[aria-hidden="true"], .marquee-toggle { display: none; }
+}
+.marquee.is-static .marquee-viewport { overflow-x: auto; scrollbar-width: none; }
+.marquee.is-static .marquee-toggle { display: none; }

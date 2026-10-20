@@ -34,8 +34,10 @@ public/               หน้าร้าน (HTML/CSS/JS ธรรมดา �
   style.css           จุดรวม CSS: css/tokens.css → components.css → layout.css → effects.css
   css/tokens.css      design tokens (สี ฟอนต์ ระยะ เงา กระจก การเคลื่อนไหว) — ใช้ทั้งหน้าร้านและหลังบ้าน
   css/bento.css       bento grid (หน้าแรก หน้าเกม โปรไฟล์) + ขนาดการ์ดเกม
-  css/effects.css     glassmorphism + micro-interactions
+  css/effects.css     glassmorphism + micro-interactions + spotlight การ์ด, ปุ่มแม่เหล็ก, ตัวเลขนับขึ้น, ผิวฟิล์ม
+  css/marquee.css     แถบชื่อเกมเลื่อนไม่หยุดในหน้าแรก (เนื้อหาจาก js/marquee.js)
   js/motion.js        ตัวช่วยแอนิเมชัน (reduced-motion, ตรวจการอยู่ในจอ, ตรวจว่าเครื่องแสดง 3D ได้)
+  js/fx.js            spotlight + ปุ่มแม่เหล็ก (เฉพาะเมาส์) + ตัวเลขนับขึ้น — ทุกหน้าร้านโหลดผ่าน common.js
   js/vendor/          GSAP / three.js ที่ build จาก node_modules แล้ว (`npm run vendor`)
 admin/                หลังบ้าน (SPA แบบ ES modules)
 scripts/              build.js (esbuild + งบขนาด JS), vendor.js (สร้าง public/js/vendor), bench.js (load test)

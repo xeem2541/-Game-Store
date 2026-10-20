@@ -1,0 +1,155 @@
+// เอฟเฟกต์เสริม (UI เฟส 24): Spotlight บนการ์ดเกม, ปุ่มแม่เหล็ก, ตัวเลขนับขึ้น — ทุกหน้าร้านโหลดผ่าน common.js
+// - ขอลดการเคลื่อนไหว → ไม่ทำอะไรเลย (ตัวเลขเป็นค่าจริงตั้งแต่แรก การ์ด/ปุ่มอยู่นิ่ง)
+// - spotlight และแม่เหล็กเฉพาะอุปกรณ์ที่มีเมาส์ (hover: hover) — จอสัมผัสไม่มี "เคอร์เซอร์" ให้ตาม
+// - ตั้งค่าผ่าน CSSOM (style.setProperty) เท่านั้น: CSP ไม่อนุญาต style แบบ inline ใน HTML
+// - คำนวณไม่เกินเฟรมละครั้ง ขยับด้วย transform/translate (ไม่กระทบ layout)
+import { prefersReducedMotion } from './motion.js';
+
+const finePointer = () => matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+// เรียก cb เมื่อมี element ใหม่ถูกเพิ่มเข้าหน้า (การ์ด/ปุ่มที่ JS สร้างทีหลัง) — รวมการเปลี่ยนแปลงทั้งเฟรมเป็นครั้งเดียว
+function onDomAdded(cb) {
+  let queued = false;
+  new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; cb(); });
+  }).observe(document.body, { childList: true, subtree: true });
+}
+
+// ---------- Spotlight: วงแสงตามเคอร์เซอร์บนการ์ดเกม (CSS วาดด้วย radial-gradient ที่ --x/--y ใน effects.css) ----------
+function initSpotlight() {
+  let frame = 0;
+  let last = null;
+  const apply = () => {
+    frame = 0;
+    const card = last?.target?.closest?.('.grid .card:not(.sk)');
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--x', `${Math.round(last.clientX - r.left)}px`);
+    card.style.setProperty('--y', `${Math.round(last.clientY - r.top)}px`);
+  };
+  document.addEventListener('pointermove', (e) => { last = e; frame ||= requestAnimationFrame(apply); }, { passive: true });
+}
+
+// ---------- Magnetic: ปุ่มหลักขนาดใหญ่ขยับเข้าหาเมาส์เล็กน้อยเมื่อเข้าใกล้ (ไม่เกิน MAG_MAX px) ----------
+// ใช้คุณสมบัติ CSS `translate` แยกจาก `transform` → ไม่ชนกับการกดยุบ (:active) และแอนิเมชันตอนโหลดของ GSAP
+export const MAGNET_SEL = '.btn.primary.big:not(:disabled):not([aria-disabled="true"])';
+export const MAG_MAX = 8; // px
+const MAG_REACH = 56; // ระยะรอบปุ่มที่เริ่มดูด (px)
+
+// ระยะที่ปุ่มควรขยับ เมื่อเมาส์อยู่ห่างจากกึ่งกลางปุ่ม (dx, dy) — คืน null เมื่ออยู่นอกระยะดูด
+export function magnetOffset(dx, dy, w, h, max = MAG_MAX, reach = MAG_REACH) {
+  if (Math.abs(dx) > w / 2 + reach || Math.abs(dy) > h / 2 + reach) return null;
+  const clamp = (v) => Math.max(-max, Math.min(max, v));
+  return { x: clamp(dx * 0.2), y: clamp(dy * 0.3) };
+}
+
+function initMagnetic() {
+  const visible = new Set();
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) e.isIntersecting ? visible.add(e.target) : visible.delete(e.target);
+  });
+  const watched = new WeakSet();
+  const watch = (root) => {
+    for (const el of root.querySelectorAll?.(MAGNET_SEL) ?? []) if (!watched.has(el)) { watched.add(el); io.observe(el); }
+  };
+  watch(document);
+  onDomAdded(() => watch(document));
+
+  let frame = 0;
+  let pt = null;
+  const apply = () => {
+    frame = 0;
+    for (const btn of visible) {
+      if (!btn.isConnected || !btn.matches(MAGNET_SEL)) { btn.style.removeProperty('--mag-x'); btn.style.removeProperty('--mag-y'); continue; }
+      const r = btn.getBoundingClientRect();
+      const off = pt && magnetOffset(pt.x - (r.left + r.width / 2), pt.y - (r.top + r.height / 2), r.width, r.height);
+      btn.classList.toggle('is-magnet', Boolean(off));
+      if (off) { btn.style.setProperty('--mag-x', `${off.x.toFixed(1)}px`); btn.style.setProperty('--mag-y', `${off.y.toFixed(1)}px`); }
+      else { btn.style.removeProperty('--mag-x'); btn.style.removeProperty('--mag-y'); }
+    }
+  };
+  document.addEventListener('pointermove', (e) => { pt = { x: e.clientX, y: e.clientY }; frame ||= requestAnimationFrame(apply); }, { passive: true });
+  document.documentElement.addEventListener('pointerleave', () => { pt = null; frame ||= requestAnimationFrame(apply); });
+}
+
+// ---------- Count-up: ตัวเลขวิ่งจาก 0 ไปค่าจริงเมื่อเลื่อนมาถึง (ครั้งเดียวต่อ element) ----------
+// ค่าจริงอยู่ใน DOM ตั้งแต่แรกเสมอ (JS ไม่ทำงาน = เห็นตัวเลขจริง) — แอนิเมชันจบที่ข้อความเดิมทุกตัวอักษร
+// ตัวเลขแต่ละก้อนถูกห่อด้วย span ความกว้างคงที่ (ความกว้างของค่าจริง, ตัวเลขกว้างเท่ากัน) → ข้อความรอบ ๆ ไม่ขยับ (CLS 0)
+export const COUNT_SEL = '.grid .card .price, .tile-deal .deal-pct, .tile-deal .price, .gt-count, .stat-val, .big-price .price, .big-price .save';
+const COUNT_MS = 900;
+const NUM_RE = /\d[\d,]*(?:\.\d+)?/g;
+
+// ข้อความของตัวเลข value ในรูปแบบเดียวกับ template (จำนวนทศนิยม, มี/ไม่มีจุลภาคคั่นหลักพัน)
+export function formatLike(template, value) {
+  const decimals = (template.split('.')[1] ?? '').length;
+  const s = value.toFixed(decimals);
+  if (!template.includes(',')) return s;
+  const [int, frac] = s.split('.');
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (frac ? `.${frac}` : '');
+}
+
+// ห่อตัวเลขทุกก้อนใน el ด้วย span.cu-num — คืนรายการ { span, text, value }
+function wrapNumbers(el) {
+  const nums = [];
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) if (/\d/.test(walker.currentNode.nodeValue)) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const frag = document.createDocumentFragment();
+    let i = 0;
+    for (const m of node.nodeValue.matchAll(NUM_RE)) {
+      frag.append(node.nodeValue.slice(i, m.index));
+      const span = document.createElement('span');
+      span.className = 'cu-num';
+      span.textContent = m[0];
+      frag.append(span);
+      nums.push({ span, text: m[0], value: Number(m[0].replace(/,/g, '')) });
+      i = m.index + m[0].length;
+    }
+    frag.append(node.nodeValue.slice(i));
+    node.replaceWith(frag);
+  }
+  return nums;
+}
+
+function runCountUp(el) {
+  const nums = wrapNumbers(el).filter((n) => Number.isFinite(n.value) && n.value > 0);
+  if (!nums.length) return;
+  // อ่านความกว้างทั้งหมดก่อน แล้วค่อยเขียน (ไม่สลับอ่าน-เขียนจนเบราว์เซอร์ต้องคำนวณเลย์เอาต์ซ้ำ)
+  const widths = nums.map((n) => n.span.getBoundingClientRect().width);
+  nums.forEach((n, i) => { n.span.style.minWidth = `${widths[i]}px`; n.span.classList.add('is-counting'); });
+  const start = performance.now();
+  const tick = (now) => {
+    const p = Math.min(1, (now - start) / COUNT_MS);
+    const eased = 1 - (1 - p) ** 3;
+    // แก้ข้อความใน text node เดิม (ไม่สร้าง node ใหม่ทุกเฟรม → ไม่ปลุก MutationObserver ที่เฝ้า childList)
+    for (const n of nums) n.span.firstChild.nodeValue = p < 1 ? formatLike(n.text, n.value * eased) : n.text;
+    if (p < 1) requestAnimationFrame(tick);
+    else for (const n of nums) n.span.classList.remove('is-counting');
+  };
+  requestAnimationFrame(tick);
+}
+
+function initCountUp() {
+  const seen = new WeakSet();
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      io.unobserve(e.target);
+      if (!prefersReducedMotion()) runCountUp(e.target);
+    }
+  }, { threshold: 0.6 });
+  const watch = () => {
+    for (const el of document.querySelectorAll(COUNT_SEL)) if (!seen.has(el)) { seen.add(el); io.observe(el); }
+  };
+  watch();
+  onDomAdded(watch);
+}
+
+export function initFx() {
+  if (prefersReducedMotion()) return;
+  initCountUp();
+  if (finePointer()) { initSpotlight(); initMagnetic(); }
+}
