@@ -92,16 +92,18 @@ test('Marquee: ชุดซ้ำ aria-hidden + ไม่รับ Tab, หย�
 
   const track = band.locator('.marquee-track');
   const state = () => track.evaluate((t) => getComputedStyle(t).animationPlayState);
-  expect(await state()).toBe('running');
-  await band.locator('.marquee-viewport').hover();
-  expect(await state()).toBe('paused');
+  // IntersectionObserver แจ้งแบบ async (WebKit ช้ากว่า) — รอให้แถบรู้ว่าอยู่ในจอก่อน
   await page.mouse.move(5, 5);
-  expect(await state()).toBe('running');
+  await expect.poll(state).toBe('running');
+  await band.locator('.marquee-viewport').hover();
+  await expect.poll(state).toBe('paused');
+  await page.mouse.move(5, 5);
+  await expect.poll(state).toBe('running');
   const toggle = band.locator('.marquee-toggle');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await page.mouse.move(5, 5);
-  expect(await state()).toBe('paused');
+  await expect.poll(state).toBe('paused');
 
   const res = await new AxeBuilder({ page }).include('.marquee').withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(serious(res).map((v) => v.id)).toEqual([]);
