@@ -2,6 +2,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -244,12 +245,17 @@ function runProd(extra, { port, wait = true } = {}) {
   };
   return { child, out: () => out, ready: wait ? ready : null };
 }
-// พอร์ตไม่ซ้ำกันในรอบเดียวกัน (ก้าวละ 13 จาก 2000 ช่อง ไม่วนซ้ำ) และต่างกันตามโปรเซส — การสุ่มเดิมชนกันได้ (EADDRINUSE)
-let portStep = 0;
-const freePort = () => 41000 + ((process.pid * 7 + portStep++ * 13) % 2000);
+// พอร์ตว่างจากระบบปฏิบัติการ (listen พอร์ต 0 แล้วปิด) — เดิมคำนวณจาก pid ในช่วง 41000–43000 ซึ่งทับช่วงพอร์ตชั่วคราว (ephemeral)
+// ที่ระบบแจกให้การเชื่อมต่ออื่นบนเครื่องเดียวกัน จึงชนได้เป็นครั้งคราว (EADDRINUSE บน CI)
+const freePort = () => new Promise((resolve, reject) => {
+  const srv = net.createServer();
+  srv.unref();
+  srv.on('error', reject);
+  srv.listen(0, '0.0.0.0', () => { const { port } = srv.address(); srv.close(() => resolve(port)); });
+});
 
 test('production: HSTS, cookie Secure+HttpOnly, CORS allowlist, ไม่มีบัญชี/คีย์/คูปองทดสอบ, ไม่มี dev-pay', async () => {
-  const port = freePort();
+  const port = await freePort();
   const p = runProd({ CORS_ORIGINS: 'https://shop.example.org' }, { port });
   try {
     await p.ready();
@@ -285,7 +291,7 @@ test('production: HSTS, cookie Secure+HttpOnly, CORS allowlist, ไม่มี�
 });
 
 test('production: trust proxy ทำงาน (IP จาก X-Forwarded-For ถูกใช้ใน rate limit/audit) เมื่อกำหนด TRUST_PROXY', async () => {
-  const port = freePort();
+  const port = await freePort();
   const p = runProd({ TRUST_PROXY: '1', AUTH_RATE_LIMIT: '3' }, { port });
   try {
     await p.ready();
@@ -302,7 +308,7 @@ test('production: trust proxy ทำงาน (IP จาก X-Forwarded-For ถ�
   } finally { p.child.kill(); }
 });
 
-test('production: ปฏิเสธการเริ่มระบบเมื่อความลับเป็นค่าเริ่มต้น/ว่าง/อ่อน (preflight)', () => {
+test('production: ปฏิเสธการเริ่มระบบเมื่อความลับเป็นค่าเริ่มต้น/ว่าง/อ่อน (preflight)', async () => {
   const cases = [
     ['JWT_SECRET', { JWT_SECRET: 'change-me-change-me-change-me-change-me' }],
     ['JWT_SECRET', { JWT_SECRET: '' }],
@@ -312,11 +318,11 @@ test('production: ปฏิเสธการเริ่มระบบเม�
     ['DEV_PAY', { DEV_PAY: '1' }],
   ];
   for (const [name, extra] of cases) {
-    const r = spawnSync(process.execPath, ['server/index.js'], { cwd: root, env: validProdEnv({ PORT: String(freePort()), ...extra }), encoding: 'utf8', timeout: 20000 });
+    const r = spawnSync(process.execPath, ['server/index.js'], { cwd: root, env: validProdEnv({ PORT: String(await freePort()), ...extra }), encoding: 'utf8', timeout: 20000 });
     assert.notEqual(r.status, 0, `${name} (${JSON.stringify(extra)}) ควรทำให้เริ่มไม่ได้`);
     assert.ok(`${r.stderr}${r.stdout}`.includes(name === 'DEV_PAY' ? 'DEV_PAY' : name), `ข้อความ error ควรบอกชื่อ ${name}`);
   }
-  const same = spawnSync(process.execPath, ['server/index.js'], { cwd: root, env: validProdEnv({ JWT_SECRET: 'a'.repeat(48), KEY_ENCRYPTION_SECRET: 'a'.repeat(48), PORT: String(freePort()) }), encoding: 'utf8', timeout: 20000 });
+  const same = spawnSync(process.execPath, ['server/index.js'], { cwd: root, env: validProdEnv({ JWT_SECRET: 'a'.repeat(48), KEY_ENCRYPTION_SECRET: 'a'.repeat(48), PORT: String(await freePort()) }), encoding: 'utf8', timeout: 20000 });
   assert.notEqual(same.status, 0, 'JWT_SECRET กับ KEY_ENCRYPTION_SECRET ห้ามเหมือนกัน');
 });
 
