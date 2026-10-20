@@ -62,8 +62,8 @@ test('Count-up: วิ่งขึ้นเมื่อเลื่อนถึ�
     new MutationObserver(() => window.__cu.push(el.textContent)).observe(el, { subtree: true, characterData: true, childList: true });
   });
   await price.scrollIntoViewIfNeeded();
-  await expect.poll(() => price.evaluate((el) => el.querySelector('.cu-num.is-counting') === null && el.querySelector('.cu-num') !== null)).toBe(true);
-  expect(await price.evaluate((el) => el.textContent)).toBe(real);
+  await expect.poll(() => price.evaluate((el) => el.querySelector('.cu-num') !== null)).toBe(true); // เริ่มนับแล้ว
+  await expect.poll(() => price.evaluate((el) => el.textContent)).toBe(real); // จบที่ค่าจริงทุกตัวอักษร
   const seen = await page.evaluate(() => window.__cu);
   expect(seen.some((s) => s !== real)).toBe(true); // มีค่าระหว่างทางจริง
   // เลื่อนออกแล้วกลับมา: ไม่นับซ้ำ

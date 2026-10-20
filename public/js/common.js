@@ -155,11 +155,16 @@ export function bindRemoveUnavailable(rerender) {
 // ---------- การ์ดเกม ----------
 export const priceHtml = (g) => (g.discount ? `<span class="old">${priceText(g.price)}</span>${priceText(g.finalPrice)}` : priceText(g.price));
 
+// การ์ดโฮโลแกรม (UI เฟส 27): เฉพาะเกมลดแรง (30% ขึ้นไป) — ผิวฟอยล์รุ้งแบบการ์ดสะสม (มีไม่กี่ใบจึงยังดูพิเศษ)
+export const HOLO_MIN_DISCOUNT = 30;
+const isHolo = (g) => g.discount >= HOLO_MIN_DISCOUNT;
+
 export function cardHtml(g) {
   return `
-  <article class="card" data-c1="${esc(g.color1 ?? '')}">
+  <article class="card${isHolo(g) ? ' holo' : ''}" data-c1="${esc(g.color1 ?? '')}" data-slug="${esc(g.slug)}">
     <a class="cover" href="/game/${esc(g.slug)}">
       <img src="${esc(g.cover)}?size=sm" alt="${esc(g.title)}" loading="lazy" decoding="async" width="400" height="300">
+      ${isHolo(g) ? '<span class="holo-foil" aria-hidden="true"></span>' : ''}
       ${g.discount ? `<span class="badge">-${g.discount}%</span>` : ''}
     </a>
     ${heartHtml(g.id)}
@@ -470,12 +475,15 @@ if (window.matchMedia('(hover: hover) and (pointer: fine)').matches && !prefersR
     card.style.setProperty('--ry', `${((x - 0.5) * 6).toFixed(2)}deg`);
     card.style.setProperty('--mx', `${(x * 100).toFixed(1)}%`);
     card.style.setProperty('--my', `${(y * 100).toFixed(1)}%`);
+    // ไม่มีหน่วย (−0.5..0.5) สำหรับคำนวณระยะ px: ชื่อเกม/ราคาขยับคนละระยะ (ความลึกในการ์ด) และผิวโฮโลแกรมไล่สีตามมุม (effects.css)
+    card.style.setProperty('--tx', (x - 0.5).toFixed(3));
+    card.style.setProperty('--ty', (y - 0.5).toFixed(3));
   };
   document.addEventListener('pointermove', (e) => { last = e; frame ||= requestAnimationFrame(applyTilt); }, { passive: true });
   document.addEventListener('pointerout', (e) => {
     const card = e.target.closest?.('.card');
     if (!card || card.contains(e.relatedTarget)) return;
-    for (const v of ['--rx', '--ry', '--mx', '--my']) card.style.removeProperty(v);
+    for (const v of ['--rx', '--ry', '--mx', '--my', '--tx', '--ty']) card.style.removeProperty(v);
   }, { passive: true });
 }
 

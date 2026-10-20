@@ -162,9 +162,8 @@ input:user-invalid:focus, textarea:user-invalid:focus { box-shadow: 0 0 0 3px rg
 .btn.primary.big { translate: var(--mag-x, 0) var(--mag-y, 0); transition: translate var(--dur-4) var(--ease-spring), background-color var(--dur-2), border-color var(--dur-2), box-shadow var(--dur-2), color var(--dur-2), transform var(--dur-2) var(--ease-out); }
 .btn.primary.big.is-magnet { transition-duration: var(--dur-2); }
 
-/* ---- ตัวเลขนับขึ้น: กว้างคงที่เท่าค่าจริงระหว่างนับ ข้อความรอบ ๆ จึงไม่ขยับ ---- */
+/* ---- ตัวเลขนับขึ้น: ตัวเลขกว้างเท่ากันทุกตัว (fx.js เติมช่องว่างกว้างเท่าตัวเลขระหว่างนับ) ข้อความรอบ ๆ จึงไม่ขยับ ---- */
 .cu-num { font-variant-numeric: tabular-nums; }
-.cu-num.is-counting { display: inline-block; text-align: end; }
 
 /* ---- ผิวฟิล์ม: ลายเกรนบาง ๆ บนพื้นหลังมืด — อยู่หลังเนื้อหาทั้งหมด (z-index -1 เหมือนแสงบรรยากาศ) จึงไม่ทับการ์ด ปุ่ม หรือช่องค้นหา ----
    SVG noise แบบ inline (data: URI — CSP อนุญาต img-src data:) วาดครั้งเดียวแล้วปูซ้ำ ไม่มีแอนิเมชัน */

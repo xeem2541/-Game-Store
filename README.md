@@ -40,6 +40,7 @@ public/               หน้าร้าน (HTML/CSS/JS ธรรมดา �
   css/ring.css        วงล้อเกม 3 มิติที่หมุนตามการเลื่อน (js/ring.js)
   css/cursor.css      เคอร์เซอร์วงแสง + แสงพื้นหลังตามสีเกม (js/cursor-fx.js, js/ambient.js)
   css/world.css       หน้าเกมเต็มจอ — โลกของเกมหลายชั้นหลังเนื้อหา (js/game-world.js)
+  css/holo.css        การ์ดโฮโลแกรม, ขอบเรืองแสงหมุน, พรีวิวภาพในเกม (js/card-preview.js), ตัวอักษรถอดรหัส (js/scramble.js)
   js/motion.js        ตัวช่วยแอนิเมชัน (reduced-motion, ตรวจการอยู่ในจอ, ตรวจว่าเครื่องแสดง 3D ได้)
   js/fx.js            spotlight + ปุ่มแม่เหล็ก (เฉพาะเมาส์) + ตัวเลขนับขึ้น — ทุกหน้าร้านโหลดผ่าน common.js
   js/vendor/          GSAP / three.js ที่ build จาก node_modules แล้ว (`npm run vendor`)

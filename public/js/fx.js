@@ -5,6 +5,8 @@
 // - คำนวณไม่เกินเฟรมละครั้ง ขยับด้วย transform/translate (ไม่กระทบ layout)
 import { prefersReducedMotion } from './motion.js';
 import { initAmbientHover, initCursor, initScrollSkew } from './cursor-fx.js';
+import { initScramble } from './scramble.js';
+import { initCardPreview } from './card-preview.js';
 
 const finePointer = () => matchMedia('(hover: hover) and (pointer: fine)').matches;
 
@@ -76,7 +78,7 @@ function initMagnetic() {
 
 // ---------- Count-up: ตัวเลขวิ่งจาก 0 ไปค่าจริงเมื่อเลื่อนมาถึง (ครั้งเดียวต่อ element) ----------
 // ค่าจริงอยู่ใน DOM ตั้งแต่แรกเสมอ (JS ไม่ทำงาน = เห็นตัวเลขจริง) — แอนิเมชันจบที่ข้อความเดิมทุกตัวอักษร
-// ตัวเลขแต่ละก้อนถูกห่อด้วย span ความกว้างคงที่ (ความกว้างของค่าจริง, ตัวเลขกว้างเท่ากัน) → ข้อความรอบ ๆ ไม่ขยับ (CLS 0)
+// ตัวเลขแต่ละก้อนถูกห่อด้วย span ตัวเลขกว้างเท่ากัน (tabular-nums) และเติมช่องว่างกว้างเท่าตัวเลขให้ยาวเท่าค่าจริง → ข้อความรอบ ๆ แทบไม่ขยับ
 export const COUNT_SEL = '.grid .card .price, .tile-deal .deal-pct, .tile-deal .price, .gt-count, .stat-val, .big-price .price, .big-price .save';
 const COUNT_MS = 900;
 const NUM_RE = /\d[\d,]*(?:\.\d+)?/g;
@@ -117,17 +119,15 @@ function wrapNumbers(el) {
 function runCountUp(el) {
   const nums = wrapNumbers(el).filter((n) => Number.isFinite(n.value) && n.value > 0);
   if (!nums.length) return;
-  // อ่านความกว้างทั้งหมดก่อน แล้วค่อยเขียน (ไม่สลับอ่าน-เขียนจนเบราว์เซอร์ต้องคำนวณเลย์เอาต์ซ้ำ)
-  const widths = nums.map((n) => n.span.getBoundingClientRect().width);
-  nums.forEach((n, i) => { n.span.style.minWidth = `${widths[i]}px`; n.span.classList.add('is-counting'); });
   const start = performance.now();
   const tick = (now) => {
     const p = Math.min(1, (now - start) / COUNT_MS);
     const eased = 1 - (1 - p) ** 3;
     // แก้ข้อความใน text node เดิม (ไม่สร้าง node ใหม่ทุกเฟรม → ไม่ปลุก MutationObserver ที่เฝ้า childList)
-    for (const n of nums) n.span.firstChild.nodeValue = p < 1 ? formatLike(n.text, n.value * eased) : n.text;
+    // เติมช่องว่างกว้างเท่าตัวเลข (U+2007) ด้านหน้าให้ยาวเท่าค่าจริง: ตัวเลขกว้างคงที่โดยยังเป็นข้อความ inline
+    // (เดิมใช้ inline-block กว้างคงที่ — ทำให้ "฿" กับตัวเลขขึ้นคนละบรรทัดได้ในการ์ดแคบระหว่างนับ)
+    for (const n of nums) n.span.firstChild.nodeValue = p < 1 ? formatLike(n.text, n.value * eased).padStart(n.text.length, '\u2007') : n.text;
     if (p < 1) requestAnimationFrame(tick);
-    else for (const n of nums) n.span.classList.remove('is-counting');
   };
   requestAnimationFrame(tick);
 }
@@ -152,5 +152,6 @@ export function initFx() {
   initAmbientHover(); // สีพื้นหลังตามเกม — ไม่ใช่การเคลื่อนไหว ทำงานเสมอ (รวมโฟกัสด้วยคีย์บอร์ด)
   if (prefersReducedMotion()) return;
   initCountUp();
-  if (finePointer()) { initSpotlight(); initMagnetic(); initCursor(); initScrollSkew(); }
+  initScramble();
+  if (finePointer()) { initSpotlight(); initMagnetic(); initCursor(); initScrollSkew(); initCardPreview(); }
 }

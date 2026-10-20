@@ -1,0 +1,77 @@
+/* ==========================================================================
+   UI เฟส 27: การ์ดโฮโลแกรม + ความลึกในการ์ด, ขอบเรืองแสงหมุน, พรีวิวภาพในเกมบนการ์ด, ตัวอักษรถอดรหัส
+   ค่าตำแหน่งเมาส์บนการ์ด --mx/--my (%) และ --tx/--ty (−0.5..0.5) มาจาก common.js (เฉพาะอุปกรณ์ที่มีเมาส์ + ไม่ได้ขอลดการเคลื่อนไหว)
+   ========================================================================== */
+
+/* ---- ผิวฟอยล์โฮโลแกรม (การ์ดเกมลดแรง): แถบรุ้งเฉียง + ประกายวาว เลื่อนตามมุมเอียงของการ์ด ----
+   อยู่บนภาพปกเท่านั้น (ไม่ทับชื่อ/ราคา/ปุ่ม), ไม่รับคลิก; ไม่มีเมาส์ = ฟอยล์นิ่งจาง ๆ */
+.holo-foil {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit;
+  background:
+    repeating-linear-gradient(115deg,
+      hsl(0 100% 70% / 0.55) 0%, hsl(50 100% 65% / 0.5) 7%, hsl(140 90% 60% / 0.5) 14%,
+      hsl(200 100% 65% / 0.55) 21%, hsl(270 90% 70% / 0.55) 28%, hsl(330 100% 70% / 0.5) 35%, hsl(0 100% 70% / 0.55) 42%),
+    repeating-linear-gradient(65deg, rgb(var(--rgb-white) / 0) 0 6px, rgb(var(--rgb-white) / 0.14) 6px 7px);
+  background-size: 300% 300%, 100% 100%;
+  background-position: var(--mx, 30%) var(--my, 30%), center;
+  mix-blend-mode: color-dodge; opacity: 0.22;
+  transition: opacity var(--dur-3) var(--ease-out);
+}
+/* ประกายแสงที่ตามเคอร์เซอร์บนฟอยล์ */
+.holo-foil::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 30%), rgb(var(--rgb-white) / 0.55), transparent 38%);
+  mix-blend-mode: overlay; opacity: 0; transition: opacity var(--dur-3);
+}
+.grid .card.holo:hover .holo-foil { opacity: 0.6; }
+.grid .card.holo:hover .holo-foil::after { opacity: 1; }
+/* ขอบรุ้งบาง ๆ บอกว่าเป็นการ์ดพิเศษ (ทุกอุปกรณ์) */
+/* ชั้นบนต้องทึบ (พื้นการ์ดเดิมโปร่ง 60%) ไม่งั้นสีรุ้งของชั้นขอบจะทะลุทั้งการ์ด */
+.grid .card.holo {
+  border-color: transparent; background-color: transparent; background-origin: border-box; background-clip: padding-box, border-box;
+  background-image: linear-gradient(color-mix(in srgb, var(--c-surface) 60%, var(--c-bg)), color-mix(in srgb, var(--c-surface) 60%, var(--c-bg))), linear-gradient(120deg, #ff6b6b, #ffd166, #06d6a0, #4cc9f0, #9b5de5, #f15bb5);
+}
+
+/* ---- ความลึกในการ์ด: ชื่อเกม/ราคาขยับมากกว่าการ์ด (เหมือนลอยออกมา) ตามมุมเอียง ---- */
+.grid .card .title, .grid .card .price-row { transition: translate var(--dur-3) var(--ease-out), text-shadow var(--dur-3); }
+.grid .card:hover .title { translate: calc(var(--tx, 0) * 10px) calc(var(--ty, 0) * 6px); text-shadow: calc(var(--tx, 0) * -8px) calc(var(--ty, 0) * -6px + 4px) 12px rgb(var(--rgb-black) / 0.6); }
+.grid .card:hover .price-row { translate: calc(var(--tx, 0) * 6px) calc(var(--ty, 0) * 4px); }
+
+/* ---- ขอบเรืองแสงหมุน: ปุ่มหลักขนาดใหญ่, ช่องดีลแรงสุด, แผงสรุปยอด ----
+   มุมของ conic-gradient เป็น custom property ที่ลงทะเบียนชนิด <angle> จึงหมุนได้ด้วย CSS ล้วน
+   เบราว์เซอร์ที่ไม่รองรับ @property: ขอบไล่สีนิ่ง (ไม่หมุน) */
+@property --glow-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.btn.primary.big, .tile-deal, .side .summary {
+  --glow-ring: conic-gradient(from var(--glow-angle), rgb(var(--rgb-accent)), rgb(var(--rgb-focus)), #ffd166, rgb(var(--rgb-accent)));
+  animation: glow-spin 4s linear infinite;
+}
+.btn.primary.big { border: 2px solid transparent; background: linear-gradient(var(--c-accent), var(--c-accent)) padding-box, var(--glow-ring) border-box; box-shadow: 0 0 22px rgb(var(--rgb-accent) / 0.35); }
+.btn.primary.big:hover:not(:disabled) { border-color: transparent; background: linear-gradient(var(--c-accent-hover), var(--c-accent-hover)) padding-box, var(--glow-ring) border-box; }
+.side .summary { border: 1.5px solid transparent; background: linear-gradient(var(--c-surface), var(--c-surface)) padding-box, var(--glow-ring) border-box; }
+/* ช่องดีลมีภาพพื้นหลัง: วาดขอบด้วยชั้นแยก (mask ให้เหลือแค่เส้นขอบ) — ::before ใช้ทำชั้นมืดอยู่แล้ว */
+.tile-deal::after {
+  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: inherit; padding: 2px;
+  background: var(--glow-ring);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+@keyframes glow-spin { to { --glow-angle: 360deg; } }
+
+/* ---- พรีวิวภาพในเกมบนการ์ด (js/card-preview.js): ภาพซ้อนบนปก ค่อย ๆ เปลี่ยน + แถบบอกภาพ ---- */
+.cover-preview { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.cover-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.45s var(--ease-out); }
+.cover-preview img.on { opacity: 1; }
+.cover-preview-bar { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; gap: 4px; }
+.cover-preview-bar i { flex: 1; height: 3px; border-radius: 2px; background: rgb(var(--rgb-white) / 0.35); overflow: hidden; }
+.cover-preview-bar i.on::before { content: ''; display: block; height: 100%; background: var(--c-text); animation: preview-fill var(--preview-ms, 1100ms) linear both; transform-origin: left; }
+.cover-preview-bar i.done { background: var(--c-text); }
+@keyframes preview-fill { from { transform: scaleX(0); } }
+
+/* ---- ตัวอักษรถอดรหัส (js/scramble.js): ระหว่างถอดรหัส ความกว้างคงที่ ไม่ขึ้นบรรทัดใหม่ (ข้อความรอบ ๆ ไม่ขยับ) ---- */
+.scrambling { display: inline-block; white-space: nowrap; overflow: hidden; vertical-align: bottom; }
+.scrambling .sc-glyph { color: var(--c-accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn.primary.big, .tile-deal, .side .summary { animation: none; }
+  .grid .card:hover .title, .grid .card:hover .price-row { translate: none; }
+}

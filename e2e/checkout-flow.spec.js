@@ -57,7 +57,7 @@ test('ตะกร้า: แถบขั้นตอน, ลบเกมแล�
   await expect(page.locator('.coupon-tag .coupon-code')).toHaveText('WELCOME10');
   await expect(page.locator('.coupon-save')).toHaveText(/^−฿/);
   await expect(page.locator('.savings')).toBeVisible();
-  await page.locator('.side').evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))); // ตรวจหลังแอนิเมชันคูปองจบ
+  await page.locator('.side').evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).filter((a) => a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished))); // ไม่รอแอนิเมชันวนไม่จบ (ขอบเรืองแสงหมุน) // ตรวจหลังแอนิเมชันคูปองจบ
   await expect(page.locator('#toast')).not.toHaveClass(/show/); // toast ของการลบเกมต้องหายก่อน (ไม่งั้นตรวจตอนกำลังจาง)
   expect(await serious(page)).toEqual([]);
 
