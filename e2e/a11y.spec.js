@@ -167,6 +167,9 @@ test('ซื้อยังไง บนมือถือ: ภาพประ�
   await expect.poll(() => step2.locator('.hv-qr').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
   await expect(page.locator('.howto-stage .hv-pay')).toHaveAttribute('data-method', 'card'); // ภาพหลัก (desktop) แยกกัน
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  // ข้อความใน hero ค่อย ๆ ปรากฏ (GSAP เริ่มหลังฉากเปิดตัว) — รอจนทึบเต็มก่อนตรวจ ไม่งั้น axe วัดคอนทราสต์ของตัวอักษรที่ยังโปร่งแสง
+  await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('.hero-eyebrow, .hero-actions .btn, .hero-points li, .hero-title .kt-word')]
+    .every((el) => getComputedStyle(el).opacity === '1'))).toBe(true);
   const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-  expect(res.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => v.id)).toEqual([]);
+  expect(serious(res).map((v) => v.id), fmt(serious(res))).toEqual([]); // ข้อความผิดพลาดบอก element ที่ไม่ผ่าน
 });
