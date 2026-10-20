@@ -14,7 +14,7 @@
 .ring-item a { position: relative; display: block; overflow: hidden; border: 1px solid var(--glass-border); border-radius: var(--r-lg); background: var(--surface-1); color: var(--c-text); text-decoration: none; }
 .ring-item img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
 /* ชื่อเกมอยู่ในภาพปกแล้ว → ซ่อนทางสายตา (ยังเป็นชื่อของลิงก์ให้ screen reader) */
-.ring-cap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ring-cap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; } /* แบบเดียวกับ .sr-only */
 .ring-item a:focus-visible { outline: 3px solid var(--c-focus); outline-offset: 3px; }
 .ring-info, .ring-hint, .ring-floor { display: none; }
 
@@ -35,11 +35,11 @@
 .ring-sec.is-ring .ring-item {
   position: absolute; top: 50%; left: 50%; margin: calc(var(--card-w) * -0.375) 0 0 calc(var(--card-w) / -2);
   transform: rotateY(var(--a, 0deg)) translateZ(var(--ring-r, 600px));
-  opacity: calc(1 - var(--d, 0) * 0.8);
 }
 .ring-sec.is-ring .ring-item a { box-shadow: 0 24px 48px rgb(var(--rgb-black) / 0.55); transition: border-color var(--dur-3), box-shadow var(--dur-3); }
-/* การ์ดที่หันหลัง: ภาพกลับด้าน → มืดลงจนเหลือแค่เงา (ไม่เห็นชื่อกลับหัว) */
-.ring-sec.is-ring .ring-item a::after { content: ''; position: absolute; inset: 0; background: var(--c-bg); opacity: calc(var(--d, 0) * 1.1 - 0.1); pointer-events: none; }
+/* ไกลจากด้านหน้า = มืดลง (ชั้นทึบทับภาพ ไม่ใช้ opacity ของการ์ด — ข้อความในการ์ดจึงไม่ถูกมองว่าคอนทราสต์ต่ำ)
+   การ์ดที่หันหลัง (ภาพกลับด้าน) มืดจนเหลือแค่เงา */
+.ring-sec.is-ring .ring-item a::after { content: ''; position: absolute; inset: 0; background: var(--c-bg); opacity: clamp(0, var(--d, 0) * 1.15 - 0.05, 0.92); pointer-events: none; }
 .ring-sec.is-ring .ring-item.is-front a { border-color: rgb(var(--rgb-accent) / 0.8); box-shadow: 0 0 0 1px rgb(var(--rgb-accent) / 0.5), 0 0 48px rgb(var(--rgb-accent) / 0.45), 0 30px 60px rgb(var(--rgb-black) / 0.6); }
 .ring-sec.is-ring .ring-floor {
   display: block; position: absolute; left: 50%; bottom: -24px; width: min(90%, 900px); height: 90px; transform: translateX(-50%);
@@ -48,7 +48,7 @@
 }
 .ring-sec.is-ring .ring-info { display: grid; justify-items: center; gap: 2px; min-height: 84px; text-align: center; }
 .ring-count { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--c-accent); letter-spacing: 0.1em; }
-.ring-name { font-size: var(--fs-xl); }
+.ring-name { font-size: var(--fs-xl); color: var(--c-text); }
 .ring-price { color: var(--c-text-2); font-weight: var(--fw-bold); }
 .ring-sec.is-ring .ring-hint { display: block; margin: 0; color: var(--c-text-2); font-size: var(--fs-sm); }
 

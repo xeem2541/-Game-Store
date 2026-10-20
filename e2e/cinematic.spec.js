@@ -132,5 +132,5 @@ test('วงล้อเกมบนมือถือ: การ์ดด้า
   });
   expect(box.front).toBeGreaterThan(box.header);
   expect(box.info).toBeLessThanOrEqual(box.tab);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0); // WebKit: innerWidth รวมแถบเลื่อน 16px
 });
