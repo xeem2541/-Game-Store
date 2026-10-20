@@ -23,8 +23,14 @@ function scramble(el) {
   heading.setAttribute('aria-label', heading.textContent.trim());
   el.style.width = `${r.width}px`;
   el.classList.add('scrambling');
+  const render = (p) => {
+    const done = Math.floor(Math.max(0, p - 0.2) / 0.8 * parts.length);
+    const rest = parts.slice(done).map((g) => (/\s/.test(g) ? g : GLYPHS[Math.floor(Math.random() * GLYPHS.length)])).join('');
+    el.innerHTML = `${esc(parts.slice(0, done).join(''))}<span class="sc-glyph">${esc(rest)}</span>`;
+  };
+  render(0); // เฟรมแรกทันที: เริ่มจากตัวสุ่ม ไม่เห็นข้อความจริงแวบหนึ่งก่อน (และไม่ขึ้นกับว่าเฟรมถัดไปมาช้าแค่ไหน)
   const start = performance.now();
-  let last = 0;
+  let last = start;
   const tick = (now) => {
     const p = (now - start) / SCRAMBLE_MS;
     if (p >= 1) {
@@ -34,12 +40,7 @@ function scramble(el) {
       heading.removeAttribute('aria-label');
       return;
     }
-    if (now - last > 40) { // ~25 ครั้ง/วินาที พอสำหรับเอฟเฟกต์ และไม่สร้าง DOM ทุกเฟรม
-      last = now;
-      const done = Math.floor(Math.max(0, p - 0.2) / 0.8 * parts.length);
-      const rest = parts.slice(done).map((g) => (/\s/.test(g) ? g : GLYPHS[Math.floor(Math.random() * GLYPHS.length)])).join('');
-      el.innerHTML = `${esc(parts.slice(0, done).join(''))}<span class="sc-glyph">${esc(rest)}</span>`;
-    }
+    if (now - last > 40) { last = now; render(p); } // ~25 ครั้ง/วินาที พอสำหรับเอฟเฟกต์ และไม่สร้าง DOM ทุกเฟรม
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);

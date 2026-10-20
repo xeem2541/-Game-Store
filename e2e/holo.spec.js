@@ -97,9 +97,10 @@ test('ตัวอักษรถอดรหัส: หัวข้อขึ้
     });
     await span.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
     await page.waitForTimeout(1300);
+    // เครื่อง CI ที่ช้า (WebKit) เฟรมแอนิเมชันมาช้า — รอจนจบจริงแทนการกำหนดเวลาตายตัว
+    await expect.poll(() => span.textContent(), { timeout: 8000 }).toBe(real);
+    await expect.poll(() => span.evaluate((el) => el.closest('h2').hasAttribute('aria-label'))).toBe(false); // คืนค่าเดิมหลังจบ
     const seen = await page.evaluate(() => window.__sc);
-    expect(await span.textContent()).toBe(real);
-    expect(await span.evaluate((el) => el.closest('h2').hasAttribute('aria-label'))).toBe(false); // คืนค่าเดิมหลังจบ
     if (reducedMotion === 'reduce') {
       expect(seen).toEqual([]);
     } else {

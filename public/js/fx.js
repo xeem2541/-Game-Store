@@ -115,6 +115,7 @@ const frameText = (text, eased) => text.replace(NUM_RE, (m) => formatLike(m, toN
 function runCountUp(el) {
   const items = wrapNumbers(el).filter((n) => [...n.text.matchAll(NUM_RE)].some((m) => toNum(m[0]) > 0));
   if (!items.length) return;
+  for (const n of items) n.span.firstChild.nodeValue = frameText(n.text, 0); // เฟรมแรกทันที: เริ่มที่ 0 (ไม่เห็นค่าจริงแวบหนึ่งแล้วกระโดดกลับ)
   const start = performance.now();
   const tick = (now) => {
     const p = Math.min(1, (now - start) / COUNT_MS);
