@@ -78,7 +78,7 @@ function initMagnetic() {
 
 // ---------- Count-up: ตัวเลขวิ่งจาก 0 ไปค่าจริงเมื่อเลื่อนมาถึง (ครั้งเดียวต่อ element) ----------
 // ค่าจริงอยู่ใน DOM ตั้งแต่แรกเสมอ (JS ไม่ทำงาน = เห็นตัวเลขจริง) — แอนิเมชันจบที่ข้อความเดิมทุกตัวอักษร
-// ตัวเลขแต่ละก้อนถูกห่อด้วย span ตัวเลขกว้างเท่ากัน (tabular-nums) และเติมช่องว่างกว้างเท่าตัวเลขให้ยาวเท่าค่าจริง → ข้อความรอบ ๆ แทบไม่ขยับ
+// ข้อความที่มีตัวเลขถูกห่อด้วย span ตัวเลขกว้างเท่ากัน (tabular-nums) และเติมช่องว่างกว้างเท่าตัวเลขให้ยาวเท่าค่าจริง → ข้อความรอบ ๆ แทบไม่ขยับ
 export const COUNT_SEL = '.grid .card .price, .tile-deal .deal-pct, .tile-deal .price, .gt-count, .stat-val, .big-price .price, .big-price .save';
 const COUNT_MS = 900;
 const NUM_RE = /\d[\d,]*(?:\.\d+)?/g;
@@ -92,41 +92,35 @@ export function formatLike(template, value) {
   return int.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (frac ? `.${frac}` : '');
 }
 
-// ห่อตัวเลขทุกก้อนใน el ด้วย span.cu-num — คืนรายการ { span, text, value }
+// ห่อข้อความที่มีตัวเลขทั้งก้อน (รวม "฿" / "%" ที่ติดกัน) ด้วย span.cu-num เดียว — คืนรายการ { span, text }
+// ห่อเฉพาะตัวเลขไม่ได้: .price เป็น flex → "฿" กับตัวเลขกลายเป็นคนละ flex item มีช่องว่างคั่น และขึ้นคนละบรรทัดได้ในการ์ดแคบ
 function wrapNumbers(el) {
-  const nums = [];
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
   const nodes = [];
   while (walker.nextNode()) if (/\d/.test(walker.currentNode.nodeValue)) nodes.push(walker.currentNode);
-  for (const node of nodes) {
-    const frag = document.createDocumentFragment();
-    let i = 0;
-    for (const m of node.nodeValue.matchAll(NUM_RE)) {
-      frag.append(node.nodeValue.slice(i, m.index));
-      const span = document.createElement('span');
-      span.className = 'cu-num';
-      span.textContent = m[0];
-      frag.append(span);
-      nums.push({ span, text: m[0], value: Number(m[0].replace(/,/g, '')) });
-      i = m.index + m[0].length;
-    }
-    frag.append(node.nodeValue.slice(i));
-    node.replaceWith(frag);
-  }
-  return nums;
+  return nodes.map((node) => {
+    const span = document.createElement('span');
+    span.className = 'cu-num';
+    span.textContent = node.nodeValue;
+    node.replaceWith(span);
+    return { span, text: span.textContent };
+  });
 }
 
+// ข้อความระหว่างนับ: ตัวเลขทุกก้อนเป็น ค่าจริง × eased ในรูปแบบเดิม เติมช่องว่างกว้างเท่าตัวเลข (U+2007) ให้ยาวเท่าค่าจริง
+// (ตัวเลขกว้างคงที่ด้วย tabular-nums ข้อความรอบ ๆ จึงแทบไม่ขยับ)
+const toNum = (m) => Number(m.replace(/,/g, ''));
+const frameText = (text, eased) => text.replace(NUM_RE, (m) => formatLike(m, toNum(m) * eased).padStart(m.length, '\u2007'));
+
 function runCountUp(el) {
-  const nums = wrapNumbers(el).filter((n) => Number.isFinite(n.value) && n.value > 0);
-  if (!nums.length) return;
+  const items = wrapNumbers(el).filter((n) => [...n.text.matchAll(NUM_RE)].some((m) => toNum(m[0]) > 0));
+  if (!items.length) return;
   const start = performance.now();
   const tick = (now) => {
     const p = Math.min(1, (now - start) / COUNT_MS);
     const eased = 1 - (1 - p) ** 3;
     // แก้ข้อความใน text node เดิม (ไม่สร้าง node ใหม่ทุกเฟรม → ไม่ปลุก MutationObserver ที่เฝ้า childList)
-    // เติมช่องว่างกว้างเท่าตัวเลข (U+2007) ด้านหน้าให้ยาวเท่าค่าจริง: ตัวเลขกว้างคงที่โดยยังเป็นข้อความ inline
-    // (เดิมใช้ inline-block กว้างคงที่ — ทำให้ "฿" กับตัวเลขขึ้นคนละบรรทัดได้ในการ์ดแคบระหว่างนับ)
-    for (const n of nums) n.span.firstChild.nodeValue = p < 1 ? formatLike(n.text, n.value * eased).padStart(n.text.length, '\u2007') : n.text;
+    for (const n of items) n.span.firstChild.nodeValue = p < 1 ? frameText(n.text, eased) : n.text;
     if (p < 1) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
